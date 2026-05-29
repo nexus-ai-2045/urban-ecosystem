@@ -1,0 +1,15 @@
+# urban-ecosystem プロジェクト設定
+# 目的:
+#   - pytest の rootdir を urban-ecosystem に固定し、Projects monorepo 側に解決されるのを防ぐ。
+#   - Pyright の import 解決を補助する。
+
+[tool.pytest.ini_options]
+# テストディレクトリを明示的に指定する。
+# conftest.py が PROJECT_ROOT を sys.path に追加しているため、
+# environments/ / app/ / tools/ への import は引き続き解決される。
+testpaths = ["tests"]
+
+[tool.pyright]
+# ソースルートを urban-ecosystem 内に限定する。
+pythonVersion = "3.12"
+include = ["app", "environments", "tools", "tests"]

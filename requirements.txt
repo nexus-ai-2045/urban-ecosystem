@@ -1,13 +1,10 @@
-numpy>=1.24.0
-matplotlib>=3.7.0
-pyyaml>=6.0
-requests>=2.31.0
-Pillow>=10.0.0
-pytest>=7.0.0
-python-dotenv>=1.0.0
-anthropic>=0.25.0
-
+# [runtime] Cloud Run コンテナに必要な依存
+# app/ tools/ environments/ のいずれかで import されているものだけを列挙する。
 # WO-URBAN-003 Replay Viewer / WO-005 Cloud Run (FastAPI web server)
 fastapi>=0.100.0
 uvicorn[standard]>=0.20.0
 httpx>=0.24.0
+
+# [dev] ローカル開発・CI テストにのみ必要な依存 (Cloud Run イメージには不要)
+# Dockerfile は requirements.txt を丸ごと pip install するため物理分割は行わない。
+pytest>=7.0.0
