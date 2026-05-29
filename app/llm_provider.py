@@ -143,7 +143,7 @@ class VertexGeminiProvider(LLMProvider):
 
     def __init__(
         self,
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-2.5-flash",
         project: Optional[str] = None,
         location: str = "us-central1",
         client: Optional[Any] = None,
@@ -151,7 +151,7 @@ class VertexGeminiProvider(LLMProvider):
         """初期化。
 
         Args:
-            model: Gemini モデル名 (既定 gemini-2.0-flash)。
+            model: Gemini モデル名 (既定 gemini-2.5-flash / Vertex GA)。
             project: GCP プロジェクト ID。None の場合 ADC から自動取得。
             location: Vertex AI リージョン (既定 us-central1)。
             client: テスト用 mock クライアント。None で本番 SDK クライアントを生成。

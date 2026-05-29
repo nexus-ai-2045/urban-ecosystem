@@ -292,17 +292,23 @@ class TestVertexGeminiProvider:
         # client=None で遅延 import パスを通す
         provider = VertexGeminiProvider(client=None)
 
-        # sys.modules から google.genai を消して未インストール状態を再現する
+        # SDK インストール済みでも未インストールを再現する。
+        # sys.modules に None を入れると、その名前の import は ImportError になる
+        # (pop だけだと SDK 実在環境では re-import が成功してしまうため None 注入を使う)。
         import sys
-        saved = {}
-        for key in list(sys.modules.keys()):
-            if "google" in key:
-                saved[key] = sys.modules.pop(key)
+        blocked = ["google.genai", "google.genai.types", "google.genai.errors"]
+        saved = {k: sys.modules.get(k) for k in blocked}
+        for k in blocked:
+            sys.modules[k] = None
         try:
             with pytest.raises(ImportError, match="google-genai"):
                 provider.complete("prompt")
         finally:
-            sys.modules.update(saved)
+            for k in blocked:
+                if saved[k] is None:
+                    sys.modules.pop(k, None)
+                else:
+                    sys.modules[k] = saved[k]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
