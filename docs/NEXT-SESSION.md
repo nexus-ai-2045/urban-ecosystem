@@ -2,51 +2,63 @@
 
 updated: 2026-05-29
 
+方針 (2026-05-29 CEO 確定):
+- **ローカルオンリーで開発を進める**。Cloud Run への再デプロイ / 公開 / 実 Maps 化 (= Type1) は、公開が必要になった節目まで保留。
+- 理由: コアは local だけで完動。実 Google Maps も Vertex/Gemini も local からキー/認証を入れれば使える。Cloud Run の本質価値は「公開URL・常時稼働」だけで開発速度には寄与せず、毎デプロイの Type1 承認ゲートが開発ループを遅くするため。
+- Cloud Run 限定デプロイ (revision 00001-t48 / Ready) は最小で完了済みなので捨てない。節目で再デプロイすればよい。
+
 目的:
-- 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP を作る。基盤=Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす1日リプレイが Cloud Run で動く」。
+- 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP。基盤=(将来) Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす 1 日リプレイが動く」← **local で達成済み**。
 
 現在地:
-- 独立 git リポジトリ `~/Projects/urban-ecosystem`（branch=main / remote 未設定）。
-- 仕様確定: spec の解決可能 assumption は全て [事実] 化。残 [実装時確定] 2 件（再生fps / 完走時間 = 実測のみ）。
-- **WO-001〜004 実装 + commit 済み**（著者 nexus-ai-2045 / `2f9f308` WO-002 / `2581986` WO-004 / `c34b333` WO-003 / `560d416` WO-004 統合修正）。
-  - WO-001 Data Loader: models + GeoJSON/JSONL loader + validation。
-  - WO-002 Sample Data Generator（`tools/generate_urban_sample.py`）: 静的データのみ = §19 準拠（scope 2026-05-29 CEO 確定 / 挙動ログは WO-004）。同一 seed で静的 4 ファイル sha256 byte 一致。`data/` を .gitignore 追加。
-  - WO-004 Rule Simulation（`environments/urban_2d/rules.py`+`simulation.py` / `tools/urban_simulation_cli.py`）: §9/§20 ルールベース。3 jsonl byte 一致 / §13.3.3 invariant 全件 / 100agent×192tick=0.43s。`--sample` は静的+挙動の 8 ファイルを 1 コマンドで出力（自己完結 replay run）。
-  - WO-003 Replay Viewer（`tools/urban_viewer_server.py`+`tools/urban_viewer/`）: FastAPI + Google Maps / キー無し fallback 地図。/api allowlist + path traversal 三重防御 + security headers。`requirements.txt` に fastapi/uvicorn/httpx 追加。
-  - **WO-005 Cloud Run（デプロイ可能な状態まで完成 / live gcloud は未実行）**（`a???` 直近 commit）: `app/main.py`(entrypoint・$PORT bind)+`config.py`+`data_access.py`(local実装+GCS stub) / `Dockerfile`(slim・GPU無し・デモrun同梱・秘密非焼込)+`.dockerignore`+`cloudbuild.yaml` / `docs/deploy.md`(gcloud手順・Secret Manager・最小権限SA・Map ID・公開範囲両論併記・Type1警告) / `tests/app/test_main.py`(14)。
-- **E2E 確認済み**: generate→simulate→viewer API で全レイヤー 200 配信（agent_states 2400 行 / interactions 395 / traversal 404・403）。
-- **🚀 WO-005 LIVE デプロイ完了（2026-05-29 / 限定アクセス）**: Cloud Run service `urban-ecosystem` @ nexus-ai-2045 / region asia-northeast1 / revision `urban-ecosystem-00001-t48` ready。URL `https://urban-ecosystem-7r3ac467fa-an.a.run.app`（invoker に allUsers 無し＝非公開 / owner=private-owner のみ）。`/api/health`=200。fallback 地図（Maps key 未設定）。閲覧は `gcloud run services proxy urban-ecosystem --project nexus-ai-2045 --region asia-northeast1` → localhost:8080。
-  - デプロイ実行は CEO（option A / agent は auto-mode 分類器で billing/prod 変更 DENY）。ビルド SA `646396388635-compute@...` に `roles/cloudbuild.builds.builder` 付与で初回 PERMISSION_DENIED を解消。
-- **viewer UX 改善 commit 済み（`8c6397c`）**: (a) 友達リンクを選択 agent のみ線で可視化（両アダプタ）(b) 意味の薄いランダム道路を既定 OFF+淡色 (c) 詳細パネルの friend ID→友達名。全体 175 passed / JS 配信 200。⚠️ **live Cloud Run は旧ビューア（このUX前にデプロイ）→ 反映には再デプロイ要**。
-- gh active アカウント = `nexus-ai-2045`（事業用 / private-github-account は非アクティブ保持）。
+- 独立 git リポジトリ `~/Projects/urban-ecosystem` (branch=main / remote 未設定 / 著者 nexus-ai-2045)。
+- **2026-05-29 仕上げ session (workflow)**: 3 commit 追加。
+  - `a6d46dd` refactor(viewer): CATEGORY_COLORS を `colors.js` (ES module SSOT / Object.freeze) に集約し 3 ファイル重複を解消 / google adapter の `highlight()` 実装・`upsertAgents` await・`_waitForGoogleMaps` 10s timeout / **HIGH bug fix** = 非表示後に再出現した agent が永続非表示になる問題を修正 (`marker.map` 復元 + pin 参照保持)。
+  - `c5ce2fa` chore(deps): 未使用依存 (Pillow/anthropic/numpy/matplotlib/pyyaml/requests/python-dotenv) 削除 / runtime=fastapi・uvicorn・httpx + dev=pytest のみ / `pyproject.toml` 追加 (pytest rootdir 固定 + pyright source roots)。
+  - `44abeac` docs(deploy): `--max-instances`/`--concurrency` 推奨レンジ + SA ハードニング (build/run SA 分離・最小権限) 追記。
+  - workflow 検証: venv pytest **175 passed** (回帰なし) / 並列レビュー = deps・docs は adopt / viewer-js の HIGH 指摘は本 session で修正済み。
+- WO-001〜005 実装 + commit 済み (既存)。E2E: generate→simulate→viewer 全レイヤー 200 (agent_states 2400 行 / interactions 395)。
+- Cloud Run 限定デプロイ (revision `urban-ecosystem-00001-t48` / Ready / 非公開 / fallback 地図) は live 稼働中だが **旧ビューア** (今回の仕上げは未反映 = local-only 方針で再デプロイ保留)。
+- **ローカル稼働中**: `localhost:8080` (BG)。fallback 地図 (Maps key 未設定) で 100 体リプレイ閲覧可。
 
-待ち / 要 CEO 判断:
-- **実 Google Maps 化（任意）**: 現状 fallback 地図。実地図にするには Maps API 有効化 + Map ID 発行(Cloud Console) + Secret `urban-maps-key` 作成 + `gcloud run deploy ... --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest --update-env-vars GOOGLE_MAPS_MAP_ID=...` で再デプロイ。手順は `docs/deploy.md`。
-- **公開切替（任意）**: 限定→全公開は `gcloud run services add-iam-policy-binding urban-ecosystem --member=allUsers --role=roles/run.invoker`（Type1 外部公開 / 要承認）。
-- GitHub push（Type1 / 外部公開・repo 名・public/private 未確認）。
-- **§9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突**。WO-004 は §20.5 優先で実装 → office_worker/student は lunch に出ず、lunch は other 20 体のみ。§9.3 を厳密化するなら spec オーナー(manager)判断。現状は §20.5 優先で進行。
+ローカル起動 (SSOT):
+```bash
+# venv (初回のみ / PEP 668 で homebrew python は外部管理):
+#   python3 -m venv /tmp/urban-venv && /tmp/urban-venv/bin/pip install -r requirements.txt
+cd ~/Projects/urban-ecosystem
+DATA_DIR="$HOME/Projects/urban-ecosystem/data" PORT=8080 /tmp/urban-venv/bin/python -m app.main
+# → http://localhost:8080 (run_id=urban_demo / 100 agents / 24 ticks)
+# テスト: /tmp/urban-venv/bin/pytest tests/ -q  → 175 passed
+# 実 Google Maps を local で見たい場合: 上記コマンドの前に GOOGLE_MAPS_API_KEY=... を export (Maps API 有効化 + Map ID 前提 / Cloud Run 不要)
+```
 
-次にやる（1-3 action）:
-1. **新 viewer UX を live 反映**: `gcloud run deploy urban-ecosystem --project nexus-ai-2045 --source . --region asia-northeast1 --no-allow-unauthenticated --quiet`（Type1 / CEO 実行）。または実 Google Maps 化（Maps key/Map ID/Secret + 上記 --set-secrets）とまとめて再デプロイ。
-2. （google adapter follow-up / Google Maps 有効時のみ影響 = review 指摘）: `highlight()` TODO 実装（選択ピン色変更）/ `upsertAgents` の await / `_waitForGoogleMaps` に timeout / `CATEGORY_COLORS` 3 ファイル重複の共通化。
-3. （品質）SA ハードニング / requirements 分離（未使用 `Pillow`/`anthropic`）/ `deploy.md` に `--max-instances`/`--concurrency` / `pyproject.toml` で Pyright 警告解消 / GitHub push は CEO 確認後。
+待ち / 保留 (local-only 方針で当面やらない):
+- 実 Google Maps 化: local で見たいだけなら `GOOGLE_MAPS_API_KEY` を env に入れれば実タイル表示 (Cloud Run 不要)。Maps API 有効化 + Map ID 発行 (Cloud Console) が前提。
+- Cloud Run 再デプロイ / 公開切替 / GitHub push: いずれも Type1 / 公開が必要になった節目で CEO 実行。手順は `docs/deploy.md`。
+- **§9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突**。WO-004 は §20.5 優先で実装 (office_worker/student は lunch に出ず、lunch は other 20 体のみ)。厳密化は spec オーナー (manager) 判断。現状は §20.5 優先で進行。
+
+次にやる (local-first):
+1. (優先軸 = ローカル主で開発加速) 次の機能/調整を local で回す。候補: LLM エージェント化 (Vertex/Gemini で WO-004 のルールベース挙動を拡張) / 実 Maps を local キーで確認 / viewer UX の追加改善。
+2. (park / LOW) google adapter `highlight()` の選択解除時、ロール別色 (office_worker=#3498db / student=#f1c40f) に戻さず DEFAULT_ROLE_COLOR にリセットしている UX 退行。`upsertAgents` 時の role を pin に保持する設計で対処 (次スプリント)。
 
 実行メモ:
-- テストは fastapi が要る。venv: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`（homebrew python は PEP 668）。base 環境では WO-003/005 テストは importorskip で skip。
-- docker はローカル未インストール → `docker build` ローカル検証は不可。Cloud Build / `gcloud run deploy --source .` でビルドする。
+- テストは fastapi が要る。venv: `/tmp/urban-venv`。base 環境では WO-003/005 テストは importorskip で skip。
+- docker はローカル未インストール → 節目の再デプロイ時のみ Cloud Build / `gcloud run deploy --source .` でビルド。
+- viewer の static JS はリクエスト毎に disk から読むため、JS 編集はサーバー再起動不要でブラウザ再読込で反映。
 
 証跡:
-- commit: 2f9f308(WO-002) / 2581986(WO-004) / c34b333(WO-003) / 560d416(WO-004統合) / (WO-005) — 著者 nexus-ai-2045
-- test: venv `pytest tests/ -q` → **175 passed** / base homebrew → WO-003/005 skip で残り pass
-- E2E smoke: `urban_simulation_cli.py run --sample --out DIR` → viewer TestClient で全レイヤー 200 / agent_states 2400 行 / security headers(nosniff/DENY) 付与
+- commit (今回): `a6d46dd`(viewer 仕上げ) / `c5ce2fa`(deps+pyproject) / `44abeac`(deploy docs) — 著者 nexus-ai-2045
+- commit (既存): `2f9f308`(WO-002) / `2581986`(WO-004) / `c34b333`(WO-003) / `560d416`(WO-004 統合) / `8c6397c`(viewer UX)
+- test: venv `pytest tests/ -q` → **175 passed**
+- local live: `curl localhost:8080/api/health` = `{"status":"ok","maps_key":"absent","data_source":"local"}` / `/api/runs` = urban_demo (100 agents / 24 ticks / interactions 395)
 
 禁止:
-- GitHub push / remote 作成 = Type1（外部公開）。CEO 承認まで実行しない。
-- commit 著者は `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` を使う（private-author で commit しない）。
+- GitHub push / remote 作成 / Cloud Run 公開切替 = Type1 (外部公開)。CEO 承認まで実行しない。
+- commit 著者は `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` を使う (private-author で commit しない)。
 - `data/*.db` 削除禁止 / API キーをコード・ログに出さない。
 
 注意:
-- git 操作は `git -C ~/Projects/urban-ecosystem` + commit は inline `-c user.name=nexus-ai-2045 -c user.email=nexus-ai-2045@users.noreply.github.com` + sandbox 解除（`git config` 直書きは hook deny される）。
-- root commit `a651046` のみ著者 private-author（amend=履歴書換が deny。push 前に再著者化は任意）。
-- pyproject.toml 未配置（pytest は `tests/conftest.py` で import 解決 / Pyright の import 警告は静的のみ・runtime は PASS）。urban 専用 pyproject を置くと rootdir が Projects に解決される問題を解消できる。
-- urban-ecosystem は Projects monorepo 内にネストした独立 repo。Projects 側に commit を混入させない（過去に staging 誤混入あり → unstage 済み）。
+- git 操作は `git -C ~/Projects/urban-ecosystem` + commit は inline `-c user.name=nexus-ai-2045 -c user.email=nexus-ai-2045@users.noreply.github.com` (`git config` 直書きは hook deny)。**新規 (untracked) ファイルは `commit --` で拾えないため、先に `git add <path>` が要る**。
+- root commit `a651046` のみ著者 private-author (amend=履歴書換が deny。push 前に再著者化は任意)。
+- urban-ecosystem は Projects monorepo 内にネストした独立 repo。Projects 側に commit を混入させない (status -s に出ず分離済み)。
+- pyproject.toml 配置済み (pytest rootdir を urban-ecosystem に固定)。
