@@ -20,6 +20,9 @@ dev_env/
 *.log
 output/
 
+# Reference transcripts and handoff exports
+docs/reference/
+
 # Generated sample data (WO-URBAN-002 既定 --out-dir / コミット対象外)
 data/
 
