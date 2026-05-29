@@ -34,7 +34,7 @@ scope:
 contracts:
   consumes:
     - id: urban-ecosystem-data-contract
-      version: 0.1.0
+      version: 0.2.0
   produces: []
 
 depends_on:
@@ -56,11 +56,17 @@ commands:
   optional:
     - "python tools/generate_urban_sample.py --out /tmp/urban_sample --agents 100 --pois 300 --ticks 24 --seed 42"
 
+# scope (2026-05-29 CEO 確定 / spec §19 準拠): 静的データのみを生成する。
+# 挙動ログ (agent_states / poi_visit_records / interaction_events) は
+# WO-URBAN-004 Rule Simulation の責務であり本 WO では生成しない。
 acceptance:
-  - "The generator emits pois.geojson, agent_profiles_N100.json, agent_states.jsonl, poi_visit_records.jsonl, interaction_events.jsonl, and summary.json."
-  - "The default output has at least 100 agents, 300 POIs, and 24 ticks."
-  - "Output is deterministic when seed is fixed."
-  - "No generated output is committed by default."
+  - "The generator emits pois.geojson, aois.geojson, roadnet.geojson, agent_profiles_N100.json, and summary.json (static input data only)."
+  - "Behavioral logs (agent_states.jsonl / poi_visit_records.jsonl / interaction_events.jsonl) are NOT produced here — they belong to WO-URBAN-004."
+  - "The default output has 100 agents, 300 POIs, 10 AOIs, ~299 roads; summary.ticks defaults to 24."
+  - "POI category distribution matches spec §19.3.1; all coordinates stay within the §19.2 bbox."
+  - "Generated static files (pois/aois/roadnet/agent_profiles) are byte-identical (sha256) across runs with a fixed --seed; summary.json is excluded (contains started_at)."
+  - "All generated output passes data_loader validation (§13.1) with zero dangling poi_id/agent_id references."
+  - "No generated output is committed by default (data/ is gitignored)."
 
 handoff:
   required_fields:

@@ -20,6 +20,9 @@ dev_env/
 *.log
 output/
 
+# Generated sample data (WO-URBAN-002 既定 --out-dir / コミット対象外)
+data/
+
 # Environment-specific config (use config.yaml.example as template)
 config.yaml
 
