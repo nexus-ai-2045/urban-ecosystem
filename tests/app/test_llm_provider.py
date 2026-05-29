@@ -558,7 +558,11 @@ class TestSimulationWithRuleBasedProvider:
             )
 
     def test_summary_content_with_rule_based(self, sample_inputs):
-        """RuleBasedProvider の summary が simulation テンプレ文と一致する。"""
+        """RuleBasedProvider の summary が simulation テンプレ文と一致する。
+
+        #2 苗字 / #4 店名 対応: エージェント表示名 (profile.name + "さん") と
+        POI 表示名 (poi.name または poi_id) を _summary_text に渡して検証する。
+        """
         from environments.urban_2d.simulation import Simulation
         pois, profiles = sample_inputs
         provider = make_llm_provider("rule")
@@ -567,13 +571,32 @@ class TestSimulationWithRuleBasedProvider:
 
         assert sim.interaction_events, "interaction イベントが 1 件も発生していない"
 
+        # Simulation と同一の lookup table を再構築する
+        profile_by_id = {p.id: p for p in profiles}
+        poi_by_id = {p.id: p for p in pois}
+
         # 各 summary が simulation._summary_text テンプレ形式と一致する
         for event in sim.interaction_events:
+            a_id = event["agent_ids"][0]
+            b_id = event["agent_ids"][1]
+            poi_id = event["location_poi_id"]
+
+            # 表示名: profile.name + "さん" / POI name or id (#2 苗字 / #4 店名)
+            pa = profile_by_id.get(a_id)
+            pb = profile_by_id.get(b_id)
+            a_name = (pa.name + "さん") if (pa and pa.name) else ""
+            b_name = (pb.name + "さん") if (pb and pb.name) else ""
+            poi_obj = poi_by_id.get(poi_id)
+            poi_name = (poi_obj.name if (poi_obj and poi_obj.name) else "") or ""
+
             expected = Simulation._summary_text(
                 event["type"],
-                event["agent_ids"][0],
-                event["agent_ids"][1],
-                event["location_poi_id"],
+                a_id,
+                b_id,
+                poi_id,
+                a_name=a_name,
+                b_name=b_name,
+                poi_name=poi_name,
             )
             assert event["summary"] == expected, (
                 f"summary 不一致: {event['summary']!r} != {expected!r}"
