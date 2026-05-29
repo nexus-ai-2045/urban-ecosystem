@@ -11,6 +11,11 @@ updated: 2026-05-29
 - 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP。基盤=(将来) Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす 1 日リプレイが動く」← **local で達成済み**。
 
 現在地:
+- 🤖 **2026-05-29 LLM エージェント化 (会話生成) 稼働**: spec §10 の `LLMProvider` 抽象を実装。`RuleBasedProvider`(既定/決定論) + `VertexGeminiProvider`(Gemini `gemini-2.5-flash` / ADC)。interaction の会話要約を実 Gemini 生成 → run `urban_real_llm` (POI 435 / interactions 184 / 全 summary が Gemini フル文)。commit `46b1396`/`cc1eedd`/`96b104d`。
+  - **学び**: (1) Vertex の GA は `gemini-2.5-flash`(`2.0-flash` は 404)。(2) 2.5-flash は思考モデル → `thinking_config(thinking_budget=0)` 必須 (無いと max_output_tokens を思考が食い summary が ~16字で途中切れ)。
+  - 決定論維持: RuleBased 既定で agent_states/interaction_events byte 一致 (249 passed)。Gemini は `--llm vertex` opt-in。実 LLM はテスト非経路 (mock)。
+  - 実行: `GOOGLE_CLOUD_PROJECT=nexus-ai-2045 python tools/urban_simulation_cli.py run --llm vertex --pois ... --out data/<run>` (ADC + Vertex AI API 有効化済 / SDK `google-genai` venv 導入済)。
+  - 残 LLM 対象 (§10.2): 行動決定 / 関係理由文の Gemini 化は未着手 (会話生成のみ稼働)。
 - 🚀 **2026-05-29 実データ + 実 Google Maps 反映 (CEO 目視確認済「でた」)**: Google Places API (New) で渋谷の実在 POI **435件**取得 → ルールシミュ (interactions 184) → **実 Google Maps** (DEMO_MAP_ID / Advanced Markers) 上で local 表示。commit `a23d3b5` + app.js durable 化。
   - fetcher: `tools/fetch_places_sample.py` (urllib stdlib / key=env / 渋谷 bbox 4タイル searchNearby / cache `data/.places_cache/` / `--dry-run`)。Places API + Maps JS API は nexus-ai-2045 で有効化済。
   - 配線 fix: `/static/app.js` を StaticFiles mount より前の templating route にしてキー/Map ID を注入 (旧: raw 配信で placeholder 残り fallback 固定だった)。
