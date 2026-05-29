@@ -15,17 +15,20 @@ updated: 2026-05-29
   - WO-003 Replay Viewer（`tools/urban_viewer_server.py`+`tools/urban_viewer/`）: FastAPI + Google Maps / キー無し fallback 地図。/api allowlist + path traversal 三重防御 + security headers。`requirements.txt` に fastapi/uvicorn/httpx 追加。
   - **WO-005 Cloud Run（デプロイ可能な状態まで完成 / live gcloud は未実行）**（`a???` 直近 commit）: `app/main.py`(entrypoint・$PORT bind)+`config.py`+`data_access.py`(local実装+GCS stub) / `Dockerfile`(slim・GPU無し・デモrun同梱・秘密非焼込)+`.dockerignore`+`cloudbuild.yaml` / `docs/deploy.md`(gcloud手順・Secret Manager・最小権限SA・Map ID・公開範囲両論併記・Type1警告) / `tests/app/test_main.py`(14)。
 - **E2E 確認済み**: generate→simulate→viewer API で全レイヤー 200 配信（agent_states 2400 行 / interactions 395 / traversal 404・403）。
+- **🚀 WO-005 LIVE デプロイ完了（2026-05-29 / 限定アクセス）**: Cloud Run service `urban-ecosystem` @ nexus-ai-2045 / region asia-northeast1 / revision `urban-ecosystem-00001-t48` ready。URL `https://urban-ecosystem-7r3ac467fa-an.a.run.app`（invoker に allUsers 無し＝非公開 / owner=private-owner のみ）。`/api/health`=200。fallback 地図（Maps key 未設定）。閲覧は `gcloud run services proxy urban-ecosystem --project nexus-ai-2045 --region asia-northeast1` → localhost:8080。
+  - デプロイ実行は CEO（option A / agent は auto-mode 分類器で billing/prod 変更 DENY）。ビルド SA `646396388635-compute@...` に `roles/cloudbuild.builds.builder` 付与で初回 PERMISSION_DENIED を解消。
 - gh active アカウント = `nexus-ai-2045`（事業用 / private-github-account は非アクティブ保持）。
 
 待ち / 要 CEO 判断:
-- **【最重要】WO-005 live デプロイ = Type1（課金・外部公開）**。コード/手順は完成済。実行に要るのは: ① 公開範囲 `--allow-unauthenticated`(公開) か IAP(限定) ② Maps API 有効化 + Map ID 発行(Cloud Console) + Secret 作成 ③ Artifact Registry 作成 + SA 作成 ④ `gcloud run deploy`。手順は `docs/deploy.md`。docker はローカル未インストール（build は Cloud Build / `--source .` で実行）。
+- **実 Google Maps 化（任意）**: 現状 fallback 地図。実地図にするには Maps API 有効化 + Map ID 発行(Cloud Console) + Secret `urban-maps-key` 作成 + `gcloud run deploy ... --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest --update-env-vars GOOGLE_MAPS_MAP_ID=...` で再デプロイ。手順は `docs/deploy.md`。
+- **公開切替（任意）**: 限定→全公開は `gcloud run services add-iam-policy-binding urban-ecosystem --member=allUsers --role=roles/run.invoker`（Type1 外部公開 / 要承認）。
 - GitHub push（Type1 / 外部公開・repo 名・public/private 未確認）。
 - **§9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突**。WO-004 は §20.5 優先で実装 → office_worker/student は lunch に出ず、lunch は other 20 体のみ。§9.3 を厳密化するなら spec オーナー(manager)判断。現状は §20.5 優先で進行。
 
 次にやる（1-3 action）:
-1. **WO-005 live デプロイ（Type1 / CEO 承認後）**: `docs/deploy.md` の順で API 有効化→Secret→SA→`gcloud run deploy --source . --region asia-northeast1`→公開 URL で 100 体リプレイ確認（§13.4）。
-2. （follow-up / 品質）requirements 分離: runtime に未使用の `Pillow`/`anthropic` を `requirements-dev.txt` 等へ分離しイメージ軽量化（security review MEDIUM/LOW）。`deploy.md` に `--max-instances`/`--concurrency` 追記（公開時の課金防護）。
-3. （任意）`pyproject.toml` を urban 直下に置き Pyright の import 警告（静的のみ・runtime PASS）を解消 / GitHub push は CEO に repo 名・public/private 確認後。
+1. （任意）実 Google Maps 化 = Maps key/Map ID/Secret 設定 + 再デプロイ（上記）。
+2. （follow-up / 品質）SA ハードニング（runtime を専用最小権限 SA に）/ requirements 分離（未使用 `Pillow`/`anthropic` を runtime から除外）/ `deploy.md` に `--max-instances`/`--concurrency`（課金防護）。
+3. （任意）`pyproject.toml` を urban 直下に置き Pyright import 警告解消 / GitHub push は CEO に repo 名・public/private 確認後。
 
 実行メモ:
 - テストは fastapi が要る。venv: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`（homebrew python は PEP 668）。base 環境では WO-003/005 テストは importorskip で skip。
