@@ -1,0 +1,84 @@
+id: wo-urban-003-replay-viewer
+title: "Urban ecosystem replay viewer"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  Build a local browser replay viewer for urban ecosystem datasets on Google
+  Maps, including layer toggles, playback controls, agent markers, and agent
+  detail inspection. Provide a no-key fallback map for tests and offline
+  development.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+  references:
+    - docs/current-usage-guide.md
+
+scope:
+  allowed_write_paths:
+    - tools/urban_viewer/
+    - tools/urban_viewer_server.py
+    - tests/tools/test_urban_viewer_server.py
+  read_only_paths:
+    - environments/urban_2d/
+    - core/
+    - materials/
+  out_of_scope:
+    - "Do not implement simulation generation in this work order."
+    - "Do not add a frontend framework unless necessary."
+    - "Do not require external build tooling for MVP."
+    - "Do not hard-code or print GOOGLE_MAPS_API_KEY."
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.1.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-002-sample-data
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/tools/test_urban_viewer_server.py -v -p no:cacheprovider"
+  optional:
+    - "python tools/urban_viewer_server.py --data /tmp/urban_sample --port 8080"
+
+acceptance:
+  - "The viewer opens from a local server."
+  - "When GOOGLE_MAPS_API_KEY is set, the viewer uses Google Maps JavaScript API."
+  - "When GOOGLE_MAPS_API_KEY is missing, the viewer uses a deterministic fallback map suitable for tests."
+  - "POI, AOI, and road GeoJSON layers use Google Maps Data layer where possible."
+  - "Agent markers use AdvancedMarkerElement when Google Maps is available."
+  - "The marker manager is structured so @googlemaps/markerclusterer can be added without rewriting playback."
+  - "POI, AOI, road, and agent layers can be toggled."
+  - "Agent markers update with playback."
+  - "Clicking an agent shows profile, current action, current POI, time, and social network ids."
+  - "Playback, pause, step, speed, and time slider controls work."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes: []

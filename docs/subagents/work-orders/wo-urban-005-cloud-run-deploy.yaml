@@ -1,0 +1,92 @@
+id: wo-urban-005-cloud-run-deploy
+title: "Cloud Run deploy for urban ecosystem viewer"
+status: draft
+owner_role: devops
+support_roles:
+  - developer
+  - quality-gate
+
+goal: >
+  Containerize the urban ecosystem replay viewer and simulation runner and
+  deploy them to Google Cloud Run as a single web Service. The Service serves
+  the Google Maps viewer, the replay data API, and an optional small rule-based
+  simulation endpoint. Large-scale simulation pre-generation runs as a Cloud
+  Run Job sharing the same image.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+  references:
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - Dockerfile
+    - cloudbuild.yaml
+    - requirements.txt
+    - app/main.py
+    - app/config.py
+    - app/data_access.py
+    - docs/deploy.md
+    - tests/app/test_main.py
+  read_only_paths:
+    - environments/urban_2d/
+    - tools/urban_viewer/
+    - data/
+    - materials/
+  out_of_scope:
+    - "Do not commit large generated replay logs or experiment outputs; place them in GCS for scale."
+    - "Do not print or bake API keys / service account keys into the image, git, or logs."
+    - "Do not include GPU or media-processing dependencies in the image."
+    - "Do not require Google Maps or Vertex AI credentials for offline unit tests; the fallback map path must work without them."
+
+contracts:
+  consumes:
+    - urban-ecosystem-data-contract (>=0.2.0)
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-003-replay-viewer
+    - wo-urban-004-rule-simulation
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/app/test_main.py -v -p no:cacheprovider"
+    - "docker build -t urban-ecosystem:local ."
+  optional:
+    - "docker run --rm -p 8080:8080 urban-ecosystem:local"
+    - "gcloud run deploy urban-ecosystem --project nexus-ai-2045 --source . --region asia-northeast1 --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com  # 公開範囲フラグ(--allow-unauthenticated か IAP)はデプロイ時に確定 (spec §16 #4)"
+
+acceptance:
+  - "docker build succeeds locally and the image contains no GPU or media-processing dependencies."
+  - "GET /api/health returns 200 after the container starts on $PORT (default 8080)."
+  - "GET / returns the map viewer HTML; with GOOGLE_MAPS_API_KEY unset it falls back to the local map adapter and does not 500."
+  - "GET /api/runs lists available run_ids and GET /api/data/{run_id}/{file} serves bundled sample GeoJSON/JSONL."
+  - "GOOGLE_MAPS_API_KEY is injected only via Secret Manager and never appears in the image, git, or logs."
+  - "The runtime service account uses least privilege (Secret Accessor, plus Storage/Vertex only when required)."
+  - "docs/deploy.md documents a reproducible gcloud run deploy --source . procedure."
+  - "Cloud Run Service vs Job usage matches spec section 17.1."
+  - "urban-ecosystem is an independent git repository and deploy unit (GCP project nexus-ai-2045); it does not share infra with other projects."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "Cloud Run sets $PORT; app/main.py must bind 0.0.0.0:$PORT."
+  - "Service and Job share one image via tools/urban_simulation_cli.py entrypoint swap."

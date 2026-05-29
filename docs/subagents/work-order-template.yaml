@@ -1,0 +1,85 @@
+id: example-work-order
+title: "Short human-readable task title"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  State the concrete outcome expected from this task.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+  references:
+    - docs/emergence-implementation-roadmap.md
+    - docs/south-pole-geography-model.md
+
+scope:
+  allowed_write_paths:
+    - path/to/file.py
+    - tests/path/to/test_file.py
+  read_only_paths:
+    - materials/
+  out_of_scope:
+    - "Do not change core/ unless this work order explicitly allows it."
+    - "Do not include experiments/results/ in commits."
+
+contracts:
+  # Interface contracts this work order must conform to.
+  # Each entry references docs/subagents/contracts/<id>.md and the version
+  # accepted at the moment this work order was claimed. If a referenced
+  # contract changes version, this work order must re-confirm before merging.
+  consumes: []   # contracts this work order reads/depends on (do NOT change)
+  produces: []   # contracts this work order owns (may evolve via change log)
+  # example:
+  # consumes:
+  #   - id: contract-agent-step
+  #     version: 0.2.0
+  # produces:
+  #   - id: contract-emergence-metrics
+  #     version: 0.1.0
+
+depends_on:
+  # Other work order ids whose contracts/paths this one depends on.
+  # The active-work ledger must show all depends_on entries as `done` or
+  # at least at a contract version compatible with this work order.
+  work_orders: []
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/ -v -p no:cacheprovider"
+  optional:
+    - "python tools/cli.py list"
+    - "python tools/cli.py batch --plan south_pole_survival_quick_sweep --dry-run"
+
+acceptance:
+  - "The requested behavior is implemented in the allowed write paths."
+  - "Existing water_exploration behavior remains backward compatible."
+  - "Ollama-free tests pass, or failures are documented with root cause."
+  - "Any model assumption changes are documented and human-approved."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes: []

@@ -1,0 +1,73 @@
+id: wo-urban-002-sample-data
+title: "Urban ecosystem sample data generator"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+
+goal: >
+  Create a deterministic sample data generator that emits a small Shibuya-like
+  urban dataset conforming to the urban ecosystem data contract.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+  references:
+    - docs/ai-ecosystem-tool-transcript.md
+
+scope:
+  allowed_write_paths:
+    - tools/generate_urban_sample.py
+    - tests/tools/test_generate_urban_sample.py
+  read_only_paths:
+    - environments/urban_2d/
+    - core/
+    - materials/
+  out_of_scope:
+    - "Do not implement the browser viewer in this work order."
+    - "Do not write large generated sample outputs into the repository."
+    - "Do not use external map APIs."
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.1.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-001-data-loader
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/tools/test_generate_urban_sample.py -v -p no:cacheprovider"
+  optional:
+    - "python tools/generate_urban_sample.py --out /tmp/urban_sample --agents 100 --pois 300 --ticks 24 --seed 42"
+
+acceptance:
+  - "The generator emits pois.geojson, agent_profiles_N100.json, agent_states.jsonl, poi_visit_records.jsonl, interaction_events.jsonl, and summary.json."
+  - "The default output has at least 100 agents, 300 POIs, and 24 ticks."
+  - "Output is deterministic when seed is fixed."
+  - "No generated output is committed by default."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes: []

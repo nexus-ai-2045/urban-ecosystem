@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+dev_env/
+
+# Logs & simulation output
+*.log
+output/
+
+# Environment-specific config (use config.yaml.example as template)
+config.yaml
+
+# API keys and secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OpenAI Codex CLI local settings
+.codex/
+
+# Superpowers visual companion sessions
+.superpowers/
+
+# Experiment results (large data; commit summary.json manually with --commit-summary)
+experiments/results/
+gcp_results/
+
+# PDCA-generated sweep plans (auto-generated per cycle)
+experiments/plans/generated_pdca/
+
+# Claude Code worktree workspaces
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# Auto-implementation agent
+scripts/.env
+scripts/poll.log

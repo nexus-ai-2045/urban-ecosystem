@@ -1,0 +1,81 @@
+id: wo-urban-001-data-loader
+title: "Urban ecosystem data loader"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  Implement loaders and validators for the urban ecosystem data contract so
+  POI, AOI, roadnet, agent profile, agent state, visit record, and interaction
+  event files can be parsed and normalized for simulation and replay.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+  references:
+    - docs/ai-ecosystem-tool-transcript.md
+    - docs/ai-ecosystem-tool-requirements-trace.json
+
+scope:
+  allowed_write_paths:
+    - environments/urban_2d/
+    - tests/environments/test_urban_data_loader.py
+    - tests/contracts/test_urban_ecosystem_data_contract.py
+  read_only_paths:
+    - core/
+    - environments/lunar_2d/
+    - materials/
+  out_of_scope:
+    - "Do not implement the browser viewer in this work order."
+    - "Do not implement LLM decision-making in this work order."
+    - "Do not change core/."
+    - "Do not commit generated experiment results."
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.1.0
+  produces: []
+
+depends_on:
+  work_orders: []
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/contracts/test_urban_ecosystem_data_contract.py tests/environments/test_urban_data_loader.py -v -p no:cacheprovider"
+  optional:
+    - "python -m pytest tests/ -v -p no:cacheprovider"
+
+acceptance:
+  - "POI, AOI, Road, AgentProfile, AgentState, VisitRecord, and InteractionEvent models exist."
+  - "GeoJSON FeatureCollection inputs are validated with readable errors."
+  - "JSON and JSONL inputs are validated with readable errors."
+  - "The loader preserves optional fields where practical."
+  - "Contract tests pass."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "This is the first recommended implementation task."

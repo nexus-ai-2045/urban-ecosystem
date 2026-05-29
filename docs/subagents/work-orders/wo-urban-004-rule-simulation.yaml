@@ -1,0 +1,74 @@
+id: wo-urban-004-rule-simulation
+title: "Urban ecosystem rule-based simulation"
+status: draft
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - test-agent
+  - quality-gate
+
+goal: >
+  Implement a no-LLM MVP simulation that generates agent states, visits, and
+  interaction events from profiles and POIs.
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - environments/urban_2d/
+    - tools/urban_simulation_cli.py
+    - tests/environments/test_urban_simulation.py
+  read_only_paths:
+    - core/
+    - environments/lunar_2d/
+    - materials/
+  out_of_scope:
+    - "Do not implement LLM social behavior in this work order."
+    - "Do not change core/."
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.1.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-001-data-loader
+    - wo-urban-002-sample-data
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/environments/test_urban_simulation.py -v -p no:cacheprovider"
+  optional:
+    - "python tools/urban_simulation_cli.py run --sample --out /tmp/urban_rule_run"
+
+acceptance:
+  - "100 agents and at least 24 ticks complete without LLM keys."
+  - "agent_states.jsonl, poi_visit_records.jsonl, interaction_events.jsonl, and summary.json are emitted."
+  - "Office worker, student, lunch, evening leisure, and nearby interaction rules are represented."
+  - "Output can be consumed by the replay viewer."
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes: []
