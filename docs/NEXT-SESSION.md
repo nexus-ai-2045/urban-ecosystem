@@ -11,6 +11,18 @@ updated: 2026-05-29
 - 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP。基盤=(将来) Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす 1 日リプレイが動く」← **local で達成済み**。
 
 現在地:
+- 🏙️ **2026-05-29 realism 要件バッチ (CEO / 7+1 件) — Phase 1 完了**:
+  - #7 viewer ラベル平易化: POI→お店・施設 / AOI→エリア / Agents→住人 (commit `bcb0d0d`)
+  - #5土台 行動決定 LLM 化: Gemini が目的地カテゴリ(§19.3.1 の12択)を選択 / RuleBased 既定で決定論維持 / 不正・例外は rule fallback (commit `ba7fe8d`)
+  - #2/#4/#1: 会話要約+viewer で agent 表示名(`profile.name`+さん)・実店名(POI `properties.name`/欠落時 id) / `--no-summaries` で会話生成をオプション化(--llm と独立) (commit `9b202e8`/`7a54129`)。**276 passed**。
+  - #2 実際の表示: マーカー glyph は `name` 先頭2文字(≒苗字 例「井上翔」→「井上」)、詳細パネルは `name`+さん。真の surname 分割は #3 で profile に surname/given を持たせると精度向上。
+  - 既知 (Phase1 review): (a) [MEDIUM] `enable_summaries` off/on で interaction_events.jsonl の summary 空化を byte 検証するテスト未追加 (回帰見逃しリスク)。(b) [LOW] `google_maps_adapter.upsertAgents` の既存マーカー更新パスは glyph/title を初回生成時のみ反映 (tick毎・run跨ぎで未更新)。
+- **残要件 (次セッション / 未着手)** — 推奨着手順 #3 → #8 → #4拡充/#6 → #5本体:
+  - **#3 リッチプロフィール**: 職業詳細/趣味/性格/1日傾向 + surname/given 分割。`generate_urban_sample.py` 拡張 + 再生成。#2 の苗字と #5 の文脈の土台。
+  - **#8 物理制約 (CEO multiSelect: 到達可能性・道路追従・移動手段(電車)・viewer動き)** = 移動モデル大改修。現状 `simulation.py` の移動は `rules.step_towards` の**直線補間で建物/道路を貫通**(roadnet は表示専用)。要: roadnet→ルーティンググラフ+最短経路で道路追従 / 残り時間で到達可能性判定 / 遠距離は鉄道高速エッジ / viewer は経路アニメ。建物 footprint は現データに無く OSM 等で別取得の要否を CEO 相談。
+  - **#4 拡充**: POI に住所/評価/primaryType 等 Places フィールド追加 (`fetch_places_sample.py` の FieldMask 拡張 + 再 fetch)。
+  - **#6 人数可変**: `--agents` は既存 (fetch/sim CLI)。生成→sim→viewer を任意 N で通す + UI/config 露出。
+  - **#5 本体**: 時間軸×リッチプロフィール行動 (#3 後に `build_destination_prompt` の context へ profile/time を厚く注入)。
 - 🤖 **2026-05-29 LLM エージェント化 (会話生成) 稼働**: spec §10 の `LLMProvider` 抽象を実装。`RuleBasedProvider`(既定/決定論) + `VertexGeminiProvider`(Gemini `gemini-2.5-flash` / ADC)。interaction の会話要約を実 Gemini 生成 → run `urban_real_llm` (POI 435 / interactions 184 / 全 summary が Gemini フル文)。commit `46b1396`/`cc1eedd`/`96b104d`。
   - **学び**: (1) Vertex の GA は `gemini-2.5-flash`(`2.0-flash` は 404)。(2) 2.5-flash は思考モデル → `thinking_config(thinking_budget=0)` 必須 (無いと max_output_tokens を思考が食い summary が ~16字で途中切れ)。
   - 決定論維持: RuleBased 既定で agent_states/interaction_events byte 一致 (249 passed)。Gemini は `--llm vertex` opt-in。実 LLM はテスト非経路 (mock)。
