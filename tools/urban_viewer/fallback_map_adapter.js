@@ -59,6 +59,13 @@ const HIGHLIGHT_COLOR = "#ff0000";
 /** エージェントのデフォルト色 */
 const AGENT_DEFAULT_COLOR = "#2c3e50";
 
+/** 友達リンク線の色 (半透明の暖色) */
+const SOCIAL_LINK_COLOR = "rgba(230, 120, 30, 0.6)";
+/** 友達リンク線の太さ (px) */
+const SOCIAL_LINK_WIDTH = 2;
+/** 友達マーカー強調リングの色 */
+const FRIEND_RING_COLOR = "rgba(230, 120, 30, 0.9)";
+
 export class FallbackMapAdapter {
     /**
      * @param {HTMLCanvasElement} canvas
@@ -74,7 +81,7 @@ export class FallbackMapAdapter {
         this._layers = {
             poi:   { geojson: null, visible: true },
             aoi:   { geojson: null, visible: true },
-            road:  { geojson: null, visible: true },
+            road:  { geojson: null, visible: false },  // 既定非表示 (app.js と統一 / 意味の薄い飾り)
             agent: { markers: [],   visible: true },
         };
 
@@ -90,6 +97,9 @@ export class FallbackMapAdapter {
         // リサイズ対応
         this._resizeObserver = new ResizeObserver(() => this._redraw());
         this._resizeObserver.observe(this._canvas.parentElement || document.body);
+
+        // 友達リンクデータ (drawSocialLinks で上書き / clearSocialLinks でリセット)
+        this._socialLinks = null;  // { center: {id,lat,lon}, friends: [{id,lat,lon}] } | null
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -153,6 +163,24 @@ export class FallbackMapAdapter {
      */
     setAgentLayerVisible(visible) {
         this._layers.agent.visible = visible;
+        this._redraw();
+    }
+
+    /**
+     * 選択中 agent から友達への社会的リンク線を描画する。
+     * @param {{ id:number, lat:number, lon:number }} centerAgent
+     * @param {Array<{ id:number, lat:number, lon:number }>} friendAgents
+     */
+    drawSocialLinks(centerAgent, friendAgents) {
+        this._socialLinks = { center: centerAgent, friends: friendAgents };
+        this._redraw();
+    }
+
+    /**
+     * 社会的リンク線をすべて消去する。
+     */
+    clearSocialLinks() {
+        this._socialLinks = null;
         this._redraw();
     }
 
@@ -285,7 +313,7 @@ export class FallbackMapAdapter {
             this._drawAois(this._layers.aoi.geojson);
         }
 
-        // Road (折れ線)
+        // Road (折れ線) — 意味の薄い飾りとして淡く描画
         if (this._layers.road.visible && this._layers.road.geojson) {
             this._drawRoads(this._layers.road.geojson);
         }
@@ -293,6 +321,11 @@ export class FallbackMapAdapter {
         // POI (点)
         if (this._layers.poi.visible && this._layers.poi.geojson) {
             this._drawPois(this._layers.poi.geojson);
+        }
+
+        // 友達リンク線 (agent より下のレイヤーに描画)
+        if (this._socialLinks) {
+            this._drawSocialLinkLines(this._socialLinks.center, this._socialLinks.friends);
         }
 
         // Agent (番号付き円)
@@ -358,11 +391,11 @@ export class FallbackMapAdapter {
         }
     }
 
-    /** Road を折れ線で描画する */
+    /** Road を折れ線で描画する (意味の薄い飾りとして淡く表示) */
     _drawRoads(geojson) {
         const ctx = this._ctx;
-        ctx.strokeStyle = "#b0a090";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(180, 170, 160, 0.35)";
+        ctx.lineWidth = 0.7;
         for (const feature of geojson.features || []) {
             if (!feature.geometry) continue;
             const t = feature.geometry.type;
@@ -427,6 +460,45 @@ export class FallbackMapAdapter {
         // テキスト描画後にデフォルトに戻す
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
+    }
+
+    /**
+     * 選択中 agent から友達への社会的リンク線を描画する内部メソッド。
+     * agent レイヤーより下(先)に描画することで線がマーカーの下になる。
+     * @param {{ id:number, lat:number, lon:number }} center
+     * @param {Array<{ id:number, lat:number, lon:number }>} friends
+     */
+    _drawSocialLinkLines(center, friends) {
+        if (!center || !friends || friends.length === 0) return;
+        const ctx = this._ctx;
+        const { x: cx, y: cy } = this._project(center.lat, center.lon);
+
+        ctx.save();
+        ctx.strokeStyle = SOCIAL_LINK_COLOR;
+        ctx.lineWidth   = SOCIAL_LINK_WIDTH;
+        ctx.setLineDash([5, 3]);  // 破線で道路線と区別
+
+        for (const friend of friends) {
+            const { x: fx, y: fy } = this._project(friend.lat, friend.lon);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(fx, fy);
+            ctx.stroke();
+
+            // 友達マーカー位置に強調リングを追加
+            ctx.beginPath();
+            ctx.arc(fx, fy, AGENT_RADIUS + 4, 0, Math.PI * 2);
+            ctx.strokeStyle = FRIEND_RING_COLOR;
+            ctx.lineWidth   = 1.5;
+            ctx.setLineDash([]);
+            ctx.stroke();
+            // 次の線描画のためにスタイルを戻す
+            ctx.strokeStyle = SOCIAL_LINK_COLOR;
+            ctx.lineWidth   = SOCIAL_LINK_WIDTH;
+            ctx.setLineDash([5, 3]);
+        }
+
+        ctx.restore();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

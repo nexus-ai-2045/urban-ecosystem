@@ -65,4 +65,21 @@ export class MapAdapter {
     onAgentClick(cb) {
         throw new Error("MapAdapter.onAgentClick() は派生クラスで実装する");
     }
+
+    /**
+     * 選択中 agent から友達 agent への社会的リンク線を描画する。
+     * @param {{ id:number, lat:number, lon:number }} centerAgent - 選択中 agent の現在位置
+     * @param {Array<{ id:number, lat:number, lon:number }>} friendAgents - 友達の現在位置リスト
+     */
+    // eslint-disable-next-line no-unused-vars
+    drawSocialLinks(centerAgent, friendAgents) {
+        throw new Error("MapAdapter.drawSocialLinks() は派生クラスで実装する");
+    }
+
+    /**
+     * drawSocialLinks で描画した社会的リンク線をすべて消去する。
+     */
+    clearSocialLinks() {
+        throw new Error("MapAdapter.clearSocialLinks() は派生クラスで実装する");
+    }
 }

@@ -43,6 +43,11 @@ const ROLE_COLORS = {
 const DEFAULT_ROLE_COLOR = "#2c3e50";
 const HIGHLIGHT_COLOR    = "#e74c3c";
 
+/** 友達リンク線の色 (半透明の暖色) */
+const SOCIAL_LINK_COLOR  = "#e6781e";
+/** 友達リンク線の太さ (px) */
+const SOCIAL_LINK_WEIGHT = 2;
+
 /** デフォルト地図中心 (渋谷周辺) */
 const DEFAULT_CENTER = { lat: 35.6628, lng: 139.7025 };
 const DEFAULT_ZOOM   = 14;
@@ -75,6 +80,9 @@ export class GoogleMapsAdapter {
 
         // MakerClusterer 拡張ポイント (後付け用 / §5.1.2 acceptance)
         this._markerClusterer = null;
+
+        // 友達リンク線 (google.maps.Polyline) のリスト
+        this._socialLinkPolylines = [];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -211,6 +219,45 @@ export class GoogleMapsAdapter {
     }
 
     /**
+     * 選択中 agent から友達への社会的リンク線を描画する。
+     * 既存の線はクリアしてから新しく引く。
+     * @param {{ id:number, lat:number, lon:number }} centerAgent
+     * @param {Array<{ id:number, lat:number, lon:number }>} friendAgents
+     */
+    drawSocialLinks(centerAgent, friendAgents) {
+        this.clearSocialLinks();
+        if (!centerAgent || !friendAgents || friendAgents.length === 0) return;
+
+        const centerLatLng = new google.maps.LatLng(centerAgent.lat, centerAgent.lon);
+
+        for (const friend of friendAgents) {
+            const friendLatLng = new google.maps.LatLng(friend.lat, friend.lon);
+            const polyline = new google.maps.Polyline({
+                path:          [centerLatLng, friendLatLng],
+                strokeColor:   SOCIAL_LINK_COLOR,
+                strokeOpacity: 0.6,
+                strokeWeight:  SOCIAL_LINK_WEIGHT,
+                icons: [{
+                    icon:   { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2 },
+                    offset: "50%",
+                }],
+                map: this._map,
+            });
+            this._socialLinkPolylines.push(polyline);
+        }
+    }
+
+    /**
+     * drawSocialLinks で描画した社会的リンク線をすべて消去する。
+     */
+    clearSocialLinks() {
+        for (const poly of this._socialLinkPolylines) {
+            poly.setMap(null);
+        }
+        this._socialLinkPolylines = [];
+    }
+
+    /**
      * MarkerClusterer を後付けで設定する拡張ポイント。
      * playback の upsertAgents を書き換えずに使える (acceptance §5.1.2)。
      * @param {Object} clusterer - @googlemaps/markerclusterer の MarkerClusterer インスタンス
@@ -263,11 +310,11 @@ export class GoogleMapsAdapter {
             strokeWeight: 1.5,
         });
 
-        // Road: LineString -> 細線
+        // Road: LineString -> 淡い細線 (表示専用の飾りと分かる程度に薄く)
         this._dataLayers.road.setStyle({
-            strokeColor:  "#888877",
-            strokeWeight: 1.5,
-            strokeOpacity: 0.7,
+            strokeColor:   "#b0a898",
+            strokeWeight:  1.0,
+            strokeOpacity: 0.35,
         });
     }
 }

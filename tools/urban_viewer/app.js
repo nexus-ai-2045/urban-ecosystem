@@ -71,7 +71,7 @@ const state = {
     layerVisible: {
         poi:   true,
         aoi:   true,
-        road:  true,
+        road:  false,   // ランダム道路はデフォルト非表示 (意味の薄い飾り)
         agent: true,
     },
 };
@@ -261,6 +261,9 @@ function renderCurrentTick() {
     adapter.upsertAgents(markerData);
     adapter.setLayer("agent", state.layerVisible.agent);
 
+    // 選択中 agent の友達リンクを現在位置に追従更新
+    _updateSocialLinks(agentStates);
+
     // 時刻表示
     const representative = agentStates[0] || null;
     updateTimeDisplay(timeEl, representative);
@@ -268,7 +271,9 @@ function renderCurrentTick() {
 
     // 詳細パネル更新
     const selectedState = agentStates.find(s => s.agent_id === state.selection.agentId) || null;
-    updateAgentDetail(detailEl, state.selection.agentId, state.data, selectedState);
+    // id -> name マップを ui_panels に渡す
+    const profileMap = _buildProfileMap(state.data.profiles);
+    updateAgentDetail(detailEl, state.selection.agentId, state.data, selectedState, profileMap);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,7 +340,67 @@ function handleAgentClick(agentId) {
     const tick         = state.replay.ticks[state.replay.tickIndex];
     const agentStates  = state.replay.statesByTick.get(tick) || [];
     const currentState = agentStates.find(s => s.agent_id === agentId) || null;
-    updateAgentDetail(detailEl, agentId, state.data, currentState);
+
+    // 友達リンクを描画 (クリック時に即時反映)
+    _updateSocialLinks(agentStates);
+
+    // id -> name マップを ui_panels に渡す
+    const profileMap = _buildProfileMap(state.data.profiles);
+    updateAgentDetail(detailEl, agentId, state.data, currentState, profileMap);
+}
+
+/**
+ * profiles 配列から id -> name のマップを生成する。
+ * @param {Array<{id:number, name?:string}>} profiles
+ * @returns {Map<number, string>}
+ */
+function _buildProfileMap(profiles) {
+    const map = new Map();
+    for (const p of profiles) {
+        if (p.id != null && p.name) map.set(p.id, p.name);
+    }
+    return map;
+}
+
+/**
+ * 選択中 agent の友達リンクを現 tick の位置で更新する。
+ * 選択なし / 友達なし の場合はリンクをクリアする。
+ * @param {Array<{agent_id:number, lat:number, lon:number}>} agentStates - 現 tick の全 agent 状態
+ */
+function _updateSocialLinks(agentStates) {
+    const selectedId = state.selection.agentId;
+    if (selectedId === null || selectedId === undefined) {
+        adapter.clearSocialLinks();
+        return;
+    }
+
+    // 選択中 agent のプロフィールから social_networks を取得
+    const profile = state.data.profiles.find(p => p.id === selectedId) || null;
+    const friendIds = Array.isArray(profile?.social_networks) ? profile.social_networks : [];
+
+    if (friendIds.length === 0) {
+        adapter.clearSocialLinks();
+        return;
+    }
+
+    // 選択中 agent の現在位置
+    const centerState = agentStates.find(s => s.agent_id === selectedId) || null;
+    if (!centerState) {
+        adapter.clearSocialLinks();
+        return;
+    }
+
+    // 友達の現在位置を収集 (現 tick にいる友達のみ)
+    const friendAgents = [];
+    for (const fid of friendIds) {
+        const fs = agentStates.find(s => s.agent_id === fid);
+        if (fs) friendAgents.push({ id: fid, lat: fs.lat, lon: fs.lon });
+    }
+
+    adapter.drawSocialLinks(
+        { id: selectedId, lat: centerState.lat, lon: centerState.lon },
+        friendAgents,
+    );
 }
 
 /** イベント配線 */

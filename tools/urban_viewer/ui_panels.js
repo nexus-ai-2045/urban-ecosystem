@@ -90,8 +90,9 @@ export function updateLegend(legendEl, data, agentCount) {
  * @param {number|null} agentId - 選択中 agent id (null で空表示)
  * @param {Object} data - ViewerState.data
  * @param {Object|null} currentState - 現 tick の AgentState オブジェクト
+ * @param {Map<number,string>} [profileMap] - id -> name マップ (友達名前解決用)
  */
-export function updateAgentDetail(detailEl, agentId, data, currentState) {
+export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map()) {
     if (!detailEl) return;
 
     // 既存 DOM を空にして再構築
@@ -119,10 +120,23 @@ export function updateAgentDetail(detailEl, agentId, data, currentState) {
         appendRow(detailEl, "性別",  profile.gender      || "—");
         appendRow(detailEl, "説明",  profile.description || "—");
         appendRow(detailEl, "role",  profile.role        || "—");
-        const snIds = Array.isArray(profile.social_networks)
-            ? profile.social_networks.join(", ") || "なし"
-            : "—";
-        appendRow(detailEl, "social network IDs", snIds);
+
+        // 友達リストを id -> 名前に解決して表示
+        const snIds = Array.isArray(profile.social_networks) ? profile.social_networks : [];
+        let friendDisplay;
+        if (snIds.length === 0) {
+            friendDisplay = "なし";
+        } else {
+            // 名前に解決できた友達を列挙し、解決できない id は数字のままフォールバック
+            const names = snIds.map(id => profileMap.get(id) || String(id));
+            // 5件超は件数を末尾に追加
+            if (names.length > 5) {
+                friendDisplay = names.slice(0, 5).join(", ") + `…(${names.length})`;
+            } else {
+                friendDisplay = names.join(", ");
+            }
+        }
+        appendRow(detailEl, "友達", friendDisplay);
     }
 
     if (currentState) {
