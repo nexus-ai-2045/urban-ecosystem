@@ -201,7 +201,10 @@ class VertexGeminiProvider(LLMProvider):
         """
         # 遅延 import (generate_content 呼び出しに必要な型のみ)
         try:
-            from google.genai.types import GenerateContentConfig  # type: ignore[import]
+            from google.genai.types import (  # type: ignore[import]
+                GenerateContentConfig,
+                ThinkingConfig,
+            )
         except ImportError as e:
             raise ImportError(
                 "VertexGeminiProvider を使用するには google-genai パッケージが必要です。\n"
@@ -213,9 +216,13 @@ class VertexGeminiProvider(LLMProvider):
         # プロンプト本文・応答テキストは info ログに出さない (§6 ルール)
         logger.debug("Vertex Gemini へリクエストを送信 (model=%s)", self.model)
 
+        # gemini-2.5-flash は思考モデル。短い要約用途では思考を無効化し
+        # (thinking_budget=0)、max_output_tokens を思考が消費して本文が
+        # 途中で切れるのを防ぐ。
         config = GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
+            thinking_config=ThinkingConfig(thinking_budget=0),
         )
         response = client.models.generate_content(
             model=self.model,
