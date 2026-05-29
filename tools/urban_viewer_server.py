@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Generator
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,6 +275,27 @@ app = FastAPI(title="Urban Ecosystem Viewer", version="0.1.0")
 
 # 静的アセット配信 (/static/* -> tools/urban_viewer/)
 _STATIC_DIR = Path(__file__).parent / "urban_viewer"
+_APP_JS_PATH = _STATIC_DIR / "app.js"
+
+
+@app.get("/static/app.js")
+async def _serve_app_js() -> Response:
+    """app.js 配信時に Maps キー / Map ID プレースホルダを注入する (§5.1.1)。
+
+    StaticFiles mount より前に登録し、app.js だけ templating する。
+    キー未設定時はプレースホルダを残し、app.js 側が fallback アダプタを選ぶ。
+    キー値はログに出力しない。
+    """
+    api_key = _get_maps_api_key()
+    map_id  = _get_maps_map_id()
+    js = _APP_JS_PATH.read_text(encoding="utf-8")
+    if api_key:
+        js = js.replace(_PLACEHOLDER_KEY, api_key)
+        js = js.replace(_PLACEHOLDER_MAP_ID, map_id if map_id else "DEMO_MAP_ID")
+    return Response(content=js, media_type="application/javascript")
+
+
+# app.js 以外の静的アセット (CSS / 他 JS / colors.js 等) は raw 配信
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 
