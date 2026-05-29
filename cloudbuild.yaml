@@ -1,0 +1,61 @@
+# urban-ecosystem — Cloud Build 設定 (build + push のみ)
+# 正本: docs/ai-ecosystem-tool-spec.md §17.6 / wo-urban-005-cloud-run-deploy.yaml
+#
+# 用途: Artifact Registry へのイメージビルド・プッシュ。
+#       gcloud run deploy は docs/deploy.md の手順に委ねる (本 yaml はデプロイしない)。
+#
+# 実行例:
+#   gcloud builds submit \
+#     --config cloudbuild.yaml \
+#     --project nexus-ai-2045 \
+#     --substitutions _REGION=asia-northeast1,_REPO=urban-ecosystem \
+#     .
+
+substitutions:
+  # GCP プロジェクト (必要なら --substitutions で上書き可)
+  _PROJECT: nexus-ai-2045
+  # Artifact Registry のリージョン
+  _REGION: asia-northeast1
+  # Artifact Registry リポジトリ名 (事前に `gcloud artifacts repositories create` 要)
+  _REPO: urban-ecosystem
+  # イメージ名
+  _IMAGE: urban-ecosystem
+
+steps:
+  # Step 1: docker build
+  # タグ: latest + コミット SHA (不変参照)
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --tag
+      - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:latest
+      - --tag
+      - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:$SHORT_SHA
+      - .
+
+  # Step 2: docker push (latest + SHA タグの両方)
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
+    waitFor:
+      - build
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:latest
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-sha
+    waitFor:
+      - build
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:$SHORT_SHA
+
+# ビルド完了後に Artifact Registry へ登録するイメージ一覧
+images:
+  - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:latest
+  - ${_REGION}-docker.pkg.dev/${_PROJECT}/${_REPO}/${_IMAGE}:$SHORT_SHA
+
+options:
+  # ビルドログを Cloud Logging へ転送 (Cloud Build デフォルト)
+  logging: CLOUD_LOGGING_ONLY
