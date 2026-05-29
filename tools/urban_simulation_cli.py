@@ -41,6 +41,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from environments.urban_2d.simulation import Simulation, load_inputs  # noqa: E402
+from app.llm_provider import make_llm_provider  # noqa: E402
 
 # run_id バリデーション (spec §21.1 / パストラバーサル防止)
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
@@ -127,6 +128,22 @@ def _run(args: argparse.Namespace) -> int:
     aoi_count = _count_features(aois_path)
     road_count = _count_features(roadnet_path)
 
+    # LLMProvider を生成する (既定 "rule" = RuleBasedProvider / 決定論維持)
+    # vertex 選択時は GOOGLE_CLOUD_PROJECT 必須 + ADC 前提 (spec §17.5)
+    llm_kind: str = getattr(args, "llm", "rule")
+    llm_opts: dict = {}
+    if llm_kind == "vertex":
+        import os
+        proj = os.environ.get("GOOGLE_CLOUD_PROJECT")
+        if not proj:
+            print(
+                "error: --llm vertex を使用するには環境変数 GOOGLE_CLOUD_PROJECT が必要です",
+                file=sys.stderr,
+            )
+            return 2
+        llm_opts["project"] = proj
+    provider = make_llm_provider(llm_kind, **llm_opts)
+
     sim = Simulation(
         pois,
         profiles,
@@ -135,6 +152,7 @@ def _run(args: argparse.Namespace) -> int:
         run_id=run_id,
         aois=aoi_count,
         roads=road_count,
+        llm_provider=provider,
     )
     summary = sim.run(out_dir)
 
@@ -161,6 +179,13 @@ def build_parser() -> argparse.ArgumentParser:
                        help="--sample 生成時のエージェント数 (既定 100)")
     run_p.add_argument("--sample-pois", dest="pois_count", type=int, default=300,
                        help="--sample 生成時の POI 数 (既定 300)")
+    run_p.add_argument(
+        "--llm", choices=["rule", "vertex"], default="rule",
+        help=(
+            "LLM プロバイダ (既定 rule=RuleBasedProvider / vertex=VertexGeminiProvider)。"
+            "vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 (spec §17.5)。"
+        ),
+    )
     run_p.add_argument("--out", required=True, help="出力ディレクトリ (末尾が run_id)")
     run_p.set_defaults(func=_run)
 

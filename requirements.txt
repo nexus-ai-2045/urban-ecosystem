@@ -5,6 +5,11 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.20.0
 httpx>=0.24.0
 
+# [optional] Vertex AI Gemini 連携 (--llm vertex / VertexGeminiProvider)
+# 遅延 import のため rule 経路・テスト実行には不要 (runtime 必須にしない)。
+# Cloud Run 本番で LLM を使う場合のみ pip install google-genai
+# google-genai>=1.10.0
+
 # [dev] ローカル開発・CI テストにのみ必要な依存 (Cloud Run イメージには不要)
 # Dockerfile は requirements.txt を丸ごと pip install するため物理分割は行わない。
 pytest>=7.0.0

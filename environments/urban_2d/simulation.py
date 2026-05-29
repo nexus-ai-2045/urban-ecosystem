@@ -35,7 +35,7 @@ import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from . import rules
 from .data_loader import (
@@ -43,6 +43,10 @@ from .data_loader import (
     load_agent_profiles,
 )
 from .models import POI, AgentProfile
+
+if TYPE_CHECKING:
+    # 型チェック時のみ import (循環回避 / SDK 未インストール環境での安全性)
+    from app.llm_provider import LLMProvider
 
 # tick/time 変換 (data-contract §Time and Tick)
 TICK_MINUTES = rules.TICK_MINUTES
@@ -106,7 +110,22 @@ class Simulation:
         run_id: str = "urban_demo",
         aois: int = 0,
         roads: int = 0,
+        llm_provider: Optional[Any] = None,
     ) -> None:
+        """シミュレーション初期化。
+
+        Args:
+            pois: POI リスト。
+            profiles: エージェントプロフィールリスト。
+            seed: 乱数 seed (決定論 §13.3.2)。
+            ticks: シミュレーション tick 数。
+            run_id: run 識別子。
+            aois: AOI 件数 (summary 用)。
+            roads: Road 件数 (summary 用)。
+            llm_provider: LLMProvider インスタンス (spec §10.1)。
+                None の場合は RuleBasedProvider を使う (MVP 既定)。
+                RuleBasedProvider 経路では決定論が保たれる (byte 一致 §13.3.2)。
+        """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
         self.pois = pois
@@ -117,6 +136,9 @@ class Simulation:
         self.run_id = run_id
         self.aois = aois
         self.roads = roads
+
+        # LLMProvider: None の場合は遅延生成で RuleBasedProvider を使う
+        self._llm_provider: Optional[Any] = llm_provider
 
         self._poi_by_id: dict[str, POI] = {p.id: p for p in pois}
         self._profile_ids = frozenset(p.id for p in profiles)
@@ -132,6 +154,15 @@ class Simulation:
 
         # bbox (§13.3.3 invariant 用 / 出力には使わない)
         self.bbox = self._compute_bbox(pois, profiles)
+
+    @property
+    def llm_provider(self) -> Any:
+        """LLMProvider を返す。未設定の場合は RuleBasedProvider を遅延生成する。"""
+        if self._llm_provider is None:
+            # 遅延 import (RuleBased 経路では SDK 不要)
+            from app.llm_provider import RuleBasedProvider
+            self._llm_provider = RuleBasedProvider()
+        return self._llm_provider
 
     # ── 初期化補助 ──────────────────────────────────────────────────────────
 
@@ -466,7 +497,12 @@ class Simulation:
     def _commit_interaction(
         self, cand: dict[str, Any], tick: int
     ) -> dict[str, Any]:
-        """候補から type 決定 + score 更新 + event dict 生成 (§9.8.2 / §9.9)。"""
+        """候補から type 決定 + score 更新 + event dict 生成 (§9.8.2 / §9.9)。
+
+        summary は LLMProvider.complete() 経由で生成する (spec §10.2)。
+        RuleBasedProvider 経路では _summary_text と同一のテンプレ文が返り、
+        決定論 byte 一致 (§13.3.2) が保たれる。
+        """
         a_id = cand["a_id"]
         b_id = cand["b_id"]
         rel = self._pair_rel(a_id, b_id, cand["in_net"])
@@ -479,7 +515,10 @@ class Simulation:
         rel["state"] = to_state
 
         day, time_str = tick_to_day_time(tick)
-        summary = self._summary_text(ev_type, a_id, b_id, cand["poi_id"])
+
+        # LLMProvider 経由で summary を生成 (§10.2 / spec §10.1)
+        summary = self._generate_summary(ev_type, a_id, b_id, cand["poi_id"], from_state)
+
         return {
             "tick": tick,
             "day": day,
@@ -491,9 +530,37 @@ class Simulation:
             "relationship_delta": {"from": from_state, "to": to_state},
         }
 
+    def _generate_summary(
+        self,
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        relationship_state: str,
+    ) -> str:
+        """LLMProvider 経由で interaction summary を生成する (spec §10.2)。
+
+        RuleBasedProvider 経路ではテンプレ文が返り、決定論が保たれる (§13.3.2)。
+        VertexGeminiProvider では Gemini が自然言語要約を返す (後段 M5)。
+        """
+        from app.llm_provider import build_prompt
+        prompt = build_prompt(
+            prompt_type="summary",
+            agent_a_id=a_id,
+            agent_b_id=b_id,
+            event_type=ev_type,
+            location_poi_id=poi_id,
+            relationship_state=relationship_state,
+        )
+        return self.llm_provider.complete(prompt)
+
     @staticmethod
     def _summary_text(ev_type: str, a_id: int, b_id: int, poi_id: str) -> str:
-        """MVP テンプレ summary を返す (§9.8.2 / 後段で Gemini 差し替え)。"""
+        """MVP テンプレ summary を返す (§9.8.2 / 後段で Gemini 差し替え)。
+
+        注意: 本メソッドは _generate_summary への移行後も互換性のため残す。
+        直接呼び出しは _generate_summary 経由 (LLMProvider) を推奨する。
+        """
         verb = {
             "meeting": "が出会った",
             "conversation": "が会話した",
