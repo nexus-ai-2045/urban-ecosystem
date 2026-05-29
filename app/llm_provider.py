@@ -99,6 +99,10 @@ class RuleBasedProvider(LLMProvider):
     _MARKER_AGENT_A = "agent_a_id:"
     _MARKER_AGENT_B = "agent_b_id:"
     _MARKER_POI = "location_poi_id:"
+    # 表示名マーカー (#2 苗字 / #4 店名)
+    _MARKER_AGENT_A_NAME = "agent_a_name:"
+    _MARKER_AGENT_B_NAME = "agent_b_name:"
+    _MARKER_POI_NAME = "poi_name:"
 
     def complete(self, prompt: str, *, temperature: float = 0.7, max_tokens: int = 256) -> str:
         """プロンプトのメタデータからテンプレ文を生成して返す。
@@ -111,9 +115,16 @@ class RuleBasedProvider(LLMProvider):
         agent_a = self._extract(prompt, self._MARKER_AGENT_A)
         agent_b = self._extract(prompt, self._MARKER_AGENT_B)
         poi_id = self._extract(prompt, self._MARKER_POI)
+        # 表示名マーカーを取り出す (存在しなければ空文字でフォールバック)
+        a_name = self._extract(prompt, self._MARKER_AGENT_A_NAME) or ""
+        b_name = self._extract(prompt, self._MARKER_AGENT_B_NAME) or ""
+        poi_name = self._extract(prompt, self._MARKER_POI_NAME) or ""
 
         if ev_type and agent_a and agent_b and poi_id:
-            return self._template_summary(ev_type, int(agent_a), int(agent_b), poi_id)
+            return self._template_summary(
+                ev_type, int(agent_a), int(agent_b), poi_id,
+                a_name=a_name, b_name=b_name, poi_name=poi_name,
+            )
 
         # フォールバック: プロンプト種別が不明な場合
         return "（ルールベース応答）"
@@ -150,11 +161,22 @@ class RuleBasedProvider(LLMProvider):
         return ""
 
     @staticmethod
-    def _template_summary(ev_type: str, a_id: int, b_id: int, poi_id: str) -> str:
+    def _template_summary(
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        a_name: str = "",
+        b_name: str = "",
+        poi_name: str = "",
+    ) -> str:
         """simulation.py の _summary_text と完全同一のテンプレ文を返す。
 
         この実装は simulation._summary_text の複製であり、両者が同一出力を
         返すことが byte 一致 (§13.3.2) の根拠である。変更時は両方を同期する。
+
+        a_name / b_name が空の場合は "エージェント {id}" 形式にフォールバックする。
+        poi_name が空の場合は poi_id にフォールバックする (#2 苗字 / #4 店名)。
         """
         verb = {
             "meeting": "が出会った",
@@ -162,7 +184,11 @@ class RuleBasedProvider(LLMProvider):
             "conflict": "が口論した",
             "farewell": "が別れた",
         }.get(ev_type, "が交流した")
-        return f"エージェント {a_id} と {b_id} {verb} (場所: {poi_id})。"
+        # 表示名フォールバック
+        display_a = a_name if a_name else f"エージェント {a_id}"
+        display_b = b_name if b_name else f"エージェント {b_id}"
+        display_poi = poi_name if poi_name else poi_id
+        return f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -393,6 +419,10 @@ def build_prompt(
     agent_b_id: int,
     event_type: str,
     location_poi_id: str,
+    # 表示名 (#2 苗字 / #4 店名)
+    agent_a_name: str = "",
+    agent_b_name: str = "",
+    poi_name: str = "",
     # 追加コンテキスト (任意)
     agent_a_profile: Optional[dict[str, Any]] = None,
     agent_b_profile: Optional[dict[str, Any]] = None,
@@ -415,6 +445,11 @@ def build_prompt(
         agent_b_id: エージェント B の ID。
         event_type: interaction type (meeting / conversation / conflict / farewell)。
         location_poi_id: 発生場所の POI ID。
+        agent_a_name: エージェント A の表示名 (例: "清水さん") (#2 苗字)。
+            空文字の場合は "エージェント {id}" 形式にフォールバックする。
+        agent_b_name: エージェント B の表示名 (#2 苗字)。同上。
+        poi_name: POI の実名 (例: "Tower Records Shibuya") (#4 店名)。
+            空文字の場合は location_poi_id にフォールバックする。
         agent_a_profile: エージェント A のプロフィール dict (任意)。
         agent_b_profile: エージェント B のプロフィール dict (任意)。
         current_time: 現在時刻 HH:MM:SS (任意)。
@@ -435,22 +470,31 @@ def build_prompt(
     lines.append(f"agent_a_id: {agent_a_id}")
     lines.append(f"agent_b_id: {agent_b_id}")
     lines.append(f"location_poi_id: {location_poi_id}")
+    # 表示名マーカー (#2 苗字 / #4 店名): 空でも行を出力してマーカー解析を安定させる
+    lines.append(f"agent_a_name: {agent_a_name}")
+    lines.append(f"agent_b_name: {agent_b_name}")
+    lines.append(f"poi_name: {poi_name}")
+
+    # タスク内で使う表示名 (フォールバック込み)
+    _display_a = agent_a_name if agent_a_name else f"エージェント {agent_a_id}"
+    _display_b = agent_b_name if agent_b_name else f"エージェント {agent_b_id}"
+    _display_poi = poi_name if poi_name else location_poi_id
 
     # ── §10.3 構造化入力セクション ─────────────────────────────────────────────
     if prompt_type == "summary":
         lines.append("")
         lines.append("## タスク")
         lines.append(
-            f"エージェント {agent_a_id} とエージェント {agent_b_id} が "
+            f"{_display_a} と {_display_b} が "
             f"'{event_type}' イベントを起こした。"
-            f"場所: {location_poi_id}。"
+            f"場所: {_display_poi}。"
             "この出来事の短い要約文 (1〜2 文) を日本語で生成してください。"
         )
     elif prompt_type == "relationship_reason":
         lines.append("")
         lines.append("## タスク")
         lines.append(
-            f"エージェント {agent_a_id} とエージェント {agent_b_id} の関係が "
+            f"{_display_a} と {_display_b} の関係が "
             f"'{event_type}' イベントにより変化した。"
             "この関係変化の理由を 1 文で日本語で説明してください。"
         )

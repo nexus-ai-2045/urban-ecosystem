@@ -253,15 +253,25 @@ async function renderCurrentTick() {
     const tick       = ticks[tickIndex];
     const agentStates = statesByTick.get(tick) || [];
 
+    // id -> name マップを事前に構築 (upsertAgents / 詳細パネル両方で使う)
+    const profileMap = _buildProfileMap(state.data.profiles);
+    const poiMap     = _buildPoiMap(state.data.pois);
+
     // adapter.upsertAgents に渡すデータ
-    const markerData = agentStates.map(s => ({
-        id:  s.agent_id,
-        lat: s.lat,
-        lon: s.lon,
-        action: s.action,
-        status: s.status,
-        role: state.data.profiles.find(p => p.id === s.agent_id)?.role || "other",
-    }));
+    // label: マーカー表示用の短縮名 (profile.name の先頭2文字 / なければ id)
+    const markerData = agentStates.map(s => {
+        const name  = profileMap.get(s.agent_id);
+        const label = name ? name.slice(0, 2) : String(s.agent_id);
+        return {
+            id:  s.agent_id,
+            lat: s.lat,
+            lon: s.lon,
+            action: s.action,
+            status: s.status,
+            role:   state.data.profiles.find(p => p.id === s.agent_id)?.role || "other",
+            label,
+        };
+    });
 
     // GoogleMapsAdapter は async / FallbackMapAdapter は sync。
     // 両者の戻り値を await することで未解決 Promise を残さない。
@@ -278,9 +288,8 @@ async function renderCurrentTick() {
 
     // 詳細パネル更新
     const selectedState = agentStates.find(s => s.agent_id === state.selection.agentId) || null;
-    // id -> name マップを ui_panels に渡す
-    const profileMap = _buildProfileMap(state.data.profiles);
-    updateAgentDetail(detailEl, state.selection.agentId, state.data, selectedState, profileMap);
+    // profileMap / poiMap は上記で構築済み
+    updateAgentDetail(detailEl, state.selection.agentId, state.data, selectedState, profileMap, poiMap);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,9 +364,10 @@ function handleAgentClick(agentId) {
     // 友達リンクを描画 (クリック時に即時反映)
     _updateSocialLinks(agentStates);
 
-    // id -> name マップを ui_panels に渡す
+    // id -> name マップ / poi -> 店名マップを ui_panels に渡す
     const profileMap = _buildProfileMap(state.data.profiles);
-    updateAgentDetail(detailEl, agentId, state.data, currentState, profileMap);
+    const poiMap     = _buildPoiMap(state.data.pois);
+    updateAgentDetail(detailEl, agentId, state.data, currentState, profileMap, poiMap);
 }
 
 /**
@@ -369,6 +379,21 @@ function _buildProfileMap(profiles) {
     const map = new Map();
     for (const p of profiles) {
         if (p.id != null && p.name) map.set(p.id, p.name);
+    }
+    return map;
+}
+
+/**
+ * pois 配列から poi_id -> 店名のマップを生成する。
+ * state.data.pois は loadRun で feature.properties を展開したオブジェクト配列。
+ * name がなければエントリを作らない (呼び出し側で id フォールバック)。
+ * @param {Array<{id:string, name?:string}>} pois
+ * @returns {Map<string, string>}
+ */
+function _buildPoiMap(pois) {
+    const map = new Map();
+    for (const poi of pois) {
+        if (poi.id != null && poi.name) map.set(String(poi.id), poi.name);
     }
     return map;
 }

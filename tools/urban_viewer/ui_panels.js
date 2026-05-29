@@ -92,9 +92,10 @@ export function updateLegend(legendEl, data, agentCount) {
  * @param {number|null} agentId - 選択中 agent id (null で空表示)
  * @param {Object} data - ViewerState.data
  * @param {Object|null} currentState - 現 tick の AgentState オブジェクト
- * @param {Map<number,string>} [profileMap] - id -> name マップ (友達名前解決用)
+ * @param {Map<number,string>} [profileMap] - agent id -> name マップ (友達名前解決用)
+ * @param {Map<string,string>} [poiMap] - poi id -> 店名マップ (訪問先名前解決用)
  */
-export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map()) {
+export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map(), poiMap = new Map()) {
     if (!detailEl) return;
 
     // 既存 DOM を空にして再構築
@@ -111,13 +112,15 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
     const profiles = data.profiles || [];
     const profile  = profiles.find(p => p.id === agentId) || null;
 
+    // ヘッダー: profile.name があれば「名前さん」、なければ「Agent N」
     const header = document.createElement("div");
     header.className   = "detail-header";
-    header.textContent = `Agent ${agentId}`;
+    header.textContent = profile && profile.name
+        ? `${profile.name}さん`
+        : `Agent ${agentId}`;
     detailEl.appendChild(header);
 
     if (profile) {
-        appendRow(detailEl, "名前",  profile.name        || "—");
         appendRow(detailEl, "年齢",  profile.age         != null ? profile.age : "—");
         appendRow(detailEl, "性別",  profile.gender      || "—");
         appendRow(detailEl, "説明",  profile.description || "—");
@@ -148,12 +151,30 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
 
         const latVal = typeof currentState.lat === "number" ? currentState.lat.toFixed(5) : "—";
         const lonVal = typeof currentState.lon === "number" ? currentState.lon.toFixed(5) : "—";
+
+        // POI id を店名に解決 (name がなければ id そのままフォールバック)
+        const currentPoiRaw = currentState.current_poi_id || null;
+        const targetPoiRaw  = currentState.target_poi_id  || null;
+        const currentPoiLabel = currentPoiRaw
+            ? (poiMap.get(currentPoiRaw) || currentPoiRaw)
+            : "移動中";
+        const targetPoiLabel = targetPoiRaw
+            ? (poiMap.get(targetPoiRaw) || targetPoiRaw)
+            : "—";
+
         appendRow(detailEl, "時刻",     `Day ${currentState.day} ${currentState.time}`);
         appendRow(detailEl, "現在位置", `${latVal}, ${lonVal}`);
-        appendRow(detailEl, "現在 POI", currentState.current_poi_id || "移動中");
-        appendRow(detailEl, "目的 POI", currentState.target_poi_id  || "—");
+        appendRow(detailEl, "現在 POI", currentPoiLabel);
+        appendRow(detailEl, "目的 POI", targetPoiLabel);
         appendRow(detailEl, "action",   currentState.action  || "—");
         appendRow(detailEl, "status",   currentState.status  || "—");
+
+        // interaction summary: 空・null・undefined でもパネルが壊れないよう
+        // 値がある時だけ表示する
+        const summary = currentState.summary;
+        if (summary != null && String(summary).trim() !== "") {
+            appendRow(detailEl, "summary", String(summary));
+        }
     }
 }
 

@@ -29,6 +29,7 @@ import { CATEGORY_COLORS } from "./colors.js";
  * @property {number} lon
  * @property {string|null} [action]
  * @property {string|null} [status]
+ * @property {string} [label] - マーカーに表示する短縮ラベル (苗字2文字など / 省略時は id)
  */
 
 /** canvas のパディング (px) — 最大 bounds を少し縮めて余白を作る */
@@ -436,12 +437,13 @@ export class FallbackMapAdapter {
             ctx.lineWidth = isSelected ? 2.5 : 1.5;
             ctx.stroke();
 
-            // 番号テキスト
+            // ラベルテキスト: label フィールドがあれば使用し、なければ id で表示
+            const labelText = agent.label != null ? String(agent.label) : String(agent.id);
             ctx.fillStyle = color;
             ctx.font = `${isSelected ? "bold " : ""}8px sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(String(agent.id), x, y);
+            ctx.fillText(labelText, x, y);
         }
         // テキスト描画後にデフォルトに戻す
         ctx.textAlign = "left";

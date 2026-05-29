@@ -162,17 +162,23 @@ export class GoogleMapsAdapter {
                 const color = (agent.id === this._selectedAgentId)
                     ? HIGHLIGHT_COLOR
                     : (ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
+                // glyph: label フィールドがあれば名前の短縮形を表示、なければ id
+                const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
                 const pin   = new PinElement({
-                    glyph:           String(agent.id),
+                    glyph:           glyphText,
                     background:      color,
                     borderColor:     "#ffffff",
                     glyphColor:      "#ffffff",
                 });
+                // title: ツールチップに短縮ラベルを表示
+                const titleText = agent.label != null
+                    ? `${agent.label} (id:${agent.id})`
+                    : `Agent ${agent.id}`;
                 const marker = new AdvancedMarkerElement({
                     map:      this._map,
                     position: latLng,
                     content:  pin.element,
-                    title:    `Agent ${agent.id}`,
+                    title:    titleText,
                 });
                 marker.addListener("click", () => {
                     if (this._agentClickCb) this._agentClickCb(agent.id);

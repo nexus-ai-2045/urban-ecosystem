@@ -144,6 +144,9 @@ def _run(args: argparse.Namespace) -> int:
         llm_opts["project"] = proj
     provider = make_llm_provider(llm_kind, **llm_opts)
 
+    # --no-summaries で interaction summary 生成をスキップする (#1 会話オプション)
+    enable_summaries: bool = not getattr(args, "no_summaries", False)
+
     sim = Simulation(
         pois,
         profiles,
@@ -153,6 +156,7 @@ def _run(args: argparse.Namespace) -> int:
         aois=aoi_count,
         roads=road_count,
         llm_provider=provider,
+        enable_summaries=enable_summaries,
     )
     summary = sim.run(out_dir)
 
@@ -184,6 +188,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "LLM プロバイダ (既定 rule=RuleBasedProvider / vertex=VertexGeminiProvider)。"
             "vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 (spec §17.5)。"
+        ),
+    )
+    run_p.add_argument(
+        "--no-summaries", action="store_true", default=False,
+        help=(
+            "interaction summary の生成をスキップする (#1 会話オプション)。"
+            "off 時 interaction_events の summary は空文字になる。"
+            "--llm と独立に制御できる。既定はサマリ生成あり (on)。"
         ),
     )
     run_p.add_argument("--out", required=True, help="出力ディレクトリ (末尾が run_id)")

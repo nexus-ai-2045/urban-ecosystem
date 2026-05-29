@@ -111,6 +111,7 @@ class Simulation:
         aois: int = 0,
         roads: int = 0,
         llm_provider: Optional[Any] = None,
+        enable_summaries: bool = True,
     ) -> None:
         """シミュレーション初期化。
 
@@ -125,6 +126,8 @@ class Simulation:
             llm_provider: LLMProvider インスタンス (spec §10.1)。
                 None の場合は RuleBasedProvider を使う (MVP 既定)。
                 RuleBasedProvider 経路では決定論が保たれる (byte 一致 §13.3.2)。
+            enable_summaries: True (既定) で interaction summary を生成する。
+                False にすると summary は空文字になり、LLM 呼び出しをスキップする。
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
@@ -140,9 +143,25 @@ class Simulation:
         # LLMProvider: None の場合は遅延生成で RuleBasedProvider を使う
         self._llm_provider: Optional[Any] = llm_provider
 
+        # summary 生成の on/off (#1 会話オプション)
+        self._enable_summaries = enable_summaries
+
         self._poi_by_id: dict[str, POI] = {p.id: p for p in pois}
         self._profile_ids = frozenset(p.id for p in profiles)
         self.rng = random.Random(seed)
+
+        # エージェント id → 表示名 の lookup (#2 苗字)
+        # AgentProfile.name (例: "清水優斗") に "さん" を付けて使う。
+        # profile は surname+given の連結のみ持つため分割は行わない。
+        self._agent_display_name: dict[int, str] = {
+            p.id: p.name + "さん" for p in profiles if p.name
+        }
+
+        # POI id → 表示名 の lookup (#4 店名)
+        # POI.name が None の場合は id をフォールバックとして使う。
+        self._poi_display_name: dict[str, str] = {
+            p.id: (p.name if p.name else p.id) for p in pois
+        }
 
         # relationship 状態 (key=(min_id, max_id) → {"score", "state"})
         self._rel: dict[tuple[int, int], dict[str, Any]] = {}
@@ -612,26 +631,53 @@ class Simulation:
     ) -> str:
         """LLMProvider 経由で interaction summary を生成する (spec §10.2)。
 
+        enable_summaries=False の場合は空文字を返す (#1 会話オプション)。
         RuleBasedProvider 経路ではテンプレ文が返り、決定論が保たれる (§13.3.2)。
         VertexGeminiProvider では Gemini が自然言語要約を返す (後段 M5)。
+
+        エージェントは profile.name に "さん" を付けた表示名を使う (#2 苗字)。
+        POI は properties.name があれば実名、なければ id を使う (#4 店名)。
         """
+        if not self._enable_summaries:
+            return ""
+
         from app.llm_provider import build_prompt
+        # #2 苗字: エージェント表示名を lookup (未登録は "エージェント {id}" へフォールバック)
+        a_name = self._agent_display_name.get(a_id, f"エージェント {a_id}")
+        b_name = self._agent_display_name.get(b_id, f"エージェント {b_id}")
+        # #4 店名: POI 実名を lookup (未登録は poi_id へフォールバック)
+        poi_name = self._poi_display_name.get(poi_id, poi_id)
+
         prompt = build_prompt(
             prompt_type="summary",
             agent_a_id=a_id,
             agent_b_id=b_id,
             event_type=ev_type,
             location_poi_id=poi_id,
+            agent_a_name=a_name,
+            agent_b_name=b_name,
+            poi_name=poi_name,
             relationship_state=relationship_state,
         )
         return self.llm_provider.complete(prompt)
 
     @staticmethod
-    def _summary_text(ev_type: str, a_id: int, b_id: int, poi_id: str) -> str:
+    def _summary_text(
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        a_name: str = "",
+        b_name: str = "",
+        poi_name: str = "",
+    ) -> str:
         """MVP テンプレ summary を返す (§9.8.2 / 後段で Gemini 差し替え)。
 
         注意: 本メソッドは _generate_summary への移行後も互換性のため残す。
         直接呼び出しは _generate_summary 経由 (LLMProvider) を推奨する。
+
+        a_name / b_name が空の場合は "エージェント {id}" 形式にフォールバックする。
+        poi_name が空の場合は poi_id にフォールバックする (#2 苗字 / #4 店名)。
         """
         verb = {
             "meeting": "が出会った",
@@ -639,7 +685,11 @@ class Simulation:
             "conflict": "が口論した",
             "farewell": "が別れた",
         }.get(ev_type, "が交流した")
-        return f"エージェント {a_id} と {b_id} {verb} (場所: {poi_id})。"
+        # 表示名フォールバック
+        display_a = a_name if a_name else f"エージェント {a_id}"
+        display_b = b_name if b_name else f"エージェント {b_id}"
+        display_poi = poi_name if poi_name else poi_id
+        return f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
 
     # ── run ─────────────────────────────────────────────────────────────────
 
