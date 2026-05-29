@@ -380,7 +380,11 @@ def test_tick_time_consistency(sample_inputs):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def test_cli_sample_path(tmp_path):
-    """CLI --sample 経路が完走し summary を出力する (§12.1)。"""
+    """CLI --sample 経路が完走し、リプレイ可能な自己完結 run を出力する (§12.1)。
+
+    静的 (pois/aois/roadnet/agent_profiles) + 挙動 (agent_states/visit/interaction)
+    + summary を同一 run dir に残すことで、ビューア (WO-003) が全レイヤーを描画できる。
+    """
     out = tmp_path / "cli_sample_run"
     result = subprocess.run(
         [
@@ -393,13 +397,21 @@ def test_cli_sample_path(tmp_path):
     summary = json.loads(result.stdout)
     assert summary["run_id"] == "cli_sample_run"
     assert summary["agents"] == 100
+    assert summary["aois"] == 10
+    assert summary["roads"] == 299
+    assert summary["interactions"] > 0  # sim summary で上書きされている (静的 0 ではない)
+    # 静的 + 挙動の全ファイルが run dir 単体に揃う (viewer 消費可能)
     for name in (
+        "pois.geojson",
+        "aois.geojson",
+        "roadnet.geojson",
+        "agent_profiles_N100.json",
         "agent_states.jsonl",
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
         "summary.json",
     ):
-        assert (out / name).exists()
+        assert (out / name).exists(), f"{name} が run dir に無い"
 
 
 def test_cli_static_input_path(sample_inputs, tmp_path):

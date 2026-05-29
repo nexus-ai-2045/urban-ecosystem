@@ -33,7 +33,6 @@ import argparse
 import json
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 # urban-ecosystem ルートを import path に追加する。
@@ -41,7 +40,6 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from environments.urban_2d.data_loader import load_aois, load_roads  # noqa: E402
 from environments.urban_2d.simulation import Simulation, load_inputs  # noqa: E402
 
 # run_id バリデーション (spec §21.1 / パストラバーサル防止)
@@ -95,24 +93,26 @@ def _run(args: argparse.Namespace) -> int:
     out_dir = Path(args.out)
     run_id = _resolve_run_id(out_dir)
 
-    sample_tmp: tempfile.TemporaryDirectory | None = None
     aois_path = Path(args.aois) if args.aois else None
     roadnet_path = Path(args.roadnet) if args.roadnet else None
 
     if args.sample:
-        # --sample: 静的データを一時 dir に内部生成してから simulate
-        sample_tmp = tempfile.TemporaryDirectory(prefix="urban_sample_")
-        sample_dir = _generate_sample(
-            Path(sample_tmp.name),
+        # --sample: 静的データを out_dir に生成してから simulate する。
+        # 生成 5 ファイル (pois/aois/roadnet/agent_profiles/summary) を out_dir に
+        # 残すことで、run dir 単体でリプレイビューア (WO-003) が POI/AOI/road/
+        # profile の全レイヤーを描画できる (1 コマンドで完全な replay 可能 run)。
+        # 静的 summary.json はこの後 sim.run が挙動 summary で上書きする。
+        _generate_sample(
+            out_dir,
             seed=args.seed,
             agents=args.agents,
             pois=args.pois_count,
             ticks=args.ticks,
         )
-        pois_path = sample_dir / "pois.geojson"
-        profiles_path = sample_dir / f"agent_profiles_N{args.agents}.json"
-        aois_path = sample_dir / "aois.geojson"
-        roadnet_path = sample_dir / "roadnet.geojson"
+        pois_path = out_dir / "pois.geojson"
+        profiles_path = out_dir / f"agent_profiles_N{args.agents}.json"
+        aois_path = out_dir / "aois.geojson"
+        roadnet_path = out_dir / "roadnet.geojson"
     else:
         if not args.pois or not args.profiles:
             print(
@@ -123,24 +123,20 @@ def _run(args: argparse.Namespace) -> int:
         pois_path = Path(args.pois)
         profiles_path = Path(args.profiles)
 
-    try:
-        pois, profiles = load_inputs(pois_path, profiles_path)
-        aoi_count = _count_features(aois_path)
-        road_count = _count_features(roadnet_path)
+    pois, profiles = load_inputs(pois_path, profiles_path)
+    aoi_count = _count_features(aois_path)
+    road_count = _count_features(roadnet_path)
 
-        sim = Simulation(
-            pois,
-            profiles,
-            seed=args.seed,
-            ticks=args.ticks,
-            run_id=run_id,
-            aois=aoi_count,
-            roads=road_count,
-        )
-        summary = sim.run(out_dir)
-    finally:
-        if sample_tmp is not None:
-            sample_tmp.cleanup()
+    sim = Simulation(
+        pois,
+        profiles,
+        seed=args.seed,
+        ticks=args.ticks,
+        run_id=run_id,
+        aois=aoi_count,
+        roads=road_count,
+    )
+    summary = sim.run(out_dir)
 
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
