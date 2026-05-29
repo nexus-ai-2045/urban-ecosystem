@@ -25,9 +25,9 @@ owner: nexus_ai
 
 | # | 論点 | 状態 | メモ |
 | --- | --- | --- | --- |
-| 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | 🔧 未着手 | 渋谷 bbox 固定 / POI カテゴリ分布 / home・work POI 割当 / social_networks 生成方法。第一成果物の見栄えに直結。 |
-| 5 | 行動ルールの境界ケース | 🔧 未着手 | (a) 遠距離 commute が 10:00 までに終わらない場合 (b) 初日 08:00 の初期 status と最初の commute 開始 (c) `MAX_INTERACTIONS_PER_TICK=50` 超過時のペア優先順位。 |
-| 6 | API レスポンス schema 未定義 | 🔧 未着手 | `/api/runs`・`/api/data/{run_id}/{file}` の返却形式、`run_id` の命名・発見方法。 |
+| 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | ✅ | spec **§19** で確定。渋谷 bbox 固定 / POI 300 件カテゴリ分布 / home(75)・work(25)・school(5) POI 割当 / social_networks (Erdős-Rényi 平均次数5) / rng 消費順序固定。残 [推測]: road 本数 (~299 vs 例500) / home 共有設計 / 氏名パターン。 |
+| 5 | 行動ルールの境界ケース | ✅ | spec **§20** で確定。(a) §20.1 遠距離 commute 継続優先 (b) §20.2 初日 tick=0 初期 status (c) §20.3 MAX_INTERACTIONS_PER_TICK=50 超過時ペア優先順位 (social→距離→seeded_rand)。加えて §20.4 no_target 連続 / §20.5 滞在中の時刻帯境界跨ぎ再評価。 |
+| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.3 GET /api/data/{run_id}/{file} (許可リスト9ファイル・JSONL raw stream・403/404) / §21.4 health / §21.5 simulate(任意) / §21.6 CORS 同一オリジン。 |
 
 ## P2 — CEO 判断 / 保留
 
@@ -42,6 +42,6 @@ owner: nexus_ai
 
 ## 次アクション候補
 
-- P1 #4-6 を spec に追記して詰める (🔧 こちらで可能、必要なら壁打ち)。
+- P1 #4-6 は spec §19/§20/§21 に追記済 (✅)。残 [推測] 値 (road 本数 / home 共有 / 氏名 / 同期境界 / ソートキー等) は実装時に確定。
 - `git init` で独立リポジトリ化 (P2 #7)。
 - WO-URBAN-001 Data Loader 実装着手。

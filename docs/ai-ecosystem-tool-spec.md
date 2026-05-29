@@ -999,4 +999,536 @@ gcloud run deploy urban-ecosystem \
 - 対応する pytest がある。
 - `python -m pytest tests/ -v -p no:cacheprovider` が通る。
 - フロント E2E がフォールバック地図で通る。
+
+## 19. 合成データ生成仕様 (WO-002)
+
+> 正本: 本節。data-contract §Naming Conventions / §Coordinate Systems / §Enumerations との整合を優先する。
+> スクリプト: `generate_urban_sample.py` (seed 固定・再現可能)。
+
+### 19.1 概要と再現性
+
+合成データは `generate_urban_sample.py` が 1 コマンドで生成する。seed を固定することで、再現性検証対象の 3 ファイル (`agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl`) が byte 一致で再現される (§13.3.2 が再現性検証の正本)。
+
+```python
+SEED = 42           # 既定値。CLI 引数 --seed で上書き可。
+RUN_ID = "urban_demo"
+rng = random.Random(SEED)   # 全乱数をこの rng から導出し、グローバル state を汚染しない
+```
+
+`random.Random(SEED)` を 1 インスタンスとして全生成ステップに順番に通す。呼び出し順を変えると出力が変わるため、ステップ順を §19.2 → §19.3 → §19.4 → §19.5 → §19.6 に固定する。rng の消費順序は §19.7 で固定する (変更禁止)。
+
+### 19.2 合成都市の地理 (bbox)
+
+渋谷駅周辺を模した合成 bbox を定数化する。[推測: 渋谷駅の実座標を参考にした概算値。実在地物の再現は行わない]
+
+```python
+# --- 既定の定数 (generate_urban_sample.py の冒頭に置く) ---
+BBOX = {
+    "lat_min": 35.655,
+    "lat_max": 35.670,
+    "lon_min": 139.695,
+    "lon_max": 139.710,
+}
+# bbox の幅: 緯度方向 ≒ 1.67 km / 経度方向 ≒ 1.27 km (WGS84 渋谷緯度での近似)
+```
+
+POI・エージェント初期位置・AOI 頂点はすべてこの bbox 内に収める。bbox 外への座標出力は禁止する (検証対象: §13)。
+
+### 19.3 POI 生成
+
+#### 19.3.1 カテゴリ分布と件数
+
+合計 300 件を以下の比率で生成する (§16 #1 「~300 POI」)。category 名は data-contract §Naming Conventions の `<group>-<sub>` 形式に従う。
+
+| カテゴリ | 件数 | 比率 | 備考 |
+| --- | --- | --- | --- |
+| `amenity-cafe` | 30 | 10% | 昼・夕方の目的地 |
+| `amenity-restaurant` | 30 | 10% | 昼・夕方の目的地 |
+| `amenity-fast_food` | 20 | 7% | 昼の目的地 |
+| `amenity-bar` | 20 | 7% | 夕方・夜の目的地 |
+| `shop-convenience` | 20 | 7% | errand の目的地 |
+| `shop-clothing` | 15 | 5% | errand の目的地 |
+| `shop-supermarket` | 10 | 3% | errand の目的地 |
+| `leisure-park` | 15 | 5% | errand・wander の目的地 |
+| `amenity-school` | 5 | 2% | student の work_or_school POI 候補 |
+| `office-building` | 25 | 8% | office_worker の work POI 候補 |
+| `home-residential` | 75 | 25% | エージェントの home POI 候補 |
+| `other-misc` | 35 | 12% | wander / no_target のバッファ |
+| 計 | 300 | 100% | |
+
+category の group は §9.3 の目的地カテゴリ選択に部分一致でマッチする。
+
+#### 19.3.2 座標散布
+
+```python
+def gen_poi_coords(rng, n):
+    """bbox 内に一様乱数で n 点を散布する"""
+    lats = [rng.uniform(BBOX["lat_min"], BBOX["lat_max"]) for _ in range(n)]
+    lons = [rng.uniform(BBOX["lon_min"], BBOX["lon_max"]) for _ in range(n)]
+    return list(zip(lats, lons))
+```
+
+座標は GeoJSON Feature の `geometry.coordinates` に `[lon, lat]` 順で格納する。`properties` に `lat`/`lon` を重複させない (data-contract §Coordinate Systems)。
+
+#### 19.3.3 id 採番
+
+通常 POI は `poi_001`〜の連番。`home-residential` は `poi_home_001`〜`poi_home_075`、`office-building` は `poi_work_001`〜`poi_work_025`、`amenity-school` は `poi_school_001`〜`poi_school_005` とする (data-contract §Naming Conventions の例示に準拠)。
+
+### 19.4 AgentProfile 生成
+
+#### 19.4.1 件数・基本属性の分布
+
+合計 100 体。id は integer の 0〜99 連番 (§3 / data-contract §Agent Profile)。
+
+| 属性 | 値の分布 |
+| --- | --- |
+| `id` | 0〜99 (integer) |
+| `name` | 姓 (20 パターン) + 名 (20 パターン) をランダム結合 [不明: 具体的な氏名パターン一覧は仕様未定義。実装者が定数リストを用意する] |
+| `age` | 20〜65 の一様整数 |
+| `gender` | `"male"` 50 体 / `"female"` 50 体 |
+| `role` | `office_worker` 60% (60 体) / `student` 20% (20 体) / `other` 20% (20 体) |
+
+```python
+ROLES = (["office_worker"] * 60 + ["student"] * 20 + ["other"] * 20)
+rng.shuffle(ROLES)  # seed 由来のシャッフル
+```
+
+#### 19.4.2 home_poi_id の割当て
+
+`home-residential` POI 75 件からランダム (重複あり) にエージェントへ割当てる。[推測: 75 件のホームを 100 体が共有する設計。1 件のホームに複数エージェント可]
+
+```python
+home_pois = [p["id"] for p in pois if p["category"] == "home-residential"]
+for agent in agents:
+    agent["home_poi_id"] = rng.choice(home_pois)
+```
+
+#### 19.4.3 work_or_school_poi_id の割当て
+
+- `office_worker` → `office-building` POI 25 件からランダム (重複あり)。
+- `student` → `amenity-school` POI 5 件からランダム (重複あり)。
+- `other` → `work_or_school_poi_id` を割当てない (フィールド省略)。§9.3 の「`work_or_school_poi_id` が無い場合は `initial_position` 最近傍 POI で代替」に委ねる。
+
+#### 19.4.4 initial_position の決め方
+
+開始位置は割当て済み `home_poi_id` の POI 座標と同一にする。これにより tick=0 の全エージェントが自宅付近に存在する初期状態を作る。
+
+```python
+poi_coords = {p["id"]: (p["lat"], p["lon"]) for p in pois}  # flat dict (lat/lon 個別)
+for agent in agents:
+    lat, lon = poi_coords[agent["home_poi_id"]]
+    agent["initial_position"] = {"lat": lat, "lon": lon}
+```
+
+`initial_position` は flat JSON の `{lat, lon}` キーで持つ (data-contract §Coordinate Systems)。
+
+### 19.5 social_networks 生成
+
+#### 19.5.1 パラメータ
+
+| パラメータ | 値 | 備考 |
+| --- | --- | --- |
+| 平均次数 | 5 | エージェント 1 体あたり平均 5 本の辺 |
+| グラフ種別 | Erdős-Rényi G(n, p) | n=100, p = mean_degree / (n-1) ≈ 0.0505 |
+| 有向/無向 | 無向 (相互リスト) | A と B が接続 → 双方の `social_networks` に相手を追加 |
+| 自己ループ | 禁止 | 自己 id を含めない (data-contract §Agent Profile / §9.7 検証 §13.1) |
+| 重複 | 禁止 | 同一 id の重複なし (data-contract §Agent Profile) |
+
+#### 19.5.2 生成手順
+
+```python
+def build_social_networks(n, mean_degree, rng):
+    p = mean_degree / (n - 1)
+    adj = {i: set() for i in range(n)}
+    for i in range(n):
+        for j in range(i + 1, n):
+            if rng.random() < p:
+                adj[i].add(j)
+                adj[j].add(i)
+    # list に変換し昇順ソートで deterministic にする
+    return {i: sorted(adj[i]) for i in range(n)}
+```
+
+`social_networks` が空のエージェント (孤立ノード) は許容する。空/欠落のエージェントは §9.10 のバイアス 0 で通常ルールに従う。
+
+### 19.6 AOI / Road 生成
+
+#### 19.6.1 AOI (矩形ポリゴン)
+
+bbox を規則的に分割した矩形を 10 枚生成する (§16 #1 summary.json 例 `"aois": 10`)。
+
+```python
+AOI_ROWS, AOI_COLS = 2, 5   # 2 行 × 5 列 = 10 枚
+
+def gen_aois(bbox, rows, cols):
+    aois = []
+    dlat = (bbox["lat_max"] - bbox["lat_min"]) / rows
+    dlon = (bbox["lon_max"] - bbox["lon_min"]) / cols
+    n = 1
+    for r in range(rows):
+        for c in range(cols):
+            lat0 = bbox["lat_min"] + r * dlat
+            lat1 = lat0 + dlat
+            lon0 = bbox["lon_min"] + c * dlon
+            lon1 = lon0 + dlon
+            # GeoJSON Polygon: coordinates は [lon, lat] 順, 閉じたリング
+            ring = [[lon0, lat0], [lon1, lat0], [lon1, lat1], [lon0, lat1], [lon0, lat0]]
+            aois.append({
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [ring]},
+                "properties": {"id": f"aoi_{n:03d}", "name": f"District {n}", "category": "district"},
+            })
+            n += 1
+    return aois
+```
+
+AOI の座標も `[lon, lat]` 順 (data-contract §Coordinate Systems)。
+
+#### 19.6.2 Road (POI 間 LineString)
+
+MVP では表示専用 (§16 #2)。POI リストをシャッフルし隣接ペア間を結ぶ LineString を生成する。
+
+```python
+def gen_roads(pois, rng):
+    shuffled = pois[:]
+    rng.shuffle(shuffled)
+    roads = []
+    for i, (a, b) in enumerate(zip(shuffled, shuffled[1:]), 1):
+        coords = [[a["lon"], a["lat"]], [b["lon"], b["lat"]]]
+        roads.append({
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": coords},
+            "properties": {"id": f"road_{i:03d}", "walkable": True},
+        })
+    return roads
+```
+
+POI=300 件の隣接ペア方式では road 数は ~299 本になる。[推測: summary.json 例の `"roads": 500` を hard requirement とする場合は、格子ノード補完または複数ペア生成で本数を増やす] `length_m` は省略可 (data-contract §Road Feature で Optional)。
+
+### 19.7 seed 固定と再現性の保証
+
+| 保証レベル | 対象 | 方法 |
+| --- | --- | --- |
+| byte 一致 | `agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl` | `random.Random(SEED)` を同一順で消費する |
+| byte 不一致 (許容) | `summary.json` | `started_at` (実行時刻) を含むため再現性検証対象外 (data-contract §Summary JSON) |
+| byte 不一致 (許容) | `pois.geojson` / `aois.geojson` / `roadnet.geojson` | 静的生成で毎回同一だが再現性検証対象には含めない |
+
+再現性検証は `python generate_urban_sample.py --seed 42` を 2 回実行し、3 ファイルの `sha256sum` が一致することで確認する (§13.3.2 が正本)。
+
+#### rng 消費順序 (変更禁止)
+
+```
+Step 1: POI 座標生成 (300 calls × rng.uniform × 2)
+Step 2: role シャッフル (1 call × rng.shuffle)
+Step 3: home_poi_id 割当て (100 calls × rng.choice)
+Step 4: work_or_school_poi_id 割当て (80 calls × rng.choice, office+student のみ)
+Step 5: social_networks 生成 (C(100,2) = 4950 calls × rng.random)
+Step 6: road 生成の POI シャッフル (1 call × rng.shuffle)
+```
+
+ステップを追加・削除・並べ替えた場合は seed を変えて再配布する。
+
+### 19.8 生成スクリプト CLI インタフェース
+
+```
+python generate_urban_sample.py [--seed SEED] [--agents N] [--pois N] [--out-dir DIR]
+
+既定値:
+  --seed   42
+  --agents 100
+  --pois   300
+  --out-dir data/
+```
+
+出力先の `data/` 以下に全ファイルを書き出す。ファイル名は data-contract §File Names に従う。
+
+## 20. 行動ルール 補遺 (境界ケース)
+
+本節は §9 の定数・テーブルと矛盾しない範囲で、未定義だった境界ケースの挙動を確定する。実装は `rules.py` で本節を参照する。
+
+### 20.1 遠距離 commute — 08:00-10:00 で職場に到達できない場合
+
+前提:
+
+- `STEP_M = 390 m/tick` (§9.5)。
+- commute 目的地は `work_or_school_poi_id` 固定 (§9.3)。
+- 10:00 (tick=24) を過ぎると §9.3 テーブルは現 POI 滞在側に切り替わる (§9.3)。
+
+決定ルール:
+
+1. commute 継続優先: tick=24 (10:00) 時点でまだ `moving` の場合、`action` を `commute` のまま保持し移動を継続する。§9.3 の時刻帯は「新しい目的地を引く契機」であり、目的地確定済みの移動中エージェントには適用しない。[推測: §9.3 の「status が idle または滞在時間を消化済み」条件から外挿]
+2. 到達後に即 work/study 開始: 職場 POI 到達 tick に `arrived` を出力し、以降は §9.6 の通勤後滞在ルール (18:00 まで) に従い滞在する。到達 tick が 10:00 以降でも退勤時刻 (18:00) は変わらない。[推測]
+3. 打ち切りしない: 11:00・12:00 到達等でも commute を途中打ち切りしない。現実的な距離では無限ループにならないため打ち切り判定は追加しない。[推測]
+4. lunch 割り込み禁止: 12:00 到達前で移動中でも lunch への目的地切り替えはしない。commute 継続が優先する。[推測]
+5. `action` フィールドの記録: 移動中 tick はすべて `action="commute"` / `status="moving"` で記録する (data-contract §Enumerations / §9.2)。
+
+### 20.2 初日 tick=0 (08:00:00) の初期状態
+
+前提:
+
+- `tick=0` は `08:00:00` (data-contract §Time and Tick)。
+- エージェントは `initial_position` から開始する (data-contract §Agent Profile)。
+
+決定ルール:
+
+1. 位置: tick=0 の `lat`/`lon` は `initial_position` の値をそのまま使う (data-contract §Agent State JSONL)。
+2. `current_poi_id`: tick=0 時点では POI 未到達のため `null` (省略可)。ただし `initial_position` が既存 POI 座標と一致する場合はその POI の `id` を設定してもよい。[推測]
+3. 目的地の引き方: tick=0 の処理冒頭で §9.3 テーブルを評価する。office_worker / student は `work_or_school_poi_id` を目的地として commute 開始。other は §9.3 該当行 (errand 相当) を参照。[推測]
+4. tick=0 の `status`: 目的地を引けた場合は `moving`、初期位置 = 目的地 POI に一致する場合のみ `arrived`。候補が空なら `staying` (reason=`no_target`)。[推測]
+5. visit_record の tick=0 出力: tick=0 で `arrived` となる場合のみ `poi_visit_records.jsonl` に 1 行出力する。移動開始は記録しない (§9.5)。
+
+### 20.3 MAX_INTERACTIONS_PER_TICK=50 超過時の処理
+
+前提:
+
+- 上限 `MAX_INTERACTIONS_PER_TICK = 50` を超えた分は破棄する (§9.8.2)。
+- 同一 tick・同一正規化ペアの interaction は 1 件まで (data-contract §Interaction Event JSONL)。
+
+どのペアを残すか — 次の優先順位で上位 50 件を出力する:
+
+| 優先順位 | 選択基準 | 根拠 |
+| --- | --- | --- |
+| 1 | 両者が互いの `social_networks` に含まれるペア | social 重視が §9.10 の設計方針 [推測] |
+| 2 | 距離が近い順 (Haversine 昇順) | 近接物理モデルとの整合 [推測] |
+| 3 | `seeded_rand(run_seed, tick, a_id, b_id)` 昇順 | 決定論性保持 (§9.8.1 の seeded_rand 定義を流用) |
+
+破棄分の扱い:
+
+- 破棄ペアの `score` / `state` は更新しない。当 tick では交流不成立として扱う。[推測]
+- 破棄ペアは「次 tick に持ち越さず破棄」(§9.8.2) の通り再試行しない。
+- summary.json の `interactions` カウントには破棄分を含めない (出力件数のみ計上)。[推測]
+
+### 20.4 `no_target` が連続する場合の挙動
+
+前提:
+
+- 候補 POI が空の場合は status を `idle` のまま据え置き reason=`no_target` (§9.4 項5)。
+- `idle` は出力 status では `staying` にマップ (§9.2 / data-contract §Enumerations)。
+
+決定ルール:
+
+1. 毎 tick 再評価: `no_target` のエージェントは次 tick でも §9.3 テーブルを評価する。候補が空でなくなれば通常の目的地選択に戻る。連続 `no_target` の tick 数に制限は設けない (MVP スコープでは POI 全滅は想定しない)。[推測]
+2. 位置は変化しない: `no_target` の間は現在地に留まる (`lat`/`lon` 変化なし) (§9.4 から外挿)。
+3. `action` フィールド: `no_target` を出力する (data-contract §Enumerations)。
+4. 近接判定への参加: `no_target` (出力 status=`staying`) のエージェントは `at_poi` 内部状態ではないため §9.7 の interaction バケット対象に含めない。[推測: §9.7 の「status が `at_poi` のエージェント同士」条件から]
+5. visit_record は出力しない: 移動・到達がないため記録なし。[推測]
+
+### 20.5 滞在中エージェントが時刻帯境界 (例: 12:00) を跨いだ時の再評価タイミング
+
+前提:
+
+- 滞在中は内部状態 `at_poi` (出力 status=`staying`)。滞在 tick を消化したら §9.3 を再評価する (§9.6)。
+- §9.3 は「毎 tick、status が idle または滞在時間を消化済みのエージェント」を評価する (§9.3)。
+
+決定ルール:
+
+1. 再評価契機は「滞在消化」のみ: 滞在時間未消化なら、時刻帯境界 (12:00 等) を跨いでも再評価せず元の action のまま滞在を続ける (§9.3 の条件が「消化済み」に限定されるため)。[推測]
+2. 消化と同 tick に境界が重なる場合: 消化 tick = 境界 tick なら、その tick で §9.3 を再評価し新しい時刻帯のルールに従う。[推測]
+3. 例 (lunch → 午後): lunch (2-4 tick) を消化した tick が 13:00 以降なら、再評価で職場滞在中の office_worker は目的地変化なしで `work` 継続 (status は `staying` のまま)。[推測]
+4. `go_home` 割り込み禁止: 22:00 境界を迎えても滞在消化前なら `go_home` に切り替えない。消化後の再評価で 22:00 以降なら `go_home` が選ばれる。[推測]
+5. 実装メモ: tick ループ内で「消化済み or idle」フラグを先に判定し、立っていれば §9.3 評価 → 目的地更新 → 移動開始の順で処理する。立っていなければ位置を保持して次 tick へ。[推測]
+
+## 21. API レスポンス schema 詳細
+
+> 本節は §17.3 の API エンドポイント表を補完する。§17.3 が列挙するパスとメソッドと整合する。
+> 正本: 本節。§17.3 との差異は本節を優先する。
+
+### 21.1 run_id の命名規約と発見方法
+
+命名規約 [推測: §12.1 の `--out experiments/results/urban_demo` 引数と data-contract §Summary JSON `"run_id": "urban_demo"` から導出。確定には `app/data_access.py` の実装が必要]:
+
+- `run_id` は CLI の `--out <dir>` 末尾ディレクトリ名から自動取得する。
+  - 例: `--out experiments/results/urban_demo` → `run_id = "urban_demo"`
+  - 例: `--out experiments/results/scenario_a_seed42` → `run_id = "scenario_a_seed42"`
+- 推奨フォーマット: `<scenario>_seed<seed>` または自由な英数字・アンダースコア・ハイフン。スラッシュ・ドット・空白は禁止 (パストラバーサル防止)。
+- バリデーション正規表現: `^[A-Za-z0-9_-]{1,128}$`。[推測: 上限は実装時確定]
+
+発見方法 (§17.2 `data/` 同梱 / §17.3 `/api/runs`):
+
+- MVP (local): `data/` 配下のサブディレクトリを走査し、`summary.json` を持つものを run として列挙する。
+- スケール時 (gcs): GCS バケット `gs://nexus-ai-2045-urban-data/runs/` 直下のプレフィックスを列挙する。
+- フロントは必ず `/api/runs` を経由して run_id を取得し、`data/` を直接走査しない。
+- manifest ファイルは設けない。[推測: summary.json の存在がマニフェスト代わりとなる設計。要実装確認]
+
+### 21.2 GET /api/runs
+
+利用可能な run の一覧を返す。フロントの run 選択 (§4.2 / §8.1) の入力源。
+
+```
+HTTP 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "runs": [
+    {
+      "run_id": "urban_demo",
+      "seed": 42,
+      "ticks": 24,
+      "agents": 100,
+      "pois": 300,
+      "interactions": 12,
+      "started_at": "2026-05-29T00:00:00Z"
+    }
+  ]
+}
+```
+
+フィールド定義:
+
+| フィールド | 型 | Required | 出典 |
+| --- | --- | --- | --- |
+| `run_id` | string | yes | data-contract §Summary JSON `run_id` |
+| `seed` | integer | yes | data-contract §Summary JSON `seed` |
+| `ticks` | integer | yes | data-contract §Summary JSON `ticks` |
+| `agents` | integer | yes | data-contract §Summary JSON `agents` |
+| `pois` | integer | yes | data-contract §Summary JSON `pois` |
+| `interactions` | integer | yes | data-contract §Summary JSON `interactions` |
+| `aois` | integer | no | data-contract §Summary JSON `aois` |
+| `roads` | integer | no | data-contract §Summary JSON `roads` |
+| `started_at` | string (ISO 8601) | no | data-contract §Summary JSON `started_at` |
+
+- `runs` 配列はサーバが見つけた全 run を返す。ソート順は `started_at` 降順を推奨。[推測: ソートキーは実装時確定]
+- run が 0 件のとき `"runs": []` を返す。4xx/5xx は返さない。
+- 各要素は `summary.json` をそのまま転送する形で実装してよい。[推測: 件数が多い場合はキャッシュが必要。MVP 規模では問題なし]
+
+### 21.3 GET /api/data/{run_id}/{file}
+
+run のデータファイルを 1 件ずつ返す。フロントはリプレイ開始時に必要なファイルを個別取得する。
+
+#### 21.3.1 許可ファイル一覧 (data-contract §File Names を正本)
+
+| file | Content-Type | MVP Required | 形式 |
+| --- | --- | --- | --- |
+| `pois.geojson` | `application/geo+json` | yes | GeoJSON FeatureCollection |
+| `aois.geojson` | `application/geo+json` | no | GeoJSON FeatureCollection |
+| `roadnet.geojson` | `application/geo+json` | no | GeoJSON FeatureCollection |
+| `agent_profiles_N100.json` | `application/json` | yes | JSON 配列 |
+| `agent_states.jsonl` | `application/x-ndjson` | yes | JSONL (1 行 1 JSON オブジェクト) |
+| `poi_visit_records.jsonl` | `application/x-ndjson` | no | JSONL |
+| `interaction_events.jsonl` | `application/x-ndjson` | yes | JSONL |
+| `relationships.jsonl` | `application/x-ndjson` | no | JSONL |
+| `summary.json` | `application/json` | yes | JSON オブジェクト |
+
+上記 9 ファイル以外のパスは 403 Forbidden を返す (パストラバーサル防止・許可リスト方式)。[推測: 実装は `ALLOWED_FILES = frozenset({...})` で先頭チェック]
+
+#### 21.3.2 JSONL の返却形式
+
+JSONL ファイルは raw ストリーム (`application/x-ndjson`) として返す。JSON 配列に変換しない。
+
+```
+HTTP 200 OK
+Content-Type: application/x-ndjson
+```
+
+ボディ例 (agent_states.jsonl 冒頭 2 行):
+
+```
+{"tick":0,"day":0,"time":"08:00:00","agent_id":0,"lat":35.659,"lon":139.700,"action":"commute","status":"moving"}
+{"tick":0,"day":0,"time":"08:00:00","agent_id":1,"lat":35.661,"lon":139.702,"action":"staying","status":"staying"}
+```
+
+JSON 配列に変換しない理由: 大規模ファイルのストリーミングを想定し、配列変換するとサーバメモリにファイル全体を乗せる必要が生じるため。フロントは `fetch()` + `getReader()` でストリーミング、または一括 `text()` 後に行分割する。[推測: MVP 規模 (24 tick × 100 agents = 2400 行) では一括取得でも問題ないが、設計はストリーミング互換とする]
+
+#### 21.3.3 GeoJSON / JSON の返却形式
+
+GeoJSON / JSON はファイルをそのまま転送する。Content-Type は GeoJSON が `application/geo+json`、JSON が `application/json`。
+
+#### 21.3.4 エラーレスポンス
+
+| 状況 | ステータス | レスポンス例 |
+| --- | --- | --- |
+| `run_id` が存在しない | 404 | `{"detail": "run not found: <run_id>"}` |
+| `file` が許可リストにない | 403 | `{"detail": "file not allowed: <file>"}` |
+| `file` が許可リストにあるが run に存在しない | 404 | `{"detail": "file not found: <file>"}` |
+| `run_id`/`file` にパストラバーサル文字 (`..`, `/`) が含まれる | 403 | `{"detail": "invalid path"}` |
+
+403 は許可リスト違反 (存在有無を明かさない)、404 は許可された上で存在しない場合に使い分ける。[推測: FastAPI の `HTTPException` で実装]
+
+### 21.4 GET /api/health
+
+Cloud Run の liveness チェックに使用する (§13.4 `GET /api/health` に 200 を返す)。
+
+```
+HTTP 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "status": "ok",
+  "maps_key": "present",
+  "data_source": "local"
+}
+```
+
+| フィールド | 型 | 値 | 備考 |
+| --- | --- | --- | --- |
+| `status` | string | `"ok"` 固定 | 200 を返す時点で常に `"ok"` |
+| `maps_key` | string | `"present"` / `"absent"` | `GOOGLE_MAPS_API_KEY` の設定有無。キー値は返さない |
+| `data_source` | string | `"local"` / `"gcs"` | `DATA_SOURCE` env の値 |
+
+- `maps_key` が `"absent"` でも 200 を返す (フォールバック地図で起動するため。§13.4 「APIキー未設定時はフォールバック地図で起動し、500 を返さない」)。
+- Cloud Run liveness probe は HTTP 200 を判定基準とし、ボディの中身は probe が解釈しない。
+
+### 21.5 POST /api/simulate (任意)
+
+小規模ルールベース sim を同期実行しリプレイデータを返す。大規模は Cloud Run Job へ誘導する (§17.3 に記載)。MVP では実装任意 (Milestone 5 以降で確定)。以下は概形のみ。
+
+リクエスト:
+
+```
+POST /api/simulate
+Content-Type: application/json
+```
+
+```json
+{ "seed": 42, "ticks": 24, "agents": 100 }
+```
+
+| フィールド | 型 | Required | デフォルト |
+| --- | --- | --- | --- |
+| `seed` | integer | no | `42` |
+| `ticks` | integer | no | `24` |
+| `agents` | integer | no | `100` |
+
+小規模 (デフォルト `agents <= 100 and ticks <= 48`) の場合: [推測: 境界値は実装時確定]
+
+```
+HTTP 200 OK
+Content-Type: application/json
+```
+
+```json
+{ "run_id": "sim_seed42_20260529T120000Z", "status": "completed", "ticks": 24, "agents": 100, "interactions": 12 }
+```
+
+結果は `data/` (local) または GCS に書き出し `run_id` を返す。フロントは後続で `/api/data/{run_id}/...` を取得する。[推測: レスポンスにデータ本体を埋め込む設計も可能だが、`/api/data/` との一貫性を考慮しリダイレクト方式を推奨]
+
+大規模 (同期境界超過) の場合:
+
+```
+HTTP 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "status": "job_required",
+  "message": "Request exceeds sync limit (agents > 100 or ticks > 48). Submit as Cloud Run Job.",
+  "recommended_cli": "python tools/urban_simulation_cli.py run --seed 42 --agents 500 --ticks 192 --out experiments/results/large_run"
+}
+```
+
+同期実行に失敗した場合 (タイムアウト等) は 504 Gateway Timeout を返す。[推測]
+
+### 21.6 CORS / 同一オリジン方針
+
+(§17.2 「フロントは `/api/data/<run_id>/agent_states.jsonl` 等の API 越しに取得 (CORS 同一オリジン)」)
+
+- MVP は同一オリジン (CORS なし)。FastAPI のデフォルト CORS 設定を変更しない。
+- フロント (`index.html`) と API (`/api/*`) は同一コンテナ・同一ポートで配信するため Same-Origin Policy を自然に満たす。
+- `CORSMiddleware` は追加しない。[推測: 将来外部 SPA からアクセスする場合のみ許可オリジンを追加。その際は `allow_origins=["https://<本番ドメイン>"]` に限定し `["*"]` は禁止]
+- ローカル開発 (`uvicorn --reload`) でもポート 8080 の単一オリジンとなり CORS 問題は発生しない。
 - 生成物 (実験出力・コンテナイメージ) がコミット対象に混入していない。
