@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+  index.html — Urban Ecosystem リプレイビューア
+  正本: docs/ai-ecosystem-tool-spec.md §5 / §11
+
+  注意:
+  - Maps API キーと Map ID はサーバーが HTML 生成時にプレースホルダを置き換えて注入する。
+  - APIキーが未設定の場合、Maps bootstrap loader は出力されない。
+    app.js がプレースホルダを検出して fallback_map_adapter に切り替える。
+  - APIキー値は git / ログに平文で残さない (§5.1.1)。
+-->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urban Ecosystem Replay Viewer</title>
+  <link rel="stylesheet" href="/static/styles.css">
+
+  <!--
+    Google Maps JavaScript API bootstrap loader (§5.1.3)。
+    キー未設定時はスクリプトタグが出力されない (サーバー側で条件分岐)。
+    以下のプレースホルダはサーバーがタグごと注入または除去する。
+  -->
+  %%MAPS_SCRIPT_TAG%%
+</head>
+<body>
+  <header class="app-header">Urban Ecosystem Replay Viewer</header>
+
+  <main class="app-body">
+    <!-- 左パネル: データ読込 / レイヤー (§5.2) -->
+    <aside class="left-panel">
+      <div class="panel-title">データ読込</div>
+      <select id="run-select" aria-label="run 選択">
+        <option value="" disabled selected>読込中...</option>
+      </select>
+      <button id="btn-load" type="button">読み込む</button>
+
+      <div class="panel-title">レイヤー</div>
+      <label class="layer-toggle">
+        <input type="checkbox" id="layer-poi" checked>
+        POI
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="layer-aoi" checked>
+        AOI
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="layer-road" checked>
+        道路
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="layer-agent" checked>
+        Agents
+      </label>
+    </aside>
+
+    <!-- 地図エリア (§5.1) -->
+    <section class="map-wrapper">
+      <div id="map-container">
+        <!-- Google Maps はここに描画される -->
+        <!-- fallback 時は canvas を使う (app.js で display 切替) -->
+        <canvas id="map-canvas" aria-label="Fallback map"></canvas>
+      </div>
+    </section>
+
+    <!-- 右パネル: 凡例 / エージェント詳細 (§5.3) -->
+    <aside class="right-panel">
+      <div id="legend-panel" aria-label="凡例">
+        <div class="legend-header">凡例</div>
+        <div class="legend-total">データ未ロード</div>
+      </div>
+      <div id="detail-panel" aria-label="エージェント詳細">
+        <div class="detail-placeholder">エージェントをクリックして詳細を表示</div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 下部: 時刻コントロール (§5.4) -->
+  <footer class="time-controls">
+    <span id="time-display" class="time-display">Day: 0  Time: 08:00:00</span>
+    <button id="btn-play"  class="control-btn" type="button" aria-label="再生">▶ 再生</button>
+    <button id="btn-step"  class="control-btn" type="button" aria-label="ステップ">⏭ ステップ</button>
+    <span class="speed-label">速度:</span>
+    <select id="speed-select" class="speed-select" aria-label="再生速度">
+      <option value="1">1x</option>
+      <option value="2">2x</option>
+      <option value="5">5x</option>
+    </select>
+    <input
+      type="range"
+      id="time-slider"
+      min="0" max="0" value="0"
+      aria-label="時刻スライダー"
+    >
+  </footer>
+
+  <!-- app.js は ES module として読み込む -->
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
