@@ -3,6 +3,7 @@ llm_provider.py — LLMProvider 抽象と具体実装 (spec §10)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §10.1 Provider 抽象 / §10.2 LLM 対象 / §10.3 プロンプト入力
+  - docs/ai-ecosystem-tool-spec.md §9.3 時刻帯×role テーブル / §19.3.1 カテゴリ集合
 
 責務:
   - LLMProvider ABC (§10.1 シグネチャ厳守)
@@ -10,11 +11,12 @@ llm_provider.py — LLMProvider 抽象と具体実装 (spec §10)。
   - VertexGeminiProvider: Vertex AI Gemini を ADC で呼ぶ (opt-in)
   - make_llm_provider: ファクトリ関数
   - build_prompt: §10.3 構造化入力から会話要約用・関係理由用プロンプトを組む
+  - build_destination_prompt: §10.3 入力 + allowed_categories で目的地カテゴリ選択用プロンプトを組む
 
 決定論方針:
   RuleBasedProvider は simulation.py の _summary_text と完全同一のテンプレ文を返す。
-  これにより RuleBased 経路で agent_states / interaction_events / poi_visit_records が
-  byte 一致する (§13.3.2)。
+  choose_destination_category は空文字列 "" を返し、呼び出し側が §9.3 ルールをそのまま
+  使うことで RuleBased 経路の byte 一致 (§13.3.2) を維持する。
 
 SDK の遅延 import:
   VertexGeminiProvider の complete / __init__ の中でのみ google.genai を import する。
@@ -41,7 +43,7 @@ logger = logging.getLogger(__name__)
 class LLMProvider(ABC):
     """LLM プロバイダ抽象基底クラス (spec §10.1)。
 
-    すべての実装は complete() を実装する。
+    すべての実装は complete() および choose_destination_category() を実装する。
     呼び出し側は必ず Provider 抽象越しに使う (LLM の直接呼び出し禁止)。
     """
 
@@ -56,6 +58,27 @@ class LLMProvider(ABC):
 
         Returns:
             応答テキスト (末尾の改行は含まない)。
+        """
+
+    @abstractmethod
+    def choose_destination_category(
+        self,
+        context: dict,
+        allowed_categories: list[str],
+    ) -> str:
+        """エージェントの次の目的地カテゴリを §19.3.1 の集合から選ぶ (spec §10.2)。
+
+        呼び出し側は戻り値が allowed_categories に含まれるか検証し、
+        含まれない場合は §9.3 ルールにフォールバックする。
+
+        Args:
+            context: §10.3 構造化コンテキスト (agent_id / role / minutes 等)。
+            allowed_categories: §9.3 テーブルが許可するカテゴリリスト
+                                (§19.3.1 形式 例: ["amenity-cafe", "amenity-restaurant"])。
+
+        Returns:
+            allowed_categories のいずれか 1 つ、またはフォールバック用の空文字列 ""。
+            空文字列は「呼び出し側がルールベース選択を使う」シグナル。
         """
 
 
@@ -104,6 +127,27 @@ class RuleBasedProvider(LLMProvider):
                 value = stripped[len(marker):].strip()
                 return value if value else None
         return None
+
+    def choose_destination_category(
+        self,
+        context: dict,
+        allowed_categories: list[str],
+    ) -> str:
+        """§9.3 テーブルと同一カテゴリを決定論的に返す。
+
+        RuleBasedProvider は LLM を呼ばず、シミュレーションの §9.3 ルールが
+        そのまま POI 選択を担うことで byte 一致 (§13.3.2) を維持する。
+        空文字列 "" を返すことで呼び出し側が §9.3 ルールにフォールバックする。
+
+        Args:
+            context: §10.3 コンテキスト (本実装では使用しない)。
+            allowed_categories: 許可カテゴリリスト (本実装では使用しない)。
+
+        Returns:
+            "" — 呼び出し側が §9.3 ルールをそのまま使うシグナル。
+        """
+        # RuleBased は §9.3 ルールと完全同一 → 呼び出し側は空文字でフォールバック
+        return ""
 
     @staticmethod
     def _template_summary(ev_type: str, a_id: int, b_id: int, poi_id: str) -> str:
@@ -236,6 +280,59 @@ class VertexGeminiProvider(LLMProvider):
         text: str = response.text if hasattr(response, "text") else ""
         return text.rstrip("\n")
 
+    def choose_destination_category(
+        self,
+        context: dict,
+        allowed_categories: list[str],
+    ) -> str:
+        """Gemini に §19.3.1 カテゴリ集合から目的地カテゴリを 1 つ選ばせる (spec §10.2)。
+
+        allowed_categories に含まれるカテゴリのみを選択肢として提示し、
+        Gemini の応答をパースする。応答が allowed_categories 外の場合は
+        空文字列 "" を返し、呼び出し側が §9.3 ルールにフォールバックする。
+
+        プロンプト本文・応答テキストは info ログに出力しない (§6 ルール)。
+
+        Args:
+            context: §10.3 構造化コンテキスト。
+            allowed_categories: §9.3 テーブルが許可するカテゴリリスト。
+
+        Returns:
+            allowed_categories のいずれか 1 つ、または不正時は "" (fallback)。
+        """
+        if not allowed_categories:
+            return ""
+
+        prompt = build_destination_prompt(
+            context=context,
+            allowed_categories=allowed_categories,
+        )
+        logger.debug(
+            "Vertex Gemini 目的地カテゴリ選択リクエスト (model=%s, 候補数=%d)",
+            self.model,
+            len(allowed_categories),
+        )
+        try:
+            raw = self.complete(prompt, temperature=0.0, max_tokens=64)
+        except Exception:
+            logger.debug("Vertex Gemini 目的地カテゴリ選択で例外発生 — fallback")
+            return ""
+
+        # 応答テキストから最初に一致するカテゴリを取り出す
+        candidate = raw.strip().rstrip("。、.,")
+        if candidate in allowed_categories:
+            return candidate
+
+        # 部分一致: 応答行の中に allowed_categories のいずれかが含まれるか探す
+        for line in raw.splitlines():
+            stripped = line.strip().rstrip("。、.,")
+            if stripped in allowed_categories:
+                return stripped
+
+        # 不正な応答 — 呼び出し側が §9.3 ルールにフォールバックする
+        logger.debug("Vertex Gemini が不正なカテゴリを返した — fallback")
+        return ""
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ファクトリ
@@ -260,6 +357,28 @@ def make_llm_provider(kind: str = "rule", **opts: Any) -> LLMProvider:
     if kind == "vertex":
         return VertexGeminiProvider(**opts)
     raise ValueError(f"未知の LLM プロバイダ kind: {kind!r}。'rule' または 'vertex' を指定してください。")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §19.3.1 カテゴリ集合 (12 択)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# spec §19.3.1 に定義される POI カテゴリの全集合。
+# choose_destination_category の allowed_categories はこの部分集合である。
+ALLOWED_CATEGORIES_19_3_1: tuple[str, ...] = (
+    "amenity-cafe",
+    "amenity-restaurant",
+    "amenity-fast_food",
+    "amenity-bar",
+    "shop-convenience",
+    "shop-clothing",
+    "shop-supermarket",
+    "leisure-park",
+    "amenity-school",
+    "office-building",
+    "home-residential",
+    "other-misc",
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -366,5 +485,78 @@ def build_prompt(
 
     if relationship_state:
         lines.append(f"- 現在の関係状態: {relationship_state}")
+
+    return "\n".join(lines)
+
+
+def build_destination_prompt(
+    *,
+    context: dict[str, Any],
+    allowed_categories: list[str],
+) -> str:
+    """目的地カテゴリ選択用プロンプトを組む (spec §10.3 / §10.2 行動決定 LLM 化)。
+
+    VertexGeminiProvider.choose_destination_category() が使用する。
+    RuleBasedProvider では呼び出されない。
+
+    プロンプト本文は info ログに出力しない (§6 ルール)。
+
+    Args:
+        context: §10.3 コンテキスト。expected keys:
+            - agent_id (int): エージェント ID。
+            - role (str): エージェントロール (office_worker / student / other)。
+            - current_time (str): 現在時刻 HH:MM:SS。
+            - current_location (str, optional): 現在地 POI 説明。
+            - recent_visits (list, optional): 直近の訪問リスト。
+        allowed_categories: §9.3 テーブルが許可するカテゴリリスト。
+            (§19.3.1 形式 例: ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"])
+
+    Returns:
+        LLMProvider.complete() に渡すプロンプト文字列。
+        応答として allowed_categories のいずれか 1 つを返すよう Gemini に求める。
+    """
+    lines: list[str] = []
+
+    # ── タスク指示 ──────────────────────────────────────────────────────────────
+    lines.append("## タスク")
+    lines.append(
+        "あなたは都市シミュレーションのエージェント行動決定システムです。"
+        "以下のコンテキストを参考に、エージェントが次に向かう目的地のカテゴリを"
+        "許可リストから **1 つだけ** 選んでください。"
+    )
+    lines.append("")
+    lines.append("## 許可カテゴリリスト (このリストから 1 つだけ回答すること)")
+    for cat in allowed_categories:
+        lines.append(f"- {cat}")
+    lines.append("")
+    lines.append("## 回答形式")
+    lines.append(
+        "カテゴリ名を 1 行だけ出力してください。例: amenity-cafe\n"
+        "リスト外のカテゴリ・説明文・改行を余分に含めないでください。"
+    )
+
+    # ── §10.3 コンテキスト ─────────────────────────────────────────────────────
+    lines.append("")
+    lines.append("## コンテキスト")
+
+    agent_id = context.get("agent_id")
+    if agent_id is not None:
+        lines.append(f"- エージェント ID: {agent_id}")
+
+    role = context.get("role")
+    if role:
+        lines.append(f"- ロール: {role}")
+
+    current_time = context.get("current_time")
+    if current_time:
+        lines.append(f"- 現在時刻: {current_time}")
+
+    current_location = context.get("current_location")
+    if current_location:
+        lines.append(f"- 現在地: {current_location}")
+
+    recent_visits = context.get("recent_visits")
+    if recent_visits:
+        lines.append(f"- 直近の訪問: {recent_visits}")
 
     return "\n".join(lines)

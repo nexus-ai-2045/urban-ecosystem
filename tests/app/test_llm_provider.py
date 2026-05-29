@@ -29,9 +29,11 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from app.llm_provider import (
+    ALLOWED_CATEGORIES_19_3_1,
     LLMProvider,
     RuleBasedProvider,
     VertexGeminiProvider,
+    build_destination_prompt,
     build_prompt,
     make_llm_provider,
 )
@@ -575,4 +577,351 @@ class TestSimulationWithRuleBasedProvider:
             )
             assert event["summary"] == expected, (
                 f"summary 不一致: {event['summary']!r} != {expected!r}"
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# choose_destination_category — §10.2 行動決定 LLM 化
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRuleBasedChooseDestinationCategory:
+    """RuleBasedProvider.choose_destination_category の決定論テスト。"""
+
+    @pytest.fixture(autouse=True)
+    def provider(self) -> RuleBasedProvider:
+        return RuleBasedProvider()
+
+    _ALLOWED = ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"]
+    _CTX = {"agent_id": 1, "role": "office_worker", "current_time": "12:00:00"}
+
+    def test_returns_string(self, provider):
+        """戻り値が str。"""
+        result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert isinstance(result, str)
+
+    def test_returns_empty_string(self, provider):
+        """RuleBasedProvider は必ず "" を返す (§9.3 fallback シグナル)。"""
+        result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == "", f"RuleBased は '' を返すべきだが {result!r} が返った"
+
+    def test_deterministic_same_input(self, provider):
+        """同一引数に対して常に同一出力 (決定論)。"""
+        results = [
+            provider.choose_destination_category(self._CTX, self._ALLOWED)
+            for _ in range(5)
+        ]
+        assert len(set(results)) == 1
+
+    def test_empty_allowed_categories(self, provider):
+        """allowed_categories が空でもクラッシュしない。"""
+        result = provider.choose_destination_category(self._CTX, [])
+        assert isinstance(result, str)
+
+    def test_is_abstract_method_implemented(self, provider):
+        """LLMProvider の抽象メソッドが実装されている。"""
+        assert hasattr(provider, "choose_destination_category")
+        assert callable(provider.choose_destination_category)
+
+    def test_context_ignored(self, provider):
+        """コンテキストの内容に関わらず同一出力 (RuleBased は context を無視)。"""
+        ctx_a = {"agent_id": 1, "role": "office_worker", "current_time": "09:00:00"}
+        ctx_b = {"agent_id": 99, "role": "student", "current_time": "20:00:00"}
+        r_a = provider.choose_destination_category(ctx_a, self._ALLOWED)
+        r_b = provider.choose_destination_category(ctx_b, self._ALLOWED)
+        assert r_a == r_b == ""
+
+
+class TestVertexGeminiChooseDestinationCategory:
+    """VertexGeminiProvider.choose_destination_category の mock テスト (実 Gemini 不使用)。"""
+
+    _ALLOWED = ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"]
+    _CTX = {"agent_id": 5, "role": "other", "current_time": "12:30:00"}
+
+    def _make_provider(self, response_text: str) -> VertexGeminiProvider:
+        """指定テキストを返す mock クライアント付き VertexGeminiProvider を返す。"""
+        mock_client = _make_mock_client(response_text)
+        provider = VertexGeminiProvider(client=mock_client)
+        return provider
+
+    # ── 正常選択 ──────────────────────────────────────────────────────────────
+
+    def test_returns_valid_category(self):
+        """Gemini が有効カテゴリを返した場合、そのカテゴリを返す。"""
+        provider = self._make_provider("amenity-cafe")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == "amenity-cafe"
+
+    def test_returns_any_valid_category(self):
+        """allowed_categories のいずれかが返る。"""
+        provider = self._make_provider("amenity-restaurant")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result in self._ALLOWED
+
+    def test_strips_trailing_punctuation(self):
+        """末尾の句読点を除去してカテゴリを認識する。"""
+        provider = self._make_provider("amenity-fast_food。")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == "amenity-fast_food"
+
+    def test_multiline_response_finds_category(self):
+        """複数行応答でも有効カテゴリを取り出せる。"""
+        provider = self._make_provider("以下が選択カテゴリです:\namenity-cafe\n説明文")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == "amenity-cafe"
+
+    # ── 不正カテゴリ検出 → fallback ────────────────────────────────────────────
+
+    def test_invalid_category_returns_empty_string(self):
+        """allowed_categories 外のカテゴリが返った場合は "" を返す (fallback シグナル)。"""
+        provider = self._make_provider("home-residential")  # allowed 外
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == ""
+
+    def test_garbage_response_returns_empty_string(self):
+        """意味不明な応答は "" を返す。"""
+        provider = self._make_provider("申し訳ありませんが、わかりません。")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == ""
+
+    def test_empty_response_returns_empty_string(self):
+        """空応答は "" を返す。"""
+        provider = self._make_provider("")
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            result = provider.choose_destination_category(self._CTX, self._ALLOWED)
+        assert result == ""
+
+    def test_empty_allowed_categories_returns_empty_string(self):
+        """allowed_categories が空なら "" を返す (API 呼び出し不要)。"""
+        provider = self._make_provider("amenity-cafe")
+        result = provider.choose_destination_category(self._CTX, [])
+        assert result == ""
+        # API を呼び出していないことも確認
+        provider._client.models.generate_content.assert_not_called()
+
+    # ── uses temperature=0.0 (決定論) ─────────────────────────────────────────
+
+    def test_called_with_temperature_zero(self):
+        """temperature=0.0 で complete を呼ぶ (決定論的選択)。"""
+        mock_client = _make_mock_client("amenity-cafe")
+        provider = VertexGeminiProvider(client=mock_client)
+
+        # complete() をラップしてコールを追跡する
+        original_complete = provider.complete
+        call_kwargs_store = []
+
+        def _wrapped_complete(prompt, **kwargs):
+            call_kwargs_store.append(kwargs)
+            return original_complete(prompt, **kwargs)
+
+        provider.complete = _wrapped_complete
+
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            provider.choose_destination_category(self._CTX, self._ALLOWED)
+
+        assert call_kwargs_store, "complete() が呼ばれていない"
+        assert call_kwargs_store[0].get("temperature") == 0.0, (
+            "temperature=0.0 で呼ばれていない"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# build_destination_prompt
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBuildDestinationPrompt:
+    """build_destination_prompt が §10.3 入力 + allowed_categories を含むプロンプトを組む。"""
+
+    _ALLOWED = ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"]
+    _CTX = {
+        "agent_id": 10,
+        "role": "office_worker",
+        "current_time": "12:00:00",
+        "current_location": "poi_office_001",
+    }
+
+    def test_returns_string(self):
+        """戻り値が str。"""
+        result = build_destination_prompt(context=self._CTX, allowed_categories=self._ALLOWED)
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_contains_all_allowed_categories(self):
+        """許可カテゴリが全てプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX, allowed_categories=self._ALLOWED)
+        for cat in self._ALLOWED:
+            assert cat in prompt, f"カテゴリ {cat!r} がプロンプトに含まれていない"
+
+    def test_contains_context_fields(self):
+        """コンテキストの各フィールドがプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX, allowed_categories=self._ALLOWED)
+        assert "10" in prompt          # agent_id
+        assert "office_worker" in prompt
+        assert "12:00:00" in prompt
+        assert "poi_office_001" in prompt
+
+    def test_task_instruction_present(self):
+        """タスク指示が含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX, allowed_categories=self._ALLOWED)
+        assert "タスク" in prompt or "カテゴリ" in prompt
+
+    def test_optional_context_omitted_when_missing(self):
+        """None の任意フィールドはプロンプトに現れない。"""
+        ctx_minimal = {"agent_id": 1, "role": "other"}
+        prompt = build_destination_prompt(context=ctx_minimal, allowed_categories=self._ALLOWED)
+        assert "None" not in prompt
+
+    def test_empty_allowed_categories(self):
+        """allowed_categories が空でもクラッシュしない。"""
+        prompt = build_destination_prompt(context=self._CTX, allowed_categories=[])
+        assert isinstance(prompt, str)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALLOWED_CATEGORIES_19_3_1 定数
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAllowedCategories19_3_1:
+    """§19.3.1 カテゴリ集合定数の検証。"""
+
+    def test_has_12_categories(self):
+        """§19.3.1 は 12 カテゴリ。"""
+        assert len(ALLOWED_CATEGORIES_19_3_1) == 12
+
+    def test_contains_required_categories(self):
+        """必須カテゴリが含まれる (§19.3.1 テーブルより)。"""
+        required = {
+            "amenity-cafe",
+            "amenity-restaurant",
+            "amenity-fast_food",
+            "amenity-bar",
+            "shop-convenience",
+            "shop-clothing",
+            "shop-supermarket",
+            "leisure-park",
+            "amenity-school",
+            "office-building",
+            "home-residential",
+            "other-misc",
+        }
+        assert required == set(ALLOWED_CATEGORIES_19_3_1)
+
+    def test_no_duplicates(self):
+        """重複なし。"""
+        assert len(ALLOWED_CATEGORIES_19_3_1) == len(set(ALLOWED_CATEGORIES_19_3_1))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# sim + Gemini fallback: 不正カテゴリでも sim が §9.3 rule で完走
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestSimulationGeminiFallback:
+    """Gemini 経路で不正カテゴリが返っても sim が rule fallback で完走する。"""
+
+    @pytest.fixture(scope="class")
+    def sample_inputs(self):
+        """合成入力を生成する。"""
+        from environments.urban_2d.simulation import load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="llm_fallback_test_")
+            gen_sample(tmp, seed=42, agents=100, pois=300, ticks=24, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N100.json",
+            )
+        return pois, profiles
+
+    def _make_invalid_provider(self) -> VertexGeminiProvider:
+        """常に不正カテゴリ (allowed 外) を返す mock provider を返す。"""
+        mock_client = _make_mock_client("INVALID_CATEGORY_XYZ")
+        provider = VertexGeminiProvider(client=mock_client)
+        return provider
+
+    def test_sim_completes_with_invalid_category(self, sample_inputs):
+        """不正カテゴリ応答でも sim が例外なく完走する。"""
+        from environments.urban_2d.simulation import Simulation
+
+        pois, profiles = sample_inputs
+        provider = self._make_invalid_provider()
+
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            sim = Simulation(pois, profiles, seed=42, ticks=24, llm_provider=provider)
+            sim.simulate()
+
+        assert len(sim.agent_states) == 100 * 24, "sim が完走しなかった"
+
+    def test_sim_produces_interactions_with_invalid_category(self, sample_inputs):
+        """不正カテゴリ fallback でも interaction が生成される。"""
+        from environments.urban_2d.simulation import Simulation
+
+        pois, profiles = sample_inputs
+        provider = self._make_invalid_provider()
+
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            sim = Simulation(pois, profiles, seed=42, ticks=24, llm_provider=provider)
+            sim.simulate()
+
+        assert len(sim.interaction_events) > 0, "fallback 時に interaction が 0 件"
+
+    def test_rulebase_byte_identical_with_invalid_gemini(self, sample_inputs, tmp_path):
+        """RuleBased 経路と Gemini 不正カテゴリ経路で agent_states/visit_records が byte 一致。
+
+        Gemini fallback = §9.3 ルール = RuleBased と同一候補 → POI 選択も同一。
+        ただし interaction_events の summary は Gemini 版で異なる可能性があるため除外。
+        (今回 summary 生成は完結・不変のため byte 一致するが、将来的に Gemini が
+         summary を生成する場合に備えてここでは agent_states と visit_records のみ検証。)
+        """
+        import filecmp
+        from environments.urban_2d.simulation import Simulation
+
+        pois, profiles = sample_inputs
+        invalid_provider = self._make_invalid_provider()
+
+        out_rule = tmp_path / "run_rule"
+        out_gemini_fallback = tmp_path / "run_gemini_fallback"
+
+        Simulation(
+            pois, profiles, seed=42, ticks=24, run_id="rule",
+            llm_provider=make_llm_provider("rule"),
+        ).run(out_rule)
+
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            Simulation(
+                pois, profiles, seed=42, ticks=24, run_id="gemini_fallback",
+                llm_provider=invalid_provider,
+            ).run(out_gemini_fallback)
+
+        for name in ("agent_states.jsonl", "poi_visit_records.jsonl"):
+            assert filecmp.cmp(out_rule / name, out_gemini_fallback / name, shallow=False), (
+                f"{name}: RuleBased と Gemini fallback で byte 不一致"
             )

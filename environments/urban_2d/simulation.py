@@ -190,6 +190,66 @@ class Simulation:
 
     # ── 目的地解決 (rng 消費は本メソッド内で完結) ──────────────────────────
 
+    def _build_destination_context(
+        self,
+        agent: _AgentRuntime,
+        tick: int,
+    ) -> dict:
+        """§10.3 コンテキスト dict を組む (choose_destination_category 用)。"""
+        day, time_str = tick_to_day_time(tick)
+        ctx: dict = {
+            "agent_id": agent.profile.id,
+            "role": agent.profile.role,
+            "current_time": time_str,
+        }
+        if agent.current_poi_id:
+            ctx["current_location"] = agent.current_poi_id
+        return ctx
+
+    def _llm_narrow_candidates(
+        self,
+        agent: _AgentRuntime,
+        tick: int,
+        cands: list[POI],
+    ) -> list[POI]:
+        """LLMProvider で候補 POI を 1 カテゴリに絞り込む。
+
+        RuleBasedProvider は "" を返すため候補は変化しない (決定論維持 §13.3.2)。
+        VertexGeminiProvider が有効カテゴリを返した場合のみ絞り込む。
+        不正カテゴリ/例外は §9.3 ルール (cands 全体) にフォールバックし、
+        fallback を debug ログに記録する (プロンプト本文は出力しない)。
+        """
+        if not cands:
+            return cands
+
+        # 候補の distinct カテゴリリストを allowed_categories として渡す
+        allowed = sorted({p.category for p in cands})
+        ctx = self._build_destination_context(agent, tick)
+
+        try:
+            chosen = self.llm_provider.choose_destination_category(ctx, allowed)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).debug(
+                "choose_destination_category で例外 — §9.3 fallback (agent_id=%d)",
+                agent.profile.id,
+            )
+            return cands
+
+        if not chosen or chosen not in allowed:
+            if chosen:
+                import logging
+                logging.getLogger(__name__).debug(
+                    "不正カテゴリ %r — §9.3 fallback (agent_id=%d)",
+                    chosen,
+                    agent.profile.id,
+                )
+            return cands  # フォールバック: §9.3 のまま
+
+        # 有効カテゴリで絞り込む
+        narrowed = [p for p in cands if p.category == chosen]
+        return narrowed if narrowed else cands  # 候補が空になったらフォールバック
+
     def _choose_destination(
         self,
         agent: _AgentRuntime,
@@ -200,6 +260,12 @@ class Simulation:
 
         rng 消費は weighted/social/wander モードのみ (docstring の消費順序参照)。
         target_poi が None で action="no_target" の場合は候補なし (§9.4 項5)。
+
+        spec §10.2 配線:
+          nearest/weighted/social モードでは _llm_narrow_candidates を経由し、
+          LLMProvider.choose_destination_category() でカテゴリを絞り込む。
+          RuleBasedProvider は "" を返すため候補は変化せず決定論が維持される。
+          VertexGeminiProvider が不正/例外時も §9.3 ルールにフォールバックする。
         """
         minutes = rules.minutes_of_tick(tick)
         mode, vocab, reason = rules.schedule_decision(minutes, agent.profile.role)
@@ -219,6 +285,8 @@ class Simulation:
 
         if mode == "nearest":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
+            # LLM カテゴリ絞り込み (RuleBased は no-op)
+            cands = self._llm_narrow_candidates(agent, tick, cands)
             poi = rules.nearest_poi(agent.lat, agent.lon, cands)
             if poi is None:
                 return (None, "no_target", mode)
@@ -226,6 +294,8 @@ class Simulation:
 
         if mode == "weighted":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
+            # LLM カテゴリ絞り込み (RuleBased は no-op)
+            cands = self._llm_narrow_candidates(agent, tick, cands)
             poi = rules.weighted_nearest_poi(agent.lat, agent.lon, cands, self.rng)
             if poi is None:
                 return (None, "no_target", mode)
@@ -233,6 +303,8 @@ class Simulation:
 
         if mode == "social":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
+            # LLM カテゴリ絞り込み (RuleBased は no-op)
+            cands = self._llm_narrow_candidates(agent, tick, cands)
             # §9.10: social_networks メンバーが滞在/向かっている POI を FRIEND_GRAVITY 倍
             friend_pois = self._friend_target_pois(agent, poi_presence)
 
