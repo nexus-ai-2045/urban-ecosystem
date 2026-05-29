@@ -8,29 +8,35 @@ updated: 2026-05-29
 現在地:
 - 独立 git リポジトリ `~/Projects/urban-ecosystem`（branch=main / remote 未設定）。
 - 仕様確定: spec の解決可能 assumption は全て [事実] 化。残 [実装時確定] 2 件（再生fps / 完走時間 = 実測のみ）。
-- WO-URBAN-001 Data Loader 実装済み（models + GeoJSON/JSONL loader + validation / pytest 78 passed）。
-- WO-URBAN-002 Sample Data Generator 実装済み（`tools/generate_urban_sample.py` / 静的データのみ = §19 準拠 / pytest 17 passed / 全体 95 passed）。**未 commit**。
-  - scope 確定（2026-05-29 CEO）: WO-002 は静的データ（pois/aois/roadnet/agent_profiles/summary）のみ。挙動ログ（agent_states/visit/interaction）は WO-004 の責務。orchestration doc / wo-yaml の acceptance を §19 整合に修正済み。
-  - 再現性: 同一 seed で静的 4 ファイル sha256 byte 一致を smoke 確認。`data/` を .gitignore 追加。
+- **WO-001〜004 実装 + commit 済み**（著者 nexus-ai-2045 / `2f9f308` WO-002 / `2581986` WO-004 / `c34b333` WO-003 / `560d416` WO-004 統合修正）。
+  - WO-001 Data Loader: models + GeoJSON/JSONL loader + validation。
+  - WO-002 Sample Data Generator（`tools/generate_urban_sample.py`）: 静的データのみ = §19 準拠（scope 2026-05-29 CEO 確定 / 挙動ログは WO-004）。同一 seed で静的 4 ファイル sha256 byte 一致。`data/` を .gitignore 追加。
+  - WO-004 Rule Simulation（`environments/urban_2d/rules.py`+`simulation.py` / `tools/urban_simulation_cli.py`）: §9/§20 ルールベース。3 jsonl byte 一致 / §13.3.3 invariant 全件 / 100agent×192tick=0.43s。`--sample` は静的+挙動の 8 ファイルを 1 コマンドで出力（自己完結 replay run）。
+  - WO-003 Replay Viewer（`tools/urban_viewer_server.py`+`tools/urban_viewer/`）: FastAPI + Google Maps / キー無し fallback 地図。/api allowlist + path traversal 三重防御。`requirements.txt` に fastapi/uvicorn/httpx 追加。
+- **E2E 確認済み**: generate→simulate→viewer API で全レイヤー 200 配信（agent_states 2400 行 / interactions 395 / traversal 404・403）。
 - gh active アカウント = `nexus-ai-2045`（事業用 / private-github-account は非アクティブ保持）。
 
-待ち:
-- なし（自走可）。唯一の保留 = GitHub push（Type1 / repo 名・public/private 未確認）。
+待ち / 要 CEO 判断:
+- GitHub push（Type1 / 外部公開・repo 名・public/private 未確認）。
+- **§9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突**。WO-004 は §20.5 優先で実装 → office_worker/student は lunch に出ず、lunch は other 20 体のみ。リプレイで「会社員が昼に動かない」絵になる。§9.3 を厳密化するなら spec オーナー(manager)判断。現状は §20.5 優先で進行。
 
-次に読む（WO-003 着手時）:
-- `docs/subagents/work-orders/wo-urban-003-replay-viewer.yaml`（次の実装対象）
-- `docs/ai-ecosystem-tool-spec.md` §5 画面仕様 / §5.1.5 fallback 地図 / §21 API schema
+次に読む（WO-005 着手時 / GCP）:
+- `docs/subagents/work-orders/wo-urban-005-cloud-run-deploy.yaml`
+- `docs/ai-ecosystem-tool-spec.md` §17 デプロイ基盤 / §16#6 Map ID / §13.4 デプロイ検証
 - `docs/subagents/contracts/urban-ecosystem-data-contract.md`（データ正本 v0.2）
 
 次にやる（1-3 action）:
-1. WO-002 を commit（著者 = nexus-ai-2045 / 下記「注意」の inline -c 方式）。変更: `tools/generate_urban_sample.py` / `tests/tools/` / `.gitignore` / docs acceptance 3 件 / NEXT-SESSION。
-2. WO-URBAN-004 Rule Simulation（§9 行動ルール / §20 境界ケース / 挙動 3 jsonl 生成 + §13.3.2 再現性）。または先に WO-URBAN-003 Replay Viewer（FastAPI + Google Maps / fallback 地図）。S3 は S2 完了で着手可、S4 と並列可。
-3. （並行可）GitHub push / Cloud Run は GCP 連携（nexus-ai-2045）の段で CEO に repo 名・public/private を確認してから。
+1. **WO-URBAN-005 Cloud Run Deploy**（GCP 連携の段）: Dockerfile / cloudbuild / `app/main.py` 化 → nexus-ai-2045 にデプロイ。Maps API 有効化・Map ID 発行 (Cloud Console)・Secret Manager 注入・公開範囲 (未認証/IAP) は **Type1（課金・外部公開）→ CEO 承認必須**。
+2. （任意 / 品質）`pyproject.toml` を urban-ecosystem 直下に置き rootdir を urban に解決 → Pyright の import 警告（静的のみ・runtime PASS）を解消。
+3. GitHub push する場合は CEO に repo 名・public/private を確認してから（著者 nexus-ai-2045）。
+
+実行メモ:
+- テストは fastapi が要る（WO-003）。venv 例: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`（homebrew python は PEP 668 で system pip 不可）。base 環境（fastapi 無し）では WO-003 テストは importorskip で skip され壊れない。
 
 証跡:
-- commit (WO-002 着手前): 78dd475(assumption解決) / ba27290(WO-001, 78 tests) / 55b6192(P1詰め) / a651046(scaffold)
-- test: `python3 -m pytest tests/ -q -p no:cacheprovider` → 95 passed（WO-001:78 + WO-002:17）
-- 再現性 smoke: `generate_urban_sample.py --seed 42` を 2 回 → pois/aois/roadnet/agent_profiles の sha256 一致
+- commit: 2f9f308(WO-002) / 2581986(WO-004) / c34b333(WO-003) / 560d416(WO-004 統合) — いずれも著者 nexus-ai-2045
+- test: venv `pytest tests/ -q` → **161 passed** / base homebrew → **115 passed, 1 skipped**（WO-003 skip）
+- E2E smoke: `urban_simulation_cli.py run --sample --out DIR` → viewer TestClient で全 6 種ファイル 200 / agent_states 2400 行
 
 禁止:
 - GitHub push / remote 作成 = Type1（外部公開）。CEO 承認まで実行しない。
