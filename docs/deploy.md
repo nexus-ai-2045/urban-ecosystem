@@ -154,6 +154,57 @@ gcloud projects add-iam-policy-binding nexus-ai-2045 \
 
 > MVP では `roles/secretmanager.secretAccessor` のみ付与し、Storage・Vertex AI は必要になった時点で追加してください。
 
+### 4.3 SA ハードニング — 運用ノート
+
+#### ビルド SA と実行 SA の分離
+
+Cloud Build (ビルド時) と Cloud Run (実行時) は**別の SA を使う**ことを推奨します。
+
+| SA | 推奨名 | 役割 |
+| --- | --- | --- |
+| ビルド SA | `urban-builder@nexus-ai-2045.iam.gserviceaccount.com` | ソースビルド・イメージ push のみ |
+| 実行 SA | `urban-run@nexus-ai-2045.iam.gserviceaccount.com` | Cloud Run コンテナの実行のみ |
+
+ビルド SA に付与するロールは `roles/artifactregistry.writer`（イメージ push）に限定し、Secret へのアクセスは与えません。
+
+```bash
+# ビルド SA 作成 (まだ存在しない場合)
+gcloud iam service-accounts create urban-builder \
+  --project nexus-ai-2045 \
+  --display-name "urban-ecosystem Cloud Build SA"
+
+# ビルド SA への最小ロール付与 (Artifact Registry への push 権限のみ)
+gcloud projects add-iam-policy-binding nexus-ai-2045 \
+  --member "serviceAccount:urban-builder@nexus-ai-2045.iam.gserviceaccount.com" \
+  --role "roles/artifactregistry.writer"
+```
+
+#### 実行 SA に付与すべき最小ロール
+
+| ロール | 目的 | 付与タイミング |
+| --- | --- | --- |
+| `roles/secretmanager.secretAccessor` | Maps API キーの取得 | MVP 必須 |
+| `roles/storage.objectViewer` (バケット単位) | GCS リプレイ JSONL 読み取り | Milestone 6 以降 |
+| `roles/aiplatform.user` | Vertex AI 呼び出し | Milestone 5 以降 |
+
+> **`roles/run.invoker` は実行 SA に付与しません。**
+> `roles/run.invoker` はサービスを呼び出す側 (人間・別サービス) に付与するロールです。
+> 実行 SA (コンテナ内プロセス) に付けると自己呼び出しを可能にし、
+> 攻撃面が広がるため不要です。
+
+#### 広域ロールを付けない
+
+以下のロールは便利に見えますが、権限過剰になるため**付与禁止**です。
+
+| 禁止ロール | 理由 |
+| --- | --- |
+| `roles/editor` / `roles/owner` | プロジェクト全体への書き込み権限を与えてしまう |
+| `roles/secretmanager.admin` | シークレットの作成・削除まで可能になる |
+| `roles/storage.admin` | バケット全体への書き込み権限を与えてしまう |
+| `roles/iam.serviceAccountTokenCreator` | 他 SA へのなりすましが可能になる |
+
+必要なロールが増えた場合は、**バケット単位・シークレット単位**などリソースレベルで絞って付与してください。
+
 ---
 
 ## 5. デプロイ — Cloud Run Service
@@ -168,6 +219,19 @@ gcloud projects add-iam-policy-binding nexus-ai-2045 \
 | A: インターネット全公開 | 誰でもアクセス可能 | `--allow-unauthenticated` |
 | B: 認証必須 (IAP / IAM) | Google アカウント認証 / 特定ユーザーのみ | `--no-allow-unauthenticated` + IAP 設定 |
 
+### 5.1.1 インスタンス数・同時実行数の推奨指針 (コスト暴走防止)
+
+urban-ecosystem は **100体・1日リプレイのデモ用途** であり、高トラフィックは想定していません。
+意図しないスケールアウトによる課金暴走を防ぐため、デプロイ時に以下のフラグを付与することを推奨します。
+
+| フラグ | 推奨レンジ | 理由 |
+| --- | --- | --- |
+| `--max-instances` | `1〜3` (推奨例: `2`) | インスタンス上限を小さく抑えてコスト上限を予測可能にする |
+| `--concurrency` | `40〜80` (推奨例: `80`) | 1インスタンスあたりの同時リクエスト数。デモ規模では80で十分で、無駄な複製を減らせる |
+
+> **注意**: これらはデモ規模向けの「コスト優先」設定です。将来的にトラフィックが増加した場合は
+> 実負荷に合わせて引き上げてください。断定的な上限値ではなく、出発点としての推奨レンジです。
+
 ### 5.2 パターン A: インターネット全公開
 
 ```bash
@@ -178,6 +242,8 @@ gcloud run deploy urban-ecosystem \
   --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com \
   --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest \
   --set-env-vars=GOOGLE_MAPS_MAP_ID=<本番 Map ID> \
+  --max-instances=2 \
+  --concurrency=80 \
   --allow-unauthenticated
 ```
 
@@ -193,6 +259,8 @@ gcloud run deploy urban-ecosystem \
   --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com \
   --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest \
   --set-env-vars=GOOGLE_MAPS_MAP_ID=<本番 Map ID> \
+  --max-instances=2 \
+  --concurrency=80 \
   --no-allow-unauthenticated
 ```
 
