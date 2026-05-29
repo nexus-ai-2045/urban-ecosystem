@@ -14,24 +14,10 @@
 
 "use strict";
 
+import { CATEGORY_COLORS } from "./colors.js";
+
 /** フォールバック Map ID (開発/テスト専用。本番は GOOGLE_MAPS_MAP_ID を使う) */
 const FALLBACK_MAP_ID = "DEMO_MAP_ID";
-
-/** カテゴリ -> 色マッピング (POI Data layer スタイル用) */
-const CATEGORY_COLORS = {
-    "amenity-cafe":        "#a0522d",
-    "amenity-restaurant":  "#e67e22",
-    "amenity-fast_food":   "#e74c3c",
-    "amenity-bar":         "#8e44ad",
-    "shop-convenience":    "#27ae60",
-    "shop-clothing":       "#2980b9",
-    "shop-supermarket":    "#16a085",
-    "leisure-park":        "#2ecc71",
-    "amenity-school":      "#f1c40f",
-    "office-building":     "#3498db",
-    "home-residential":    "#95a5a6",
-    "other-misc":          "#7f8c8d",
-};
 
 /** role -> ピン背景色 (AdvancedMarkerElement) */
 const ROLE_COLORS = {
@@ -71,6 +57,9 @@ export class GoogleMapsAdapter {
 
         // agent: id -> AdvancedMarkerElement のマップ
         this._agentMarkers = new Map();
+
+        // agent: id -> PinElement のマップ (highlight で背景色を差し替えるために保持)
+        this._agentPins = new Map();
 
         // 選択中 agent
         this._selectedAgentId = null;
@@ -162,13 +151,17 @@ export class GoogleMapsAdapter {
             const latLng = new google.maps.LatLng(agent.lat, agent.lon);
 
             if (this._agentMarkers.has(agent.id)) {
-                // 位置のみ更新 (§5.1.4)
+                // 位置を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4)
                 const marker = this._agentMarkers.get(agent.id);
                 marker.position = latLng;
+                marker.map = this._map;
             } else {
                 // 新規作成
                 const role  = agent.role || "other";
-                const color = ROLE_COLORS[role] || DEFAULT_ROLE_COLOR;
+                // 選択中なら強調色、それ以外はロール別色
+                const color = (agent.id === this._selectedAgentId)
+                    ? HIGHLIGHT_COLOR
+                    : (ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
                 const pin   = new PinElement({
                     glyph:           String(agent.id),
                     background:      color,
@@ -185,12 +178,17 @@ export class GoogleMapsAdapter {
                     if (this._agentClickCb) this._agentClickCb(agent.id);
                 });
                 this._agentMarkers.set(agent.id, marker);
+                this._agentPins.set(agent.id, pin);
             }
         }
 
-        // 今 tick に存在しない agent マーカーを非表示にする
+        // 今 tick に存在しない agent マーカーを非表示にする。
+        // marker / pin の参照は保持し、再出現時は上の既存マーカーパスで
+        // marker.map を復元する (delete すると再表示・highlight が壊れる)。
         for (const [id, marker] of this._agentMarkers) {
-            if (!seenIds.has(id)) marker.map = null;
+            if (!seenIds.has(id)) {
+                marker.map = null;
+            }
         }
 
         // markerclusterer 拡張ポイント: クラスタを再描画
@@ -202,12 +200,31 @@ export class GoogleMapsAdapter {
 
     /**
      * 指定 agentId を強調表示する (null で解除)。
+     * PinElement の background を差し替えて視覚的に強調する。
+     * 前回選択だったマーカーをロール別のデフォルト色に戻してから新規選択を強調する。
      * @param {number|null} agentId
      */
     highlight(agentId) {
+        const prevId = this._selectedAgentId;
         this._selectedAgentId = agentId;
-        // TODO (Milestone 6): PinElement の背景色を差し替えて強調
-        // MVP では詳細パネル側の強調表示で代替する
+
+        // 前回選択マーカーをデフォルト色に戻す
+        if (prevId !== null && prevId !== undefined && prevId !== agentId) {
+            const prevPin = this._agentPins.get(prevId);
+            if (prevPin) {
+                // ロール色に戻す (agentMarker の title から role は取れないため DEFAULT_ROLE_COLOR を使う)
+                // role は upsertAgents 時に設定済みの pin 色を直接 DEFAULT_ROLE_COLOR にリセットする
+                prevPin.background = DEFAULT_ROLE_COLOR;
+            }
+        }
+
+        // 新規選択マーカーを強調色にする
+        if (agentId !== null && agentId !== undefined) {
+            const pin = this._agentPins.get(agentId);
+            if (pin) {
+                pin.background = HIGHLIGHT_COLOR;
+            }
+        }
     }
 
     /**
@@ -270,17 +287,40 @@ export class GoogleMapsAdapter {
     // 内部
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** google.maps が利用可能になるまで待機する (bootstrap loader がコールバックを呼ぶまで) */
-    async _waitForGoogleMaps() {
-        return new Promise((resolve) => {
+    /**
+     * google.maps が利用可能になるまで待機する (bootstrap loader がコールバックを呼ぶまで)。
+     * timeout_ms 以内にロードされない場合は reject する (無限待ち防止)。
+     * @param {number} [timeoutMs=10000] - タイムアウト時間 (ミリ秒)
+     * @returns {Promise<void>}
+     */
+    _waitForGoogleMaps(timeoutMs = 10000) {
+        return new Promise((resolve, reject) => {
+            // 既にロード済みなら即 resolve
+            if (typeof google !== "undefined" && google.maps) {
+                resolve();
+                return;
+            }
+
+            let rafHandle = null;
+
+            const timeoutId = setTimeout(() => {
+                if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+                reject(new Error(
+                    `Google Maps SDK が ${timeoutMs}ms 以内にロードされませんでした。` +
+                    " APIキーと bootstrap loader の設定を確認してください。"
+                ));
+            }, timeoutMs);
+
             const check = () => {
                 if (typeof google !== "undefined" && google.maps) {
+                    clearTimeout(timeoutId);
                     resolve();
                 } else {
-                    requestAnimationFrame(check);
+                    rafHandle = requestAnimationFrame(check);
                 }
             };
-            check();
+
+            rafHandle = requestAnimationFrame(check);
         });
     }
 

@@ -230,8 +230,8 @@ async function loadRun(runId) {
     // 凡例更新
     updateLegend(legendEl, state.data, state.data.profiles.length);
 
-    // 初期表示
-    renderCurrentTick();
+    // 初期表示 (upsertAgents が async のため await する)
+    await renderCurrentTick();
     updatePlayButton(playBtn, false);
     updateSlider(sliderEl, Math.max(0, ticks.length - 1), 0);
 }
@@ -240,8 +240,13 @@ async function loadRun(runId) {
 // 描画
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 現在の tickIndex を描画する */
-function renderCurrentTick() {
+/**
+ * 現在の tickIndex を描画する。
+ * upsertAgents が非同期のため async にする。
+ * RAF コールバック (playLoop) からは fire-and-forget で呼び出す。
+ * @returns {Promise<void>}
+ */
+async function renderCurrentTick() {
     const { ticks, tickIndex, statesByTick } = state.replay;
     if (ticks.length === 0) return;
 
@@ -258,7 +263,9 @@ function renderCurrentTick() {
         role: state.data.profiles.find(p => p.id === s.agent_id)?.role || "other",
     }));
 
-    adapter.upsertAgents(markerData);
+    // GoogleMapsAdapter は async / FallbackMapAdapter は sync。
+    // 両者の戻り値を await することで未解決 Promise を残さない。
+    await adapter.upsertAgents(markerData);
     adapter.setLayer("agent", state.layerVisible.agent);
 
     // 選択中 agent の友達リンクを現在位置に追従更新
@@ -317,7 +324,11 @@ function stopPlay() {
     updatePlayButton(playBtn, false);
 }
 
-/** 1 tick 進める */
+/**
+ * 1 tick 進める。
+ * renderCurrentTick は async だが、playLoop (RAF) から呼ばれる経路があるため
+ * fire-and-forget にする。Promise エラーはコンソールに出る。
+ */
 function stepTick() {
     const { ticks, tickIndex } = state.replay;
     if (tickIndex >= ticks.length - 1) {
@@ -325,7 +336,7 @@ function stepTick() {
         return;
     }
     state.replay.tickIndex = tickIndex + 1;
-    renderCurrentTick();
+    renderCurrentTick(); // fire-and-forget (RAF 経路)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -433,12 +444,12 @@ function wireEvents() {
 
     // スライダー
     if (sliderEl) {
-        sliderEl.addEventListener("input", () => {
+        sliderEl.addEventListener("input", async () => {
             const idx = parseInt(sliderEl.value, 10);
             if (!isNaN(idx)) {
                 stopPlay();
                 state.replay.tickIndex = idx;
-                renderCurrentTick();
+                await renderCurrentTick();
             }
         });
     }
