@@ -25,9 +25,9 @@ owner: nexus_ai
 
 | # | 論点 | 状態 | メモ |
 | --- | --- | --- | --- |
-| 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | ✅ | spec **§19** で確定。渋谷 bbox 固定 / POI 300 件カテゴリ分布 / home(75)・work(25)・school(5) POI 割当 / social_networks (Erdős-Rényi 平均次数5) / rng 消費順序固定。残 [推測]: road 本数 (~299 vs 例500) / home 共有設計 / 氏名パターン。 |
-| 5 | 行動ルールの境界ケース | ✅ | spec **§20** で確定。(a) §20.1 遠距離 commute 継続優先 (b) §20.2 初日 tick=0 初期 status (c) §20.3 MAX_INTERACTIONS_PER_TICK=50 超過時ペア優先順位 (social→距離→seeded_rand)。加えて §20.4 no_target 連続 / §20.5 滞在中の時刻帯境界跨ぎ再評価。 |
-| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.3 GET /api/data/{run_id}/{file} (許可リスト9ファイル・JSONL raw stream・403/404) / §21.4 health / §21.5 simulate(任意) / §21.6 CORS 同一オリジン。 |
+| 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | ✅ | spec **§19** で確定。渋谷 bbox 固定 / POI 300 件カテゴリ分布 / home(75)・work(25)・school(5) POI 割当 / social_networks (Erdős-Rényi 平均次数5) / rng 消費順序固定。残だった [推測] (road 本数 ~299 / home 共有設計 / 氏名パターン / bbox 実座標) は全て `[事実: 設計決定/research]` に解決済。 |
+| 5 | 行動ルールの境界ケース | ✅ | spec **§20** で確定。(a) §20.1 遠距離 commute 継続優先 (b) §20.2 初日 tick=0 初期 status (c) §20.3 MAX_INTERACTIONS_PER_TICK=50 超過時ペア優先順位 (social→距離→seeded_rand)。加えて §20.4 no_target 連続 / §20.5 滞在中の時刻帯境界跨ぎ再評価。§20 の [推測] 18 件は全て §9 由来の `[事実: 設計決定]` に解決済。 |
+| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.3 GET /api/data/{run_id}/{file} (許可リスト9ファイル・JSONL raw stream・403/404) / §21.4 health / §21.5 simulate(任意) / §21.6 CORS 同一オリジン。§21 の [推測] は設計決定 + FastAPI 公式 docs research で全て `[事実]` に解決済。 |
 
 ## P2 — CEO 判断 / 保留
 
@@ -36,12 +36,12 @@ owner: nexus_ai
 | 7 | repo 構成 | ✅ | **独立 git リポジトリ化** (2026-05-29 CEO)。`git init` 未実行。 |
 | 8 | デプロイ先 GCP プロジェクト | ✅ | **nexus-ai-2045 (事業用)** (2026-05-29 CEO)。spec の `<project>` を全置換済。 |
 | 9 | Cloud Run 公開範囲 (未認証 / IAP) | ⏸ | デプロイ時 (Milestone 4) に確定。実装はどちらでも動く構成。 |
-| 10 | 本番 Map ID 自前発行 (§16 #6) | ⏸ | 本番推奨。MVP 検証は fallback Map ID で開始可。 |
+| 10 | 本番 Map ID 自前発行 (§16 #6) | ✅ | spec §16 #6 で確定。`DEMO_MAP_ID` は本番禁止 (Google 利用規約)、Milestone 4 で Cloud Console 発行 + Secret Manager 注入。[事実: developers.google.com/maps/documentation/javascript/advanced-markers/start] |
 | 11 | reference/ の Groq 由来 transcript を残すか削除か | ⏸ | 低優先。現状 `docs/reference/` に歴史資料として退避済。 |
-| 12 | 性能/規模の [推測] 値 (30fps / 完走時間) | ⏸ | 実測後に確定。MVP 合格ラインの数値固定は実装後。 |
+| 12 | 性能/規模の値 (30fps / 完走時間) | 🔧 | 目標値は spec で確定 (fps 30 目標 / 完走数秒〜十数秒目安)。実測値は impl-dependent として §5.1.4 行138・§13.3.5 行790 を `[実装時確定]` に分類。実装後に実測 fps / 経過秒を記録。 |
 
 ## 次アクション候補
 
-- P1 #4-6 は spec §19/§20/§21 に追記済 (✅)。残 [推測] 値 (road 本数 / home 共有 / 氏名 / 同期境界 / ソートキー等) は実装時に確定。
+- P1 #4-6 は spec §19/§20/§21 に追記済 (✅)。spec 内の [推測]/[不明] は全件解決済 (設計決定 + research)。残るのは真に impl-dependent の 2 件のみ = §5.1.4 行138 (実測 fps) / §13.3.5 行790 (完走経過秒)。いずれも `[実装時確定]` タグで実装後に実測値を記録する。
 - `git init` で独立リポジトリ化 (P2 #7)。
 - WO-URBAN-001 Data Loader 実装着手。
