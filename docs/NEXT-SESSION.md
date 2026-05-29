@@ -11,6 +11,12 @@ updated: 2026-05-29
 - 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP。基盤=(将来) Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす 1 日リプレイが動く」← **local で達成済み**。
 
 現在地:
+- 🚀 **2026-05-29 実データ + 実 Google Maps 反映 (CEO 目視確認済「でた」)**: Google Places API (New) で渋谷の実在 POI **435件**取得 → ルールシミュ (interactions 184) → **実 Google Maps** (DEMO_MAP_ID / Advanced Markers) 上で local 表示。commit `a23d3b5` + app.js durable 化。
+  - fetcher: `tools/fetch_places_sample.py` (urllib stdlib / key=env / 渋谷 bbox 4タイル searchNearby / cache `data/.places_cache/` / `--dry-run`)。Places API + Maps JS API は nexus-ai-2045 で有効化済。
+  - 配線 fix: `/static/app.js` を StaticFiles mount より前の templating route にしてキー/Map ID を注入 (旧: raw 配信で placeholder 残り fallback 固定だった)。
+  - 環境: `.env` (gitignore) に GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY (同値1本 / Places+MapsJS に API 制限) / GOOGLE_MAPS_MAP_ID=DEMO_MAP_ID。`app/main.py` が __main__ で .env を自動 load (Cloud Run は no-op)。
+  - 実データ run = `urban_real` (POI 435 / interactions 184 / 100 agents)。合成 run = `urban_demo` も併存。
+  - 既知 LOW: `fetch_places_sample.py` に未使用 helper (`_poi_feature` / `_places_type_to_category`) が残存 (Pyright)。動作影響なし / 次回削除候補。
 - 独立 git リポジトリ `~/Projects/urban-ecosystem` (branch=main / remote 未設定 / 著者 nexus-ai-2045)。
 - **2026-05-29 仕上げ session (workflow)**: 3 commit 追加。
   - `a6d46dd` refactor(viewer): CATEGORY_COLORS を `colors.js` (ES module SSOT / Object.freeze) に集約し 3 ファイル重複を解消 / google adapter の `highlight()` 実装・`upsertAgents` await・`_waitForGoogleMaps` 10s timeout / **HIGH bug fix** = 非表示後に再出現した agent が永続非表示になる問題を修正 (`marker.map` 復元 + pin 参照保持)。
@@ -23,13 +29,19 @@ updated: 2026-05-29
 
 ローカル起動 (SSOT):
 ```bash
-# venv (初回のみ / PEP 668 で homebrew python は外部管理):
-#   python3 -m venv /tmp/urban-venv && /tmp/urban-venv/bin/pip install -r requirements.txt
+# venv (初回のみ): python3 -m venv /tmp/urban-venv && /tmp/urban-venv/bin/pip install -r requirements.txt
 cd ~/Projects/urban-ecosystem
+
+# (任意) 実データ再取得 + シミュ (.env にキー必須 / 既に data/urban_real があれば不要):
+/tmp/urban-venv/bin/python tools/fetch_places_sample.py --out-dir data/urban_real --run-id urban_real
+/tmp/urban-venv/bin/python tools/urban_simulation_cli.py run \
+  --pois data/urban_real/pois.geojson --profiles data/urban_real/agent_profiles_N100.json \
+  --aois data/urban_real/aois.geojson --roadnet data/urban_real/roadnet.geojson --out data/urban_real
+
+# サーバー起動 (app/main.py が .env を自動 load → 実 Google Maps):
 DATA_DIR="$HOME/Projects/urban-ecosystem/data" PORT=8080 /tmp/urban-venv/bin/python -m app.main
-# → http://localhost:8080 (run_id=urban_demo / 100 agents / 24 ticks)
-# テスト: /tmp/urban-venv/bin/pytest tests/ -q  → 175 passed
-# 実 Google Maps を local で見たい場合: 上記コマンドの前に GOOGLE_MAPS_API_KEY=... を export (Maps API 有効化 + Map ID 前提 / Cloud Run 不要)
+# → http://localhost:8080 で run_id=urban_real を選択 = 実渋谷 Google Maps + 実 POI 435
+# テスト: /tmp/urban-venv/bin/pytest tests/ -q  → 214 passed
 ```
 
 待ち / 保留 (local-only 方針で当面やらない):
