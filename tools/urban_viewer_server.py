@@ -32,6 +32,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from tools.urban_viewer.labels import ALL_LABELS
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 定数
 # ─────────────────────────────────────────────────────────────────────────────
@@ -48,6 +50,10 @@ ALLOWED_FILES: frozenset[str] = frozenset({
     "relationships.jsonl",
     "summary.json",
 })
+
+# agent_profiles_N<N>.json は可変エージェント数 (N=10 等) に対応するため正規表現で許可する。
+# パストラバーサルは _validate_run_and_file の ".." / "/" チェックで別途防止済み (数字のみ許容)。
+AGENT_PROFILES_RE = re.compile(r"^agent_profiles_N\d+\.json$")
 
 # ファイル拡張子 -> Content-Type
 CONTENT_TYPES: dict[str, str] = {
@@ -233,7 +239,8 @@ def _validate_run_and_file(run_id: str, file: str) -> Path:
         raise HTTPException(status_code=403, detail="invalid path")
 
     # ファイル許可リストチェック (§21.3.1)
-    if file not in ALLOWED_FILES:
+    # agent_profiles_N<N>.json は可変エージェント数に対応するため正規表現でも許可する。
+    if file not in ALLOWED_FILES and not AGENT_PROFILES_RE.match(file):
         raise HTTPException(status_code=403, detail=f"file not allowed: {file}")
 
     # run ディレクトリ存在チェック
@@ -343,6 +350,18 @@ async def list_runs() -> JSONResponse:
     """
     runs = _list_runs()
     return JSONResponse({"runs": runs})
+
+
+@app.get("/api/labels")
+async def get_labels() -> JSONResponse:
+    """日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。
+
+    category / role / interaction_type / action の 4 セクションを持つ JSON を返す。
+    表示層がこのエンドポイントを使って内部コードを日本語に変換する。
+    内部 JSONL / contract の値はこのエンドポイントへの変換ではなく
+    表示時の変換にのみ使用する (out_of_scope 保持)。
+    """
+    return JSONResponse(ALL_LABELS)
 
 
 @app.get("/api/data/{run_id}/{file}", response_model=None)

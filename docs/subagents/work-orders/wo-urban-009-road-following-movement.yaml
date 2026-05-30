@@ -1,0 +1,77 @@
+id: wo-urban-009-road-following-movement
+title: "Road-following movement (routing graph, no building footprint)"
+status: draft
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - test-agent
+  - quality-gate
+
+goal: >
+  roadnet をルーティンググラフ化し、エージェントを最短経路で道路に追従させる。
+  現行の緯度経度直線補間 (建物・道路を貫通) を置き換える。建物 footprint は
+  取得しない (道路追従のみ / CEO 確定 2026-05-29)。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md  # §9.5 直線補間移動 / §20 補遺 / realism #8
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - environments/urban_2d/
+    - tools/urban_simulation_cli.py
+    - docs/ai-ecosystem-tool-spec.md  # §9.5 / §20 の移動モデル改訂
+    - tests/environments/test_urban_simulation.py
+  read_only_paths:
+    - core/
+    - tools/urban_viewer/
+  out_of_scope:
+    - "建物 footprint の取得 / OSM 連携はしない (CEO 確定: 道路追従のみ)。"
+    - "viewer の経路アニメ高度化は最小限 (経路に沿って見える範囲)。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0
+  produces: []
+
+depends_on:
+  work_orders: []   # 独立 / 他バッチと並列可
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1   # 移動モデル (挙動契約) の変更 = 決定論出力が変わる
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/environments/test_urban_simulation.py -v -p no:cacheprovider"
+  optional:
+    - "python tools/urban_simulation_cli.py run --agents 10 --pois data/urban_real/pois.geojson --aois data/urban_real/aois.geojson --roadnet data/urban_real/roadnet.geojson --out /tmp/urban_road10"
+
+acceptance:
+  - "roadnet からノード (POI / 交差点) とエッジ (道路セグメント) のグラフを構築する。"
+  - "エージェントは現在地を最近傍道路ノードに接続し、目的地まで最短経路 (Dijkstra/A*) で移動する。tick 毎に経路上を STEP_M 前進する。"
+  - "viewer で移動が道路に沿って見え、建物・道路を直線貫通しない。"
+  - "新移動モデルで 10 体 seed 固定の出力が byte 一致再現する (決定論)。"
+  - "roadnet が非連結 / 孤立 POI の場合の fallback (最近傍ノードスナップ等) を定義する。"
+  - "既存の移動 assertion テストを新モデルに更新し、回帰がない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "現行 rules.step_towards (§9.5) は直線補間。本 WO で経路追従へ置換するため、既存 run の byte 一致は新仕様基準で再定義する。"
+  - "決定論: 経路探索のタイブレークを id / 座標で安定化し、rng 消費順を変えない。"

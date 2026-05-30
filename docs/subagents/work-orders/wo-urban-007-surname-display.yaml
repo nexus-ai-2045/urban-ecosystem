@@ -1,0 +1,69 @@
+id: wo-urban-007-surname-display
+title: "Surname-based agent character display in viewer"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  viewer のエージェント表示を真の姓 (surname) ベースにする。マーカー glyph を
+  surname、詳細パネルを「surname given さん」表示にし、現行の name 先頭 2 文字に
+  よる擬似苗字を置き換える。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - tools/urban_viewer/
+    - tests/tools/test_urban_viewer_server.py
+    - tests/app/test_main.py
+  read_only_paths:
+    - environments/urban_2d/
+  out_of_scope:
+    - "profile データ生成は WO-006 の責務。"
+    - "役割 / カテゴリ等のラベル日本語化は WO-010。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-006-rich-profile
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/tools/test_urban_viewer_server.py tests/app/test_main.py -v -p no:cacheprovider"
+
+acceptance:
+  - "マーカー glyph が surname を表示する (例: 井上)。"
+  - "詳細パネルが surname + given + さん を表示する (例: 井上 翔さん)。"
+  - "surname 欠落時は name 先頭にフォールバックする。"
+  - "google_maps_adapter.upsertAgents が tick 毎・run 跨ぎで glyph / title を更新する (NEXT-SESSION 既知 LOW の解消)。"
+  - "fallback 地図で viewer サーバーテストが通る。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes: []

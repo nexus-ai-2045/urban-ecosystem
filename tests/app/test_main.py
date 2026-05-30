@@ -179,3 +179,34 @@ class TestConfig:
             assert get_port() == 8080
         finally:
             os.environ.pop("PORT", None)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /api/labels (WO-010)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestLabels:
+    """GET /api/labels — app.main 経由でラベルエンドポイントが稼働すること。"""
+
+    def test_status_200(self, client: TestClient) -> None:
+        """/api/labels は 200 を返す。"""
+        resp = client.get("/api/labels")
+        assert resp.status_code == 200
+
+    def test_response_has_category_section(self, client: TestClient) -> None:
+        """レスポンスに category セクションが含まれる。"""
+        resp = client.get("/api/labels")
+        data = resp.json()
+        assert "category" in data
+
+    def test_category_cafe_is_japanese(self, client: TestClient) -> None:
+        """amenity-cafe のラベルが日本語 (カフェ) である。"""
+        resp = client.get("/api/labels")
+        data = resp.json()
+        assert data["category"].get("amenity-cafe") == "カフェ"
+
+    def test_role_office_worker_is_japanese(self, client: TestClient) -> None:
+        """office_worker のラベルが日本語 (会社員) である。"""
+        resp = client.get("/api/labels")
+        data = resp.json()
+        assert data["role"].get("office_worker") == "会社員"

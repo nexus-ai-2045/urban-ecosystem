@@ -95,6 +95,7 @@ class RuleBasedProvider(LLMProvider):
     """
 
     # 会話要約用プロンプトのキーワードマーカー (build_prompt が埋め込む)
+    _MARKER_PROMPT_TYPE = "prompt_type:"
     _MARKER_EV_TYPE = "event_type:"
     _MARKER_AGENT_A = "agent_a_id:"
     _MARKER_AGENT_B = "agent_b_id:"
@@ -103,14 +104,20 @@ class RuleBasedProvider(LLMProvider):
     _MARKER_AGENT_A_NAME = "agent_a_name:"
     _MARKER_AGENT_B_NAME = "agent_b_name:"
     _MARKER_POI_NAME = "poi_name:"
+    # relationship_reason マーカー (WO-008)
+    _MARKER_REL_FROM = "relationship_from:"
+    _MARKER_REL_TO = "relationship_to:"
 
     def complete(self, prompt: str, *, temperature: float = 0.7, max_tokens: int = 256) -> str:
         """プロンプトのメタデータからテンプレ文を生成して返す。
 
         build_prompt が生成したプロンプトに含まれるマーカー行を解析し、
-        simulation.py の _summary_text と同一のテンプレ文を返す。
+        prompt_type に応じてテンプレ文を返す。
+        - summary: simulation.py の _summary_text と同一のテンプレ文
+        - relationship_reason: 関係変化テンプレ文 (WO-008)
         マーカーが見つからない場合はフォールバック文を返す。
         """
+        prompt_type = self._extract(prompt, self._MARKER_PROMPT_TYPE) or "summary"
         ev_type = self._extract(prompt, self._MARKER_EV_TYPE)
         agent_a = self._extract(prompt, self._MARKER_AGENT_A)
         agent_b = self._extract(prompt, self._MARKER_AGENT_B)
@@ -121,6 +128,16 @@ class RuleBasedProvider(LLMProvider):
         poi_name = self._extract(prompt, self._MARKER_POI_NAME) or ""
 
         if ev_type and agent_a and agent_b and poi_id:
+            if prompt_type == "relationship_reason":
+                # WO-008: 関係変化理由のテンプレ文
+                rel_from = self._extract(prompt, self._MARKER_REL_FROM) or ""
+                rel_to = self._extract(prompt, self._MARKER_REL_TO) or ""
+                return self._template_relationship_reason(
+                    ev_type, int(agent_a), int(agent_b), poi_id,
+                    a_name=a_name, b_name=b_name, poi_name=poi_name,
+                    rel_from=rel_from, rel_to=rel_to,
+                )
+            # デフォルト: summary
             return self._template_summary(
                 ev_type, int(agent_a), int(agent_b), poi_id,
                 a_name=a_name, b_name=b_name, poi_name=poi_name,
@@ -188,6 +205,45 @@ class RuleBasedProvider(LLMProvider):
         display_a = a_name if a_name else f"エージェント {a_id}"
         display_b = b_name if b_name else f"エージェント {b_id}"
         display_poi = poi_name if poi_name else poi_id
+        return f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
+
+    @staticmethod
+    def _template_relationship_reason(
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        a_name: str = "",
+        b_name: str = "",
+        poi_name: str = "",
+        rel_from: str = "",
+        rel_to: str = "",
+    ) -> str:
+        """関係変化理由のテンプレ文を返す (WO-008 / §9.9 / §10.2)。
+
+        RuleBased 経路での決定論テンプレ文。
+        同一入力には常に同一出力を返し、byte 一致 (§13.3.2) を維持する。
+
+        a_name / b_name が空の場合は "エージェント {id}" 形式にフォールバックする。
+        poi_name が空の場合は poi_id にフォールバックする。
+        """
+        # イベント種別別の理由テンプレ
+        verb = {
+            "meeting": "が出会ったことで関係が始まった",
+            "conversation": "の会話を通じて距離が縮まった",
+            "conflict": "の口論により関係が悪化した",
+            "farewell": "との別れにより関係が変化した",
+        }.get(ev_type, "との交流により関係が変化した")
+        # 表示名フォールバック
+        display_a = a_name if a_name else f"エージェント {a_id}"
+        display_b = b_name if b_name else f"エージェント {b_id}"
+        display_poi = poi_name if poi_name else poi_id
+        # 状態変化の記述
+        if rel_from and rel_to and rel_from != rel_to:
+            return (
+                f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
+                f"関係: {rel_from} → {rel_to}。"
+            )
         return f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
 
 
@@ -433,6 +489,8 @@ def build_prompt(
     recent_visits: Optional[list[dict[str, Any]]] = None,
     recent_interactions: Optional[list[dict[str, Any]]] = None,
     relationship_state: Optional[str] = None,
+    # WO-008: relationship_reason 用の変化後状態 (任意)
+    relationship_to: Optional[str] = None,
 ) -> str:
     """§10.3 構造化入力から LLM プロンプトを組み立てる。
 
@@ -458,7 +516,8 @@ def build_prompt(
         nearby_agents: 近傍エージェント ID リスト (任意)。
         recent_visits: 直近の visit record リスト (任意)。
         recent_interactions: 直近の interaction event リスト (任意)。
-        relationship_state: 現在の関係状態 (stranger/acquaintance/friend 等) (任意)。
+        relationship_state: 現在 (変化前) の関係状態 (stranger/acquaintance/friend 等) (任意)。
+        relationship_to: 変化後の関係状態 (WO-008 / relationship_reason プロンプト用) (任意)。
 
     Returns:
         LLMProvider.complete() に渡すプロンプト文字列。
@@ -466,6 +525,7 @@ def build_prompt(
     lines: list[str] = []
 
     # ── RuleBased 用マーカー行 (complete() がここを解析する) ─────────────────
+    lines.append(f"prompt_type: {prompt_type}")
     lines.append(f"event_type: {event_type}")
     lines.append(f"agent_a_id: {agent_a_id}")
     lines.append(f"agent_b_id: {agent_b_id}")
@@ -474,6 +534,12 @@ def build_prompt(
     lines.append(f"agent_a_name: {agent_a_name}")
     lines.append(f"agent_b_name: {agent_b_name}")
     lines.append(f"poi_name: {poi_name}")
+    # WO-008: relationship_reason 用マーカー
+    # relationship_state = 変化前状態 / relationship_to = 変化後状態
+    if relationship_state:
+        lines.append(f"relationship_from: {relationship_state}")
+    if relationship_to:
+        lines.append(f"relationship_to: {relationship_to}")
 
     # タスク内で使う表示名 (フォールバック込み)
     _display_a = agent_a_name if agent_a_name else f"エージェント {agent_a_id}"
@@ -493,9 +559,12 @@ def build_prompt(
     elif prompt_type == "relationship_reason":
         lines.append("")
         lines.append("## タスク")
+        rel_change = ""
+        if relationship_state and relationship_to and relationship_state != relationship_to:
+            rel_change = f" ({relationship_state} → {relationship_to})"
         lines.append(
             f"{_display_a} と {_display_b} の関係が "
-            f"'{event_type}' イベントにより変化した。"
+            f"'{event_type}' イベントにより変化した{rel_change}。"
             "この関係変化の理由を 1 文で日本語で説明してください。"
         )
 
@@ -552,6 +621,10 @@ def build_destination_prompt(
             - current_time (str): 現在時刻 HH:MM:SS。
             - current_location (str, optional): 現在地 POI 説明。
             - recent_visits (list, optional): 直近の訪問リスト。
+            - occupation (str, optional): 職業詳細 (WO-006 / WO-008)。
+            - personality (str, optional): 性格傾向 (WO-006 / WO-008)。
+            - hobbies (list[str], optional): 趣味リスト (WO-006 / WO-008)。
+            - day_pattern (str, optional): 行動傾向 morning/night/balanced (WO-006 / WO-008)。
         allowed_categories: §9.3 テーブルが許可するカテゴリリスト。
             (§19.3.1 形式 例: ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"])
 
@@ -594,6 +667,24 @@ def build_destination_prompt(
     current_time = context.get("current_time")
     if current_time:
         lines.append(f"- 現在時刻: {current_time}")
+
+    # WO-008: WO-006 プロフィール拡張フィールドを注入する
+    occupation = context.get("occupation")
+    if occupation:
+        lines.append(f"- 職業: {occupation}")
+
+    personality = context.get("personality")
+    if personality:
+        lines.append(f"- 性格: {personality}")
+
+    hobbies = context.get("hobbies")
+    if hobbies:
+        hobbies_str = "、".join(hobbies) if isinstance(hobbies, (list, tuple)) else str(hobbies)
+        lines.append(f"- 趣味: {hobbies_str}")
+
+    day_pattern = context.get("day_pattern")
+    if day_pattern:
+        lines.append(f"- 行動傾向: {day_pattern}")
 
     current_location = context.get("current_location")
     if current_location:

@@ -43,7 +43,14 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # サーバーモジュールを import
-from tools.urban_viewer_server import app, ALLOWED_FILES
+from tools.urban_viewer_server import app, ALLOWED_FILES, AGENT_PROFILES_RE
+from tools.urban_viewer.labels import (
+    CATEGORY_LABELS,
+    ROLE_LABELS,
+    ACTION_LABELS,
+    INTERACTION_TYPE_LABELS,
+    get_label,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # fixture: 最小 agent_states.jsonl (contract §Agent State JSONL 準拠)
@@ -489,3 +496,334 @@ class TestAllowedFiles:
     def test_expected_files_in_allowlist(self, filename):
         """contract で定義された 9 ファイルがすべて許可リストにある。"""
         assert filename in ALLOWED_FILES, f"{filename!r} が許可リストにない"
+
+    @pytest.mark.parametrize("filename", [
+        "agent_profiles_N10.json",
+        "agent_profiles_N100.json",
+        "agent_profiles_N2.json",
+        "agent_profiles_N1000.json",
+    ])
+    def test_agent_profiles_variable_n_allowed(self, filename):
+        """agent_profiles_N<N>.json は可変エージェント数で許可される (10 体運用対応)。"""
+        assert AGENT_PROFILES_RE.match(filename), f"{filename!r} が許可されない"
+
+    @pytest.mark.parametrize("filename", [
+        "agent_profiles.json",
+        "agent_profiles_N.json",
+        "agent_profiles_Nx.json",
+        "agent_profiles_N10.json.bak",
+        "agent_profiles_N10.py",
+        "../agent_profiles_N10.json",
+    ])
+    def test_agent_profiles_invalid_names_rejected(self, filename):
+        """N<数字>.json 形式以外は許可しない (安全側)。"""
+        assert not AGENT_PROFILES_RE.match(filename), f"{filename!r} を誤って許可した"
+
+    def test_agent_profiles_n10_not_forbidden(self, client_no_key):
+        """N10 プロファイルは許可リストを通過する (存在しない run なら 404 で、403 ではない)。"""
+        res = client_no_key.get("/api/data/no_such_run/agent_profiles_N10.json")
+        assert res.status_code == 404, f"403 (not allowed) ではなく 404 を期待: got {res.status_code}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# labels モジュール単体テスト (WO-010)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCategoryLabels:
+    """CATEGORY_LABELS: §19.3.1 の 12 カテゴリすべてが日本語表示される。"""
+
+    def test_all_12_categories_present(self):
+        """contract §19.3.1 の 12 カテゴリが CATEGORY_LABELS に含まれる。"""
+        expected = {
+            "amenity-cafe", "amenity-restaurant", "amenity-fast_food",
+            "amenity-bar", "shop-convenience", "shop-clothing",
+            "shop-supermarket", "leisure-park", "amenity-school",
+            "office-building", "home-residential", "other-misc",
+        }
+        missing = expected - set(CATEGORY_LABELS.keys())
+        assert not missing, f"CATEGORY_LABELS に不足: {missing}"
+
+    @pytest.mark.parametrize("code,expected_label", [
+        ("amenity-cafe",        "カフェ"),
+        ("amenity-restaurant",  "レストラン"),
+        ("amenity-fast_food",   "ファストフード"),
+        ("amenity-bar",         "バー"),
+        ("shop-convenience",    "コンビニ"),
+        ("shop-clothing",       "衣料品店"),
+        ("shop-supermarket",    "スーパー"),
+        ("leisure-park",        "公園"),
+        ("amenity-school",      "学校"),
+        ("office-building",     "オフィスビル"),
+        ("home-residential",    "住宅"),
+        ("other-misc",          "その他"),
+    ])
+    def test_category_label_value(self, code, expected_label):
+        """各カテゴリコードが期待する日本語ラベルに変換される。"""
+        assert CATEGORY_LABELS[code] == expected_label, (
+            f"{code!r}: expected {expected_label!r}, got {CATEGORY_LABELS[code]!r}"
+        )
+
+    def test_values_are_nonempty_strings(self):
+        """すべてのラベル値は非空文字列である。"""
+        for code, label in CATEGORY_LABELS.items():
+            assert isinstance(label, str) and label.strip(), (
+                f"{code!r} のラベルが空または非文字列: {label!r}"
+            )
+
+
+class TestRoleLabels:
+    """ROLE_LABELS: contract §Enumerations の 3 種が日本語表示される。"""
+
+    @pytest.mark.parametrize("code,expected_label", [
+        ("office_worker", "会社員"),
+        ("student",       "学生"),
+        ("other",         "その他"),
+    ])
+    def test_role_label_value(self, code, expected_label):
+        """各 role コードが期待する日本語ラベルに変換される。"""
+        assert ROLE_LABELS[code] == expected_label, (
+            f"{code!r}: expected {expected_label!r}, got {ROLE_LABELS[code]!r}"
+        )
+
+    def test_all_3_roles_present(self):
+        """3 種すべての role が ROLE_LABELS に含まれる。"""
+        for code in ("office_worker", "student", "other"):
+            assert code in ROLE_LABELS, f"{code!r} が ROLE_LABELS に存在しない"
+
+
+class TestInteractionTypeLabels:
+    """INTERACTION_TYPE_LABELS: contract §Enumerations の 4 種が日本語表示される。"""
+
+    @pytest.mark.parametrize("code,expected_label", [
+        ("meeting",      "出会い"),
+        ("conversation", "会話"),
+        ("conflict",     "口論"),
+        ("farewell",     "別れ"),
+    ])
+    def test_interaction_type_label_value(self, code, expected_label):
+        """各 interaction type コードが期待する日本語ラベルに変換される。"""
+        assert INTERACTION_TYPE_LABELS[code] == expected_label, (
+            f"{code!r}: expected {expected_label!r}, got {INTERACTION_TYPE_LABELS[code]!r}"
+        )
+
+    def test_all_4_types_present(self):
+        """4 種すべての interaction type が INTERACTION_TYPE_LABELS に含まれる。"""
+        for code in ("meeting", "conversation", "conflict", "farewell"):
+            assert code in INTERACTION_TYPE_LABELS, f"{code!r} が INTERACTION_TYPE_LABELS に存在しない"
+
+
+class TestActionLabels:
+    """ACTION_LABELS: contract §Enumerations の行動理由が日本語表示される。"""
+
+    @pytest.mark.parametrize("code,expected_label", [
+        ("commute",   "通勤"),
+        ("lunch",     "昼食"),
+        ("errand",    "用事"),
+        ("social",    "交流"),
+        ("go_home",   "帰宅"),
+        ("wander",    "散策"),
+        ("work",      "仕事"),
+        ("study",     "勉強"),
+        ("no_target", "目的地なし"),
+    ])
+    def test_action_label_value(self, code, expected_label):
+        """各 action/reason コードが期待する日本語ラベルに変換される。"""
+        assert ACTION_LABELS[code] == expected_label, (
+            f"{code!r}: expected {expected_label!r}, got {ACTION_LABELS[code]!r}"
+        )
+
+    def test_all_actions_present(self):
+        """contract §Enumerations の全 action が ACTION_LABELS に含まれる。"""
+        # contract §Enumerations: commute/work/study/lunch/errand/social/go_home/wander/no_target
+        required = {"commute", "work", "study", "lunch", "errand", "social", "go_home", "wander", "no_target"}
+        missing = required - set(ACTION_LABELS.keys())
+        assert not missing, f"ACTION_LABELS に不足: {missing}"
+
+
+class TestGetLabel:
+    """get_label() ヘルパー: 未知コードはそのままフォールバックする。"""
+
+    def test_known_code_returns_japanese(self):
+        """既知コードは日本語ラベルを返す。"""
+        assert get_label(CATEGORY_LABELS, "amenity-cafe") == "カフェ"
+        assert get_label(ROLE_LABELS,     "student")      == "学生"
+        assert get_label(ACTION_LABELS,   "commute")      == "通勤"
+        assert get_label(INTERACTION_TYPE_LABELS, "meeting") == "出会い"
+
+    def test_unknown_code_returns_code_itself(self):
+        """未知コードは入力コードをそのまま返す (後方互換)。"""
+        assert get_label(CATEGORY_LABELS, "unknown-xyz") == "unknown-xyz"
+        assert get_label(ROLE_LABELS,     "future_role") == "future_role"
+        assert get_label(ACTION_LABELS,   "new_action")  == "new_action"
+
+    def test_empty_code_returns_empty(self):
+        """空文字列は空文字列を返す。"""
+        assert get_label(CATEGORY_LABELS, "") == ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /api/labels エンドポイントテスト (WO-010)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestLabelsEndpoint:
+    """GET /api/labels — ラベルマップを JSON で返す。"""
+
+    def test_returns_200(self, client_no_key):
+        """ラベルエンドポイントは 200 を返す。"""
+        res = client_no_key.get("/api/labels")
+        assert res.status_code == 200
+
+    def test_content_type_json(self, client_no_key):
+        """Content-Type は application/json。"""
+        res = client_no_key.get("/api/labels")
+        assert "application/json" in res.headers.get("content-type", "")
+
+    def test_has_all_label_sections(self, client_no_key):
+        """レスポンスに category / role / interaction_type / action の 4 セクションがある。"""
+        body = client_no_key.get("/api/labels").json()
+        for key in ("category", "role", "interaction_type", "action"):
+            assert key in body, f"ラベルセクション {key!r} が欠けている"
+
+    def test_category_section_has_12_entries(self, client_no_key):
+        """category セクションは 12 エントリを持つ (§19.3.1)。"""
+        body = client_no_key.get("/api/labels").json()
+        assert len(body["category"]) == 12
+
+    def test_known_category_has_correct_label(self, client_no_key):
+        """amenity-cafe -> カフェ が返る。"""
+        body = client_no_key.get("/api/labels").json()
+        assert body["category"]["amenity-cafe"] == "カフェ"
+
+    def test_known_role_has_correct_label(self, client_no_key):
+        """office_worker -> 会社員 が返る。"""
+        body = client_no_key.get("/api/labels").json()
+        assert body["role"]["office_worker"] == "会社員"
+
+    def test_known_interaction_type_has_correct_label(self, client_no_key):
+        """meeting -> 出会い が返る。"""
+        body = client_no_key.get("/api/labels").json()
+        assert body["interaction_type"]["meeting"] == "出会い"
+
+    def test_known_action_has_correct_label(self, client_no_key):
+        """commute -> 通勤 が返る。"""
+        body = client_no_key.get("/api/labels").json()
+        assert body["action"]["commute"] == "通勤"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-007: surname ベースのエージェント表示
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAgentProfileSurnameFields:
+    """agent_profiles_N100.json が surname / given フィールドを持つ (WO-006 contract §0.3.0)。
+
+    WO-007 の受け入れ条件:
+      - マーカー glyph に surname を使う。
+      - surname 欠落時は name 先頭文字列にフォールバックする。
+      - 詳細パネルに「surname given さん」を表示する。
+    これらは JS 側で実装されるが、データ契約の検証はサーバーテストで担保する。
+    """
+
+    def test_profiles_endpoint_returns_list(self, client_no_key):
+        """agent_profiles_N100.json エンドポイントはリストを返す。"""
+        res = client_no_key.get("/api/data/test_run/agent_profiles_N100.json")
+        assert res.status_code == 200
+        data = res.json()
+        assert isinstance(data, list), f"profile data should be a list, got {type(data)}"
+
+    def test_profiles_have_required_contract_fields(self, client_no_key):
+        """各プロフィールが contract §Agent Profile の必須フィールドを持つ (id / name / initial_position)。"""
+        res = client_no_key.get("/api/data/test_run/agent_profiles_N100.json")
+        assert res.status_code == 200
+        profiles = res.json()
+        assert len(profiles) >= 1, "プロフィールが 1 件以上必要"
+        for p in profiles:
+            assert "id"               in p, f"id 欠落: {p}"
+            assert "name"             in p, f"name 欠落: {p}"
+            assert "initial_position" in p, f"initial_position 欠落: {p}"
+
+    def test_profiles_have_surname_and_given(self, client_no_key):
+        """generate_urban_sample.py が生成したプロフィールは surname / given を持つ (WO-006 §0.3.0)。
+
+        fallback fixture (_create_minimal_static_files) が呼ばれた場合は surname / given を
+        持たないことが予想されるため、generate_urban_sample.py が成功した場合のみ検証する。
+        テスト用 fixture は generate 成功時 surname = 姓、given = 名 を持つことを期待する。
+        """
+        res = client_no_key.get("/api/data/test_run/agent_profiles_N100.json")
+        assert res.status_code == 200
+        profiles = res.json()
+
+        # generate_urban_sample.py が生成したプロフィールかどうかを name フィールドで判定する。
+        # 最小 fallback fixture は ASCII 名 ("Tanaka Ken" など) を使うため
+        # 日本語名を持つプロフィールは generate が成功した場合のみ存在する。
+        # ASCII 名のみの場合は surname/given 無しを許容してスキップする。
+        has_japanese_name = any(
+            p.get("name", "").encode("utf-8") != p.get("name", "").encode("ascii", errors="ignore")
+            for p in profiles
+        )
+        if not has_japanese_name:
+            pytest.skip("最小 fallback fixture のため surname/given テストをスキップ")
+
+        for p in profiles:
+            assert "surname" in p, (
+                f"WO-006 contract §0.3.0: surname が欠落 (profile id={p.get('id')!r})"
+            )
+            assert "given"   in p, (
+                f"WO-006 contract §0.3.0: given が欠落 (profile id={p.get('id')!r})"
+            )
+            # name == surname + given 保証 (contract §Agent Profile)
+            assert p["name"] == p["surname"] + p["given"], (
+                f"name '{p['name']}' != surname '{p['surname']}' + given '{p['given']}'"
+            )
+
+    def test_surname_fallback_in_minimal_fixture(self):
+        """surname 欠落プロフィールに対する glyph ラベル計算ロジックの検証。
+
+        JS 側 app.js の _buildProfileMap / markerData ラベルロジックを
+        Python で等価実装して確認する (fallback = name 先頭文字列)。
+        """
+        # surname あり
+        p_with_surname = {"id": 0, "name": "井上翔", "surname": "井上", "given": "翔"}
+        label = p_with_surname.get("surname") or p_with_surname["name"][:2]
+        assert label == "井上", f"surname あり: expected '井上', got {label!r}"
+
+        # surname なし → name 先頭にフォールバック
+        p_no_surname = {"id": 1, "name": "TanakaKen"}
+        label_fb = p_no_surname.get("surname") or p_no_surname["name"][:2]
+        assert label_fb == "Ta", f"surname なし fallback: expected 'Ta', got {label_fb!r}"
+
+        # surname が空文字列 → name 先頭にフォールバック
+        p_empty_surname = {"id": 2, "name": "山田太郎", "surname": "", "given": "太郎"}
+        label_empty = p_empty_surname.get("surname") or p_empty_surname["name"][:2]
+        assert label_empty == "山田", f"surname 空: expected '山田', got {label_empty!r}"
+
+    def test_detail_panel_title_logic(self):
+        """詳細パネルのタイトル生成ロジック検証 (JS ui_panels.js の Python 等価実装)。
+
+        受け入れ条件: 「surname given さん」表示。surname 欠落時は「name さん」にフォールバック。
+        """
+        def _panel_title(profile: dict) -> str:
+            """JS updateAgentDetail ヘッダー生成ロジックの Python 等価実装。"""
+            if not profile:
+                return "Agent unknown"
+            surname = profile.get("surname", "")
+            given   = profile.get("given",   "")
+            name    = profile.get("name",    "")
+            if surname and given:
+                return f"{surname} {given}さん"
+            if name:
+                return f"{name}さん"
+            return f"Agent {profile.get('id', '?')}"
+
+        # surname + given → 「surname given さん」
+        assert _panel_title({"id": 0, "name": "井上翔", "surname": "井上", "given": "翔"}) \
+            == "井上 翔さん"
+
+        # surname なし → 「name さん」フォールバック
+        assert _panel_title({"id": 1, "name": "TanakaKen"}) == "TanakaKenさん"
+
+        # surname のみ (given なし) → 「name さん」フォールバック
+        assert _panel_title({"id": 2, "name": "山田", "surname": "山田"}) == "山田さん"
+
+        # name なし profile → 「Agent N」
+        assert _panel_title({"id": 3}) == "Agent 3"

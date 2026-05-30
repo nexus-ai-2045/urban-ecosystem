@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.2.0
+version: 0.3.0
 owner: manager
-updated: 2026-05-29
+updated: 2026-05-30
 
 ## Purpose
 
@@ -125,13 +125,27 @@ Required: `id` (string `road_*`)。Optional: `length_m` (number >= 0), `walkable
 ```json
 {
   "id": 26,
-  "name": "Mori Akira",
-  "initial_position": { "lat": 35.0, "lon": 139.0 }
+  "name": "井上翔",
+  "surname": "井上",
+  "given": "翔",
+  "age": 30,
+  "gender": "male",
+  "occupation": "エンジニア",
+  "personality": "几帳面",
+  "hobbies": ["プログラミング", "ゲーム"],
+  "day_pattern": "morning",
+  "initial_position": { "lat": 35.0, "lon": 139.0 },
+  "home_poi_id": "poi_home_001",
+  "role": "office_worker",
+  "social_networks": [61, 97, 99]
 }
 ```
 
 Required: `id` (integer), `name` (string), `initial_position` (`{lat, lon}`)。
-Optional: `age` (integer >= 0), `gender` (string), `description` (string), `home_poi_id` (既存 POI id), `work_or_school_poi_id` (既存 POI id), `role` (§Enumerations), `social_networks` (既存 agent id の配列 / 自己 id を含めない / 重複なし)。
+Optional (既存): `age` (integer >= 0), `gender` (string), `description` (string), `home_poi_id` (既存 POI id), `work_or_school_poi_id` (既存 POI id), `role` (§Enumerations), `social_networks` (既存 agent id の配列 / 自己 id を含めない / 重複なし)。
+Optional (WO-006 追加): `surname` (string / 日本語姓), `given` (string / 日本語名 / `name == surname + given` を保証), `occupation` (string / 職業詳細), `personality` (string / 性格傾向), `hobbies` (string の配列 / 1 件以上), `day_pattern` (`"morning"` | `"night"` | `"balanced"` / §9.3 時刻帯テーブルと矛盾しない行動傾向値)。
+
+**後方互換**: WO-006 追加フィールドはすべて optional。既存の simulation / viewer / replay は未知フィールドを保持 (§Common Rules) するため、profile に追加フィールドが混在しても壊れない。
 
 ## Agent State JSONL
 
@@ -230,3 +244,4 @@ Required: `run_id`, `seed`, `ticks`, `agents`, `pois`, `interactions`。Optional
 
 - 0.1.0: Initial MVP contract for data loader, viewer, simulation, and replay.
 - 0.2.0: spec 改訂 (Google Cloud Run + Google Maps + Vertex AI/Gemini, Groq/STT 全除去) に追従。§Coordinate Systems / §Naming Conventions / §Time and Tick / §Enumerations / §Relationship Snapshot を新設。POI/AOI/Road を GeoJSON Feature 構造へ統一し `geometry_type` プロパティを廃止。例の `poi_id` を `cafe_123`→`poi_123`、`category` を `"amenity - cafe"`→`amenity-cafe` に修正。`summary.json` に `seed` を追加し決定論対象外を明記。`relationships.jsonl` を File Names に追加。Purpose から動画要件抽出への言及を削除。
+- 0.3.0 (WO-006): §Agent Profile に optional 拡張フィールドを追加。`surname` / `given` (姓名分割 / `name == surname + given` 保証) / `occupation` (職業詳細) / `personality` (性格傾向) / `hobbies` (趣味リスト) / `day_pattern` (行動傾向 / `"morning"` | `"night"` | `"balanced"`)。後方互換: 全フィールドは optional で既存 simulation / viewer / replay は影響なし。`generate_urban_sample.py` は WO-006 から新フィールドを生成する (rng 消費 Step 10-13)。これは WO-007 (苗字キャラ表示) / WO-008 (LLM 行動決定) の共通土台。

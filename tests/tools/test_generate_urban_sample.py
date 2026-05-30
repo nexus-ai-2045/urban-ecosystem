@@ -250,3 +250,112 @@ def test_custom_agent_count_filename(tmp_path: Path) -> None:
         frozenset(p.id for p in load_pois(tmp_path / "pois.geojson")),
     )
     assert len(profiles) == 50
+
+
+# ── WO-006: rich profile フィールド (surname/given/occupation/personality/hobbies/day_pattern) ─
+
+def test_rich_profile_fields_present(tmp_path: Path) -> None:
+    """全エージェントに surname/given/occupation/personality/hobbies/day_pattern が存在する。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        assert "surname" in agent, f"id={agent['id']}: surname 欠落"
+        assert "given" in agent, f"id={agent['id']}: given 欠落"
+        assert "occupation" in agent, f"id={agent['id']}: occupation 欠落"
+        assert "personality" in agent, f"id={agent['id']}: personality 欠落"
+        assert "hobbies" in agent, f"id={agent['id']}: hobbies 欠落"
+        assert "day_pattern" in agent, f"id={agent['id']}: day_pattern 欠落"
+
+
+def test_surname_given_consistent_with_name(tmp_path: Path) -> None:
+    """surname + given を結合すると name と一致する。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        assert agent["name"] == agent["surname"] + agent["given"], (
+            f"id={agent['id']}: name={agent['name']!r} != surname={agent['surname']!r}+given={agent['given']!r}"
+        )
+
+
+def test_rich_profile_deterministic_agents10(tmp_path: Path) -> None:
+    """--agents 10 で seed 固定 → byte 一致再現 (WO-006 決定論要件)。"""
+    d1, d2 = tmp_path / "r1", tmp_path / "r2"
+    import hashlib
+    generate(d1, seed=42, agents=10, pois=300)
+    generate(d2, seed=42, agents=10, pois=300)
+    fname = "agent_profiles_N10.json"
+    h1 = hashlib.sha256((d1 / fname).read_bytes()).hexdigest()
+    h2 = hashlib.sha256((d2 / fname).read_bytes()).hexdigest()
+    assert h1 == h2, f"{fname} が byte 一致しない"
+
+
+def test_occupation_is_string(tmp_path: Path) -> None:
+    """occupation は非空文字列。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        assert isinstance(agent["occupation"], str) and agent["occupation"], (
+            f"id={agent['id']}: occupation が空/非文字列"
+        )
+
+
+def test_personality_is_string(tmp_path: Path) -> None:
+    """personality は非空文字列。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        assert isinstance(agent["personality"], str) and agent["personality"], (
+            f"id={agent['id']}: personality が空/非文字列"
+        )
+
+
+def test_hobbies_is_nonempty_list_of_strings(tmp_path: Path) -> None:
+    """hobbies は 1 件以上の文字列リスト。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        h = agent["hobbies"]
+        assert isinstance(h, list) and len(h) >= 1, (
+            f"id={agent['id']}: hobbies が空/非リスト: {h!r}"
+        )
+        assert all(isinstance(x, str) and x for x in h), (
+            f"id={agent['id']}: hobbies に空/非文字列要素: {h!r}"
+        )
+
+
+def test_day_pattern_is_string(tmp_path: Path) -> None:
+    """day_pattern は非空文字列 (例: 'morning', 'night', 'balanced')。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    for agent in raw:
+        assert isinstance(agent["day_pattern"], str) and agent["day_pattern"], (
+            f"id={agent['id']}: day_pattern が空/非文字列"
+        )
+
+
+def test_cli_agents10(tmp_path: Path) -> None:
+    """--agents 10 で CLI が正常終了し rich profile フィールドが存在する。"""
+    rc = main(["--seed", "42", "--out-dir", str(tmp_path), "--agents", "10", "--pois", "300"])
+    assert rc == 0
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    assert len(raw) == 10
+    for agent in raw:
+        assert "surname" in agent
+        assert "day_pattern" in agent
+
+
+def test_rich_profile_loader_round_trip(tmp_path: Path) -> None:
+    """生成した rich profile を data_loader が正常ロードできる (optional フィールドは extra or named)。"""
+    generate(tmp_path, seed=42, agents=10, pois=300)
+    pois = load_pois(tmp_path / "pois.geojson")
+    poi_ids = frozenset(p.id for p in pois)
+    profiles = load_agent_profiles(tmp_path / "agent_profiles_N10.json", poi_ids)
+    assert len(profiles) == 10
+    # surname/given/occupation/personality/hobbies/day_pattern は named field または extra に存在する
+    for p in profiles:
+        # named field として存在する場合
+        if hasattr(p, "surname"):
+            assert p.surname is not None
+        else:
+            # extra に格納されている場合
+            assert "surname" in p.extra

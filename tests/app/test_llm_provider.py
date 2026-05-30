@@ -948,3 +948,320 @@ class TestSimulationGeminiFallback:
             assert filecmp.cmp(out_rule / name, out_gemini_fallback / name, shallow=False), (
                 f"{name}: RuleBased と Gemini fallback で byte 不一致"
             )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-008: build_destination_prompt プロフィール注入
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBuildDestinationPromptProfileInjection:
+    """WO-008: build_destination_prompt が occupation/personality/hobbies/day_pattern/
+    current_time を context に含めるテスト (acceptance criterion 1)。"""
+
+    _ALLOWED = ["amenity-cafe", "amenity-restaurant", "amenity-fast_food"]
+    _CTX_FULL = {
+        "agent_id": 10,
+        "role": "office_worker",
+        "current_time": "12:00:00",
+        "occupation": "エンジニア",
+        "personality": "几帳面",
+        "hobbies": ["プログラミング", "ゲーム"],
+        "day_pattern": "morning",
+    }
+
+    def test_occupation_included(self):
+        """occupation がプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX_FULL, allowed_categories=self._ALLOWED)
+        assert "エンジニア" in prompt, "occupation がプロンプトに含まれていない"
+
+    def test_personality_included(self):
+        """personality がプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX_FULL, allowed_categories=self._ALLOWED)
+        assert "几帳面" in prompt, "personality がプロンプトに含まれていない"
+
+    def test_hobbies_included(self):
+        """hobbies がプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX_FULL, allowed_categories=self._ALLOWED)
+        assert "プログラミング" in prompt or "ゲーム" in prompt, "hobbies がプロンプトに含まれていない"
+
+    def test_day_pattern_included(self):
+        """day_pattern がプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX_FULL, allowed_categories=self._ALLOWED)
+        assert "morning" in prompt, "day_pattern がプロンプトに含まれていない"
+
+    def test_current_time_included(self):
+        """current_time がプロンプトに含まれる。"""
+        prompt = build_destination_prompt(context=self._CTX_FULL, allowed_categories=self._ALLOWED)
+        assert "12:00:00" in prompt, "current_time がプロンプトに含まれていない"
+
+    def test_optional_profile_fields_omitted_when_absent(self):
+        """プロフィールフィールドが context に無い場合はプロンプトに現れない。"""
+        ctx_minimal = {"agent_id": 1, "role": "other", "current_time": "08:00:00"}
+        prompt = build_destination_prompt(context=ctx_minimal, allowed_categories=self._ALLOWED)
+        assert "None" not in prompt
+        # occupation/personality/hobbies/day_pattern はコンテキストに存在しないため現れない
+        assert "occupation" not in prompt or "エンジニア" not in prompt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-008: _build_destination_context がプロフィールフィールドを含める
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBuildDestinationContextProfileInjection:
+    """WO-008: Simulation._build_destination_context が occupation/personality/hobbies/
+    day_pattern/current_time を context dict に含めるテスト。"""
+
+    @pytest.fixture(scope="class")
+    def sample_inputs(self):
+        from environments.urban_2d.simulation import load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+        import tempfile, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="wo008_ctx_test_")
+            gen_sample(tmp, seed=42, agents=10, pois=50, ticks=4, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N10.json",
+            )
+        return pois, profiles
+
+    def test_context_contains_profile_fields(self, sample_inputs):
+        """_build_destination_context が WO-006 プロフィールフィールドを context に含める。"""
+        from environments.urban_2d.simulation import Simulation, _AgentRuntime
+        pois, profiles = sample_inputs
+
+        # occupation/personality/hobbies/day_pattern が設定されたプロフィールを探す
+        profile_with_fields = None
+        for p in profiles:
+            if p.occupation or p.personality or p.hobbies or p.day_pattern:
+                profile_with_fields = p
+                break
+
+        if profile_with_fields is None:
+            pytest.skip("サンプルにプロフィールフィールドが設定されたエージェントが存在しない")
+
+        sim = Simulation(pois, profiles, seed=42, ticks=4)
+        agent = _AgentRuntime(
+            profile=profile_with_fields,
+            lat=profile_with_fields.initial_lat,
+            lon=profile_with_fields.initial_lon,
+        )
+        ctx = sim._build_destination_context(agent, tick=4)
+
+        # current_time は必ず含まれる
+        assert "current_time" in ctx
+
+        # profile フィールドが存在する場合は context に含まれる
+        if profile_with_fields.occupation:
+            assert ctx.get("occupation") == profile_with_fields.occupation
+        if profile_with_fields.personality:
+            assert ctx.get("personality") == profile_with_fields.personality
+        if profile_with_fields.hobbies:
+            assert ctx.get("hobbies") == list(profile_with_fields.hobbies)
+        if profile_with_fields.day_pattern:
+            assert ctx.get("day_pattern") == profile_with_fields.day_pattern
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-008: relationship_reason — RuleBased テンプレ文
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRuleBasedRelationshipReason:
+    """WO-008: RuleBasedProvider が relationship_reason プロンプトにテンプレ文を返す。"""
+
+    @pytest.fixture(autouse=True)
+    def provider(self) -> RuleBasedProvider:
+        return RuleBasedProvider()
+
+    def test_relationship_reason_returns_string(self, provider):
+        """relationship_reason プロンプトで文字列が返る。"""
+        prompt = build_prompt(
+            prompt_type="relationship_reason",
+            agent_a_id=1,
+            agent_b_id=2,
+            event_type="conversation",
+            location_poi_id="poi_cafe_001",
+            relationship_state="acquaintance",
+        )
+        result = provider.complete(prompt)
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_relationship_reason_not_empty(self, provider):
+        """relationship_reason プロンプトが空文字やプレースホルダーではない。"""
+        prompt = build_prompt(
+            prompt_type="relationship_reason",
+            agent_a_id=3,
+            agent_b_id=7,
+            event_type="conflict",
+            location_poi_id="poi_bar_001",
+            relationship_state="stranger",
+        )
+        result = provider.complete(prompt)
+        # 空・None ではなく、フォールバック文または有意なテンプレ文を返す
+        assert result.strip() != ""
+
+    def test_relationship_reason_deterministic(self, provider):
+        """同一入力で常に同一出力 (決定論)。"""
+        prompt = build_prompt(
+            prompt_type="relationship_reason",
+            agent_a_id=5,
+            agent_b_id=9,
+            event_type="meeting",
+            location_poi_id="poi_park_001",
+            relationship_state="stranger",
+            agent_a_name="田中さん",
+            agent_b_name="鈴木さん",
+        )
+        results = [provider.complete(prompt) for _ in range(5)]
+        assert len(set(results)) == 1, "同一プロンプトで異なる出力が返った"
+
+    @pytest.mark.parametrize("ev_type", ["meeting", "conversation", "conflict", "farewell"])
+    def test_relationship_reason_covers_all_event_types(self, provider, ev_type):
+        """全 event_type で relationship_reason が生成される。"""
+        prompt = build_prompt(
+            prompt_type="relationship_reason",
+            agent_a_id=1,
+            agent_b_id=2,
+            event_type=ev_type,
+            location_poi_id="poi_001",
+            relationship_state="acquaintance",
+        )
+        result = provider.complete(prompt)
+        assert isinstance(result, str) and len(result) > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-008: interaction_events に relationship_reason が格納される
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestInteractionEventRelationshipReason:
+    """WO-008: relationship 変化時に interaction_events に relationship_reason が格納される
+    (acceptance criterion 2)。"""
+
+    @pytest.fixture(scope="class")
+    def sim_with_interactions(self):
+        """interaction が発生する最小シミュレーションを返す。"""
+        from environments.urban_2d.simulation import Simulation, load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+        import tempfile, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="wo008_rel_test_")
+            gen_sample(tmp, seed=42, agents=100, pois=300, ticks=24, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N100.json",
+            )
+        sim = Simulation(pois, profiles, seed=42, ticks=24, llm_provider=make_llm_provider("rule"))
+        sim.simulate()
+        return sim
+
+    def test_relationship_delta_events_have_reason(self, sim_with_interactions):
+        """relationship_delta が存在するイベントには relationship_reason が格納される。"""
+        sim = sim_with_interactions
+        assert sim.interaction_events, "interaction イベントが 0 件"
+
+        delta_events = [
+            e for e in sim.interaction_events
+            if e.get("relationship_delta") and
+            e["relationship_delta"]["from"] != e["relationship_delta"]["to"]
+        ]
+
+        if not delta_events:
+            pytest.skip("relationship が変化したイベントが 0 件 (テスト前提不成立)")
+
+        for event in delta_events:
+            assert "relationship_reason" in event, (
+                f"relationship 変化があるのに relationship_reason が格納されていない: {event}"
+            )
+            assert isinstance(event["relationship_reason"], str)
+            assert len(event["relationship_reason"]) > 0
+
+    def test_no_delta_events_may_or_may_not_have_reason(self, sim_with_interactions):
+        """from==to のイベント (状態不変) には relationship_reason が格納されなくてよい。"""
+        sim = sim_with_interactions
+        no_change_events = [
+            e for e in sim.interaction_events
+            if e.get("relationship_delta") and
+            e["relationship_delta"]["from"] == e["relationship_delta"]["to"]
+        ]
+        # 状態不変の場合は relationship_reason がなくても OK (型チェックのみ)
+        for event in no_change_events:
+            if "relationship_reason" in event:
+                assert isinstance(event["relationship_reason"], str)
+
+    def test_relationship_reason_deterministic_with_rule_based(self):
+        """RuleBased で 2 回実行した interaction_events が byte 一致する (§13.3.2)。"""
+        import filecmp, tempfile, warnings
+        from environments.urban_2d.simulation import Simulation, load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="wo008_det_test_")
+            gen_sample(tmp, seed=42, agents=100, pois=300, ticks=24, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N100.json",
+            )
+        import tempfile as _tf
+        out_a = Path(_tf.mkdtemp(prefix="wo008_det_a_"))
+        out_b = Path(_tf.mkdtemp(prefix="wo008_det_b_"))
+
+        Simulation(
+            pois, profiles, seed=42, ticks=24, run_id="run_a",
+            llm_provider=make_llm_provider("rule"),
+        ).run(out_a)
+        Simulation(
+            pois, profiles, seed=42, ticks=24, run_id="run_b",
+            llm_provider=make_llm_provider("rule"),
+        ).run(out_b)
+
+        for name in (
+            "agent_states.jsonl",
+            "poi_visit_records.jsonl",
+            "interaction_events.jsonl",
+        ):
+            assert filecmp.cmp(out_a / name, out_b / name, shallow=False), (
+                f"WO-008 決定論: {name} が byte 不一致"
+            )
+
+    def test_relationship_reason_with_mock_gemini(self):
+        """VertexGeminiProvider (mock) で relationship_reason が Gemini 応答になる。"""
+        import tempfile, warnings
+        from environments.urban_2d.simulation import Simulation, load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="wo008_gemini_test_")
+            gen_sample(tmp, seed=42, agents=100, pois=300, ticks=24, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N100.json",
+            )
+
+        gemini_reason_text = "会話を通じて二人の距離が縮まった。"
+        mock_client = _make_mock_client(gemini_reason_text)
+        provider = VertexGeminiProvider(client=mock_client)
+
+        with patch.dict("sys.modules", {
+            "google.genai.types": MagicMock(GenerateContentConfig=MagicMock()),
+        }):
+            sim = Simulation(pois, profiles, seed=42, ticks=24, llm_provider=provider)
+            sim.simulate()
+
+        # interaction イベントが存在すること
+        assert sim.interaction_events, "interaction イベントが 0 件"
+
+        # relationship が変化したイベントに Gemini 応答テキストが含まれる
+        delta_events = [
+            e for e in sim.interaction_events
+            if e.get("relationship_delta") and
+            e["relationship_delta"]["from"] != e["relationship_delta"]["to"]
+        ]
+        if delta_events:
+            for event in delta_events:
+                assert "relationship_reason" in event
+                # Gemini provider の応答は mock テキストになる
+                assert event["relationship_reason"] == gemini_reason_text

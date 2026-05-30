@@ -115,10 +115,12 @@ class Road:
 class AgentProfile:
     """AgentProfile (agent_profiles_N100.json)。
 
-    contract §Agent Profile:
+    contract §Agent Profile v0.3.0:
       Required: id (int), name (str), initial_position {lat, lon}
-      Optional: age, gender, description, home_poi_id, work_or_school_poi_id,
-                role, social_networks
+      Optional (既存): age, gender, description, home_poi_id, work_or_school_poi_id,
+                       role, social_networks
+      Optional (WO-006 追加): surname, given, occupation, personality,
+                              hobbies, day_pattern
     """
     id: int
     name: str
@@ -131,6 +133,14 @@ class AgentProfile:
     work_or_school_poi_id: Optional[str] = None
     role: str = "other"
     social_networks: tuple[int, ...] = field(default_factory=tuple)
+    # WO-006: 姓名分割
+    surname: Optional[str] = None
+    given: Optional[str] = None
+    # WO-006: 職業詳細・性格・趣味・行動傾向
+    occupation: Optional[str] = None
+    personality: Optional[str] = None
+    hobbies: tuple[str, ...] = field(default_factory=tuple)
+    day_pattern: Optional[str] = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 

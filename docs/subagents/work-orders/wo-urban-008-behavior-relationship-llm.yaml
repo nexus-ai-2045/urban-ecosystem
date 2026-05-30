@@ -1,0 +1,77 @@
+id: wo-urban-008-behavior-relationship-llm
+title: "Behavior-decision LLM body + relationship-reason LLM wiring"
+status: draft
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - test-agent
+  - quality-gate
+
+goal: >
+  行動決定 LLM を本体化する。choose_destination_category の context に
+  プロフィール (occupation / personality / hobbies / day_pattern) と時刻を厚く
+  注入し、さらに関係変化理由文 (relationship_reason) を simulation に配線して
+  Gemini 生成する。RuleBased 既定は決定論を維持する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md  # §10.2 / §10.3 / §9.3
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - app/llm_provider.py
+    - environments/urban_2d/simulation.py
+    - tests/app/test_llm_provider.py
+    - tests/environments/test_urban_simulation.py
+  read_only_paths:
+    - core/
+  out_of_scope:
+    - "profile スキーマ追加は WO-006。"
+    - "会話要約 (summary) は実装済みのため再実装しない (必要なら拡張のみ)。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-006-rich-profile
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation: []
+  before_long_run:
+    - G2   # Vertex AI / Gemini の利用量・実験範囲
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/app/test_llm_provider.py tests/environments/test_urban_simulation.py -v -p no:cacheprovider"
+  optional:
+    - "GOOGLE_CLOUD_PROJECT=nexus-ai-2045 python tools/urban_simulation_cli.py run --llm vertex --agents 10 --pois data/urban_real/pois.geojson --out /tmp/urban_llm10"
+
+acceptance:
+  - "build_destination_prompt が occupation / personality / hobbies / day_pattern / current_time を context に含める。"
+  - "relationship 変化時に build_prompt(relationship_reason) を呼び、Gemini で理由文を生成して interaction_events に格納する (RuleBased は決定論テンプレ文)。"
+  - "RuleBased 既定で 10 体の agent_states / interaction_events が byte 一致を維持する (§13.3.2)。"
+  - "LLM 経路は --llm vertex の opt-in のみ。テストは mock で実 API を呼ばない。"
+  - "不正・例外応答は §9.3 ルール / テンプレ文に fallback する。"
+  - "--llm vertex で 10 体 run が完走する (ADC)。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "決定論方針: RuleBased が byte 一致を担保するため、LLM 注入は必ず provider 抽象越し・opt-in に閉じる。"

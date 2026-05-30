@@ -424,6 +424,9 @@ _PROFILE_KNOWN_KEYS = {
     "age", "gender", "description",
     "home_poi_id", "work_or_school_poi_id",
     "role", "social_networks",
+    # WO-006: rich profile 拡張フィールド
+    "surname", "given",
+    "occupation", "personality", "hobbies", "day_pattern",
 }
 
 
@@ -468,6 +471,10 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
     )
     social_networks = tuple(sn_raw)
 
+    # WO-006: hobbies は list[str] → tuple[str, ...]
+    hobbies_raw = obj.get("hobbies", [])
+    _require(isinstance(hobbies_raw, list), loc, "hobbies", "list of strings")
+
     extra = _extract_extra(obj, _PROFILE_KNOWN_KEYS)
     return AgentProfile(
         id=obj["id"],
@@ -481,6 +488,12 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
         work_or_school_poi_id=obj.get("work_or_school_poi_id"),
         role=role,
         social_networks=social_networks,
+        surname=obj.get("surname"),
+        given=obj.get("given"),
+        occupation=obj.get("occupation"),
+        personality=obj.get("personality"),
+        hobbies=tuple(hobbies_raw),
+        day_pattern=obj.get("day_pattern"),
         extra=extra,
     )
 

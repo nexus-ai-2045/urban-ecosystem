@@ -1,0 +1,82 @@
+id: wo-urban-006-rich-profile
+title: "Rich agent profile (surname/given + occupation/personality/hobbies/day pattern)"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  AgentProfile を拡張し、姓名分割 (surname / given) と職業詳細・性格・趣味・
+  1 日の行動傾向 (day_pattern) を持たせる。generate_urban_sample.py で生成し、
+  data-contract と spec §6.4 / §19.4 に反映する。これは「苗字キャラ表示」
+  (WO-007) と「行動決定 LLM 本体」(WO-008) の共通土台。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/ai-ecosystem-implementation-orchestration.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - environments/urban_2d/models.py
+    - environments/urban_2d/data_loader.py
+    - tools/generate_urban_sample.py
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/ai-ecosystem-tool-spec.md
+    - tests/environments/test_urban_data_loader.py
+    - tests/tools/test_generate_urban_sample.py
+  read_only_paths:
+    - core/
+    - environments/lunar_2d/
+  out_of_scope:
+    - "viewer の表示変更は WO-007 で行う (本 WO はデータ生成まで)。"
+    - "LLM への profile 注入は WO-008 で行う。"
+    - "core/ は変更しない。"
+
+contracts:
+  consumes: []
+  produces:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0  # MINOR up: profile に optional 拡張フィールド追加 (実装時に現行最新版を再確認)
+
+depends_on:
+  work_orders: []
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1   # data-contract (profile schema) の変更
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/environments/test_urban_data_loader.py tests/tools/test_generate_urban_sample.py -v -p no:cacheprovider"
+  optional:
+    - "python tools/generate_urban_sample.py --agents 10 --seed 42 --out-dir /tmp/urban_p10"
+
+acceptance:
+  - "AgentProfile に surname / given / occupation / personality / hobbies / day_pattern を追加する (後方互換: 既存 name を維持)。"
+  - "generate_urban_sample.py が新フィールド込みで生成し、--agents 10 で 10 体生成できる。"
+  - "surname / given は日本語の実在しうる姓名で、name と整合する (例 name=井上翔 / surname=井上 / given=翔)。"
+  - "data-contract を MINOR 改訂し、§6.4 Agent Profile / §19.4 生成仕様を更新、変更ログを残す。"
+  - "新フィールドは optional 扱いで、既存 simulation / viewer / replay が壊れない。"
+  - "--seed 固定で静的プロフィールがバイト一致再現する。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "10 体運用 (CEO 確定 2026-05-29): 開発・検証の既定エージェント数を 10 とする。"
+  - "day_pattern は §9.3 時刻帯テーブルと矛盾しない傾向値 (例: 朝型/夜型・外出頻度) とし、決定論を壊さない。"

@@ -151,10 +151,21 @@ export class GoogleMapsAdapter {
             const latLng = new google.maps.LatLng(agent.lat, agent.lon);
 
             if (this._agentMarkers.has(agent.id)) {
-                // 位置を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4)
+                // 位置・glyph・title を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4 / WO-007)
+                // WO-007 acceptance: tick 毎・run 跨ぎで glyph / title を更新する。
                 const marker = this._agentMarkers.get(agent.id);
                 marker.position = latLng;
                 marker.map = this._map;
+                // glyph / title を最新の label で更新する (profile ロード後の run 跨ぎ対応)
+                const pin = this._agentPins.get(agent.id);
+                if (pin) {
+                    const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
+                    pin.glyph = glyphText;
+                }
+                const titleText = agent.label != null
+                    ? `${agent.label} (id:${agent.id})`
+                    : `Agent ${agent.id}`;
+                marker.title = titleText;
             } else {
                 // 新規作成
                 const role  = agent.role || "other";

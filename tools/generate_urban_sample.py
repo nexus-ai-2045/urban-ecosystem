@@ -23,6 +23,8 @@ rng 消費順序:
   social → road shuffle) を記載順で消費する (変更禁止)。§19.7 が明示していない
   name/age/gender は、6 step の rng 位置を保存するため road shuffle の後に
   step 7-9 として追記する (本実装の確定事項)。
+  WO-006 追加フィールド (occupation/personality/hobbies/day_pattern) は
+  既存 step 7-9 の後に step 10-13 として追記する (変更禁止)。
 """
 
 from __future__ import annotations
@@ -86,6 +88,36 @@ GIVEN_NAMES = [
     "健", "誠", "拓也", "翔", "大輝", "蓮", "颯", "陸", "優斗", "海斗",
     "さくら", "葵", "陽菜", "美咲", "彩", "結衣", "莉子", "七海", "凜", "ひかり",
 ]
+
+# ── WO-006: 職業リスト (role 別に分類 / step 10 で role に応じて選択) ────────────
+OCCUPATIONS_OFFICE = [
+    "会社員", "エンジニア", "営業職", "管理職", "経理担当", "人事担当",
+    "マーケター", "デザイナー", "コンサルタント", "プロジェクトマネージャー",
+]
+OCCUPATIONS_STUDENT = [
+    "大学生", "専門学校生", "高校生", "大学院生",
+]
+OCCUPATIONS_OTHER = [
+    "フリーランス", "自営業", "アルバイト", "無職", "主婦・主夫",
+    "クリエイター", "ライター", "カメラマン",
+]
+
+# ── WO-006: 性格リスト (step 11) ──────────────────────────────────────────────
+PERSONALITIES = [
+    "几帳面", "おおらか", "内向的", "外向的", "好奇心旺盛", "慎重派",
+    "楽観的", "現実主義", "負けず嫌い", "温厚", "感情的", "論理的",
+]
+
+# ── WO-006: 趣味リスト (step 12 / 1〜3 個をランダム選択) ───────────────────────
+HOBBIES_POOL = [
+    "読書", "ランニング", "料理", "音楽鑑賞", "ゲーム", "映画鑑賞",
+    "旅行", "写真撮影", "サイクリング", "登山", "ヨガ", "カフェ巡り",
+    "アニメ", "DIY", "ガーデニング", "釣り", "ボードゲーム", "プログラミング",
+]
+
+# ── WO-006: 行動傾向 (day_pattern / §9.3 時刻帯テーブルと矛盾しない傾向値) ─────
+# 朝型 / 夜型 / 標準 の 3 パターン。シミュレーション側で optional hint として使う。
+DAY_PATTERNS = ["morning", "night", "balanced"]
 
 # ── social_networks (§19.5) ───────────────────────────────────────────────────
 SOCIAL_MEAN_DEGREE = 5
@@ -216,23 +248,60 @@ def _build_agents_core(
 
 
 def _fill_demographics(rng: random.Random, agents: list[dict[str, Any]]) -> None:
-    """name / age / gender を埋める (§19.4.1)。
+    """name / age / gender / rich profile を埋める (§19.4.1 + WO-006)。
 
-    rng 消費: Step 7 (name) → Step 8 (age) → Step 9 (gender shuffle)。
+    rng 消費:
+      Step 7 (name/surname/given) → Step 8 (age) → Step 9 (gender shuffle)
+      → Step 10 (occupation) → Step 11 (personality) → Step 12 (hobbies)
+      → Step 13 (day_pattern shuffle)。
     §19.7 が明示する 6 step (Step 6 = road shuffle まで) を消費し終えた後に呼ぶことで、
-    6 step の rng 位置を保存する。name/age/gender の rng 位置は本実装の確定事項。
+    6 step の rng 位置を保存する。
+
+    決定論保証: 消費順序を変えると出力が変わるため変更禁止。
     """
     n_agents = len(agents)
-    for agent in agents:  # Step 7: 姓 → 名 の順 (n_agents × 2 choice)
+
+    # Step 7: 姓 → 名 の順 (n_agents × 2 choice)
+    for agent in agents:
         surname = rng.choice(SURNAMES)
         given = rng.choice(GIVEN_NAMES)
+        agent["surname"] = surname
+        agent["given"] = given
         agent["name"] = surname + given
-    for agent in agents:  # Step 8: age (n_agents × randint)
+
+    # Step 8: age (n_agents × randint)
+    for agent in agents:
         agent["age"] = rng.randint(20, 65)
+
+    # Step 9: gender shuffle
     genders = ["male"] * (n_agents // 2) + ["female"] * (n_agents - n_agents // 2)
-    rng.shuffle(genders)  # Step 9: gender shuffle
+    rng.shuffle(genders)
     for agent, g in zip(agents, genders):
         agent["gender"] = g
+
+    # Step 10: occupation (role に応じた選択肢から choice)
+    for agent in agents:
+        if agent["role"] == "office_worker":
+            agent["occupation"] = rng.choice(OCCUPATIONS_OFFICE)
+        elif agent["role"] == "student":
+            agent["occupation"] = rng.choice(OCCUPATIONS_STUDENT)
+        else:
+            agent["occupation"] = rng.choice(OCCUPATIONS_OTHER)
+
+    # Step 11: personality (n_agents × choice)
+    for agent in agents:
+        agent["personality"] = rng.choice(PERSONALITIES)
+
+    # Step 12: hobbies (1〜3 個 / sample)
+    for agent in agents:
+        k = rng.randint(1, 3)
+        agent["hobbies"] = rng.sample(HOBBIES_POOL, k)
+
+    # Step 13: day_pattern shuffle
+    patterns = [DAY_PATTERNS[i % len(DAY_PATTERNS)] for i in range(n_agents)]
+    rng.shuffle(patterns)
+    for agent, dp in zip(agents, patterns):
+        agent["day_pattern"] = dp
 
 
 def _format_profiles(
@@ -249,8 +318,14 @@ def _format_profiles(
         profile: dict[str, Any] = {
             "id": agent["id"],
             "name": agent["name"],
+            "surname": agent["surname"],
+            "given": agent["given"],
             "age": agent["age"],
             "gender": agent["gender"],
+            "occupation": agent["occupation"],
+            "personality": agent["personality"],
+            "hobbies": agent["hobbies"],
+            "day_pattern": agent["day_pattern"],
             "role": agent["role"],
             "home_poi_id": agent["home_poi_id"],
             "initial_position": {"lat": lat, "lon": lon},
@@ -348,9 +423,10 @@ def generate(
 ) -> dict[str, Any]:
     """静的合成データを out_dir に生成し summary dict を返す。
 
-    rng 消費順序 (§19.7):
+    rng 消費順序 (§19.7 + WO-006):
       Step 1 POI 座標 → Step 2 role shuffle → Step 3 home → Step 4 work/school
-      → Step 5 social → Step 6 road shuffle → Step 7-9 name/age/gender。
+      → Step 5 social → Step 6 road shuffle → Step 7-9 name/age/gender
+      → Step 10 occupation → Step 11 personality → Step 12 hobbies → Step 13 day_pattern。
     """
     if agents < 1:
         raise ValueError("agents は 1 以上が必要")

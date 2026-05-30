@@ -1008,3 +1008,80 @@ class TestReviewFixes:
         p = _write_jsonl(tmp_path, "interactions.jsonl", rows)
         events = load_interaction_events(p)
         assert events[0].relationship_delta == {"from": "stranger", "to": "acquaintance"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-006: AgentProfile rich profile フィールド (surname/given/occupation/personality/hobbies/day_pattern)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRichProfileFields:
+    """WO-006: surname/given/occupation/personality/hobbies/day_pattern の ロード検証。"""
+
+    def test_surname_and_given_loaded_as_named_fields(self, tmp_path):
+        """正常系: surname/given を含む profile が AgentProfile.surname/given として取得できる。"""
+        profiles = [_agent_profile(0, surname="田中", given="健")]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].surname == "田中"
+        assert result[0].given == "健"
+
+    def test_occupation_loaded_as_named_field(self, tmp_path):
+        """正常系: occupation を含む profile が AgentProfile.occupation として取得できる。"""
+        profiles = [_agent_profile(0, occupation="会社員")]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].occupation == "会社員"
+
+    def test_personality_loaded_as_named_field(self, tmp_path):
+        """正常系: personality を含む profile が AgentProfile.personality として取得できる。"""
+        profiles = [_agent_profile(0, personality="几帳面")]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].personality == "几帳面"
+
+    def test_hobbies_loaded_as_named_field(self, tmp_path):
+        """正常系: hobbies (list) を含む profile が AgentProfile.hobbies として取得できる。"""
+        profiles = [_agent_profile(0, hobbies=["読書", "ランニング"])]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].hobbies == ("読書", "ランニング")
+
+    def test_day_pattern_loaded_as_named_field(self, tmp_path):
+        """正常系: day_pattern を含む profile が AgentProfile.day_pattern として取得できる。"""
+        profiles = [_agent_profile(0, day_pattern="morning")]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].day_pattern == "morning"
+
+    def test_rich_profile_all_optional(self, tmp_path):
+        """正常系: rich フィールドを全て省略しても既存 profile は正常ロードできる (後方互換)。"""
+        profiles = [_agent_profile(0)]  # rich フィールドなし
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].surname is None
+        assert result[0].given is None
+        assert result[0].occupation is None
+        assert result[0].personality is None
+        assert result[0].hobbies == ()
+        assert result[0].day_pattern is None
+
+    def test_rich_profile_full_round_trip(self, tmp_path):
+        """正常系: 全 rich フィールドを含む profile が完全にロードできる。"""
+        profiles = [_agent_profile(
+            0,
+            surname="井上",
+            given="翔",
+            occupation="エンジニア",
+            personality="内向的",
+            hobbies=["プログラミング", "ゲーム"],
+            day_pattern="night",
+        )]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        r = result[0]
+        assert r.surname == "井上"
+        assert r.given == "翔"
+        assert r.occupation == "エンジニア"
+        assert r.personality == "内向的"
+        assert r.hobbies == ("プログラミング", "ゲーム")
+        assert r.day_pattern == "night"

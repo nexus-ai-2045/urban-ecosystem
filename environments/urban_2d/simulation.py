@@ -43,6 +43,7 @@ from .data_loader import (
     load_agent_profiles,
 )
 from .models import POI, AgentProfile
+from .road_graph import RoadGraph
 
 if TYPE_CHECKING:
     # 型チェック時のみ import (循環回避 / SDK 未インストール環境での安全性)
@@ -88,6 +89,9 @@ class _AgentRuntime:
     was_moving: bool = False
     # 当 tick に出力する status (contract 語彙)
     out_status: str = "staying"
+    # WO-009: 道路追従用の残りウェイポイント列 [(lat, lon), ...]
+    # 空リスト = 直線補間フォールバック (road graph なし / 到達不能)
+    route_waypoints: list[tuple[float, float]] = field(default_factory=list)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -110,6 +114,7 @@ class Simulation:
         run_id: str = "urban_demo",
         aois: int = 0,
         roads: int = 0,
+        road_graph: Optional[RoadGraph] = None,
         llm_provider: Optional[Any] = None,
         enable_summaries: bool = True,
     ) -> None:
@@ -123,6 +128,9 @@ class Simulation:
             run_id: run 識別子。
             aois: AOI 件数 (summary 用)。
             roads: Road 件数 (summary 用)。
+            road_graph: RoadGraph インスタンス (WO-009 道路追従 §acceptance 1-5)。
+                None の場合は直線補間フォールバックで動作する (後方互換)。
+                road_graph を渡すとエージェントが最短経路で道路追従移動する。
             llm_provider: LLMProvider インスタンス (spec §10.1)。
                 None の場合は RuleBasedProvider を使う (MVP 既定)。
                 RuleBasedProvider 経路では決定論が保たれる (byte 一致 §13.3.2)。
@@ -139,6 +147,8 @@ class Simulation:
         self.run_id = run_id
         self.aois = aois
         self.roads = roads
+        # WO-009: 道路追従グラフ (None = 直線補間フォールバック)
+        self.road_graph: Optional[RoadGraph] = road_graph
 
         # LLMProvider: None の場合は遅延生成で RuleBasedProvider を使う
         self._llm_provider: Optional[Any] = llm_provider
@@ -214,13 +224,27 @@ class Simulation:
         agent: _AgentRuntime,
         tick: int,
     ) -> dict:
-        """§10.3 コンテキスト dict を組む (choose_destination_category 用)。"""
+        """§10.3 コンテキスト dict を組む (choose_destination_category 用)。
+
+        WO-008: occupation / personality / hobbies / day_pattern / current_time を
+        context に含める (acceptance criterion 1)。
+        各フィールドは AgentProfile (WO-006 追加) から取得し、存在する場合のみ注入する。
+        """
         day, time_str = tick_to_day_time(tick)
         ctx: dict = {
             "agent_id": agent.profile.id,
             "role": agent.profile.role,
             "current_time": time_str,
         }
+        # WO-008: WO-006 プロフィール拡張フィールドを注入する
+        if agent.profile.occupation:
+            ctx["occupation"] = agent.profile.occupation
+        if agent.profile.personality:
+            ctx["personality"] = agent.profile.personality
+        if agent.profile.hobbies:
+            ctx["hobbies"] = list(agent.profile.hobbies)
+        if agent.profile.day_pattern:
+            ctx["day_pattern"] = agent.profile.day_pattern
         if agent.current_poi_id:
             ctx["current_location"] = agent.current_poi_id
         return ctx
@@ -409,22 +433,35 @@ class Simulation:
                 # no_target または wander_stay: 現地滞在 (§9.4 項5 / §20.4)
                 agent.internal = "idle"
                 agent.dwell_remaining = 0
+                agent.route_waypoints = []
             elif target.id == agent.current_poi_id and self._at_poi_coords(agent, target):
                 # 既に目的地 POI に居る (stay_current 等): 移動せず滞在
                 agent.internal = "at_poi"
                 agent.dwell_remaining = self._dwell_for(action)
+                agent.route_waypoints = []
             else:
                 agent.internal = "moving"
+                # WO-009: 道路追従ルートを計算して waypoints に格納する。
+                # road_graph がない場合は空リスト → 既存の直線補間フォールバック。
+                agent.route_waypoints = self._compute_route(
+                    agent.lat, agent.lon, target.lat, target.lon
+                )
 
-        # ── 移動処理 (§9.5) ──
+        # ── 移動処理 (§9.5 / WO-009 道路追従) ──
         if agent.internal == "moving" and agent.target_poi is not None:
-            new_lat, new_lon, arrived = rules.step_towards(
-                agent.lat, agent.lon, agent.target_poi.lat, agent.target_poi.lon
-            )
+            if agent.route_waypoints:
+                # WO-009: waypoints チェーンに沿って STEP_M 前進する。
+                new_lat, new_lon, arrived = self._step_along_route(agent)
+            else:
+                # 直線補間フォールバック (road_graph なし / 到達不能)
+                new_lat, new_lon, arrived = rules.step_towards(
+                    agent.lat, agent.lon, agent.target_poi.lat, agent.target_poi.lon
+                )
             agent.lat, agent.lon = new_lat, new_lon
             if arrived:
                 agent.internal = "at_poi"
                 agent.current_poi_id = agent.target_poi.id
+                agent.route_waypoints = []
                 # 到達 tick に visit record を 1 行出力 (§9.5 / §20.2 項5)。
                 # reason は移動時の §9.3 reason (commute 等) をそのまま記録する。
                 visit = self._make_visit(agent, tick)
@@ -441,6 +478,90 @@ class Simulation:
     def _at_poi_coords(self, agent: _AgentRuntime, poi: POI) -> bool:
         """agent が POI 座標とほぼ一致しているか (到達済み判定)。"""
         return rules.haversine_m(agent.lat, agent.lon, poi.lat, poi.lon) <= rules.STEP_M
+
+    # ── WO-009 道路追従 ──────────────────────────────────────────────────────
+
+    def _compute_route(
+        self,
+        src_lat: float,
+        src_lon: float,
+        dst_lat: float,
+        dst_lon: float,
+    ) -> list[tuple[float, float]]:
+        """road_graph で src → dst のウェイポイント列を返す。
+
+        road_graph がない場合は空リストを返す (直線補間フォールバック)。
+        到達不能の場合も空リストを返す (RoadGraph.route は [(dst_lat, dst_lon)] を返すが、
+        それは dst スナップなので最終目的地 = dst_lat/dst_lon と同等 → 直線で十分)。
+
+        ウェイポイントは「まだ向かうべき残り点列」。先頭から順に消費する。
+        最終要素に近づいたら到達判定を行う。
+        """
+        if self.road_graph is None or self.road_graph.is_empty():
+            return []
+        waypoints = self.road_graph.route(src_lat, src_lon, dst_lat, dst_lon)
+        # フォールバック (グラフ空 / 到達不能): [(dst_lat, dst_lon)] を 1 要素で返すが
+        # そのまま使うと「waypoints がある」と判定されてしまう。
+        # 到達不能は直線フォールバックに委ねるため空リストを返す。
+        # ただし到達可能 (>=2 ノード) のみ道路追従を使う。
+        if len(waypoints) <= 1:
+            # 1 要素 = 直線フォールバック (到達不能) または同一ノード
+            return []
+        return list(waypoints)
+
+    def _step_along_route(
+        self,
+        agent: _AgentRuntime,
+    ) -> tuple[float, float, bool]:
+        """route_waypoints に沿って STEP_M 前進し、新座標と到達フラグを返す。
+
+        毎 tick STEP_M m ずつ waypoints を消費する。
+        最終 waypoint (= dst スナップ点) に近づいたら実際の目的地にスナップし
+        arrived=True を返す。
+
+        waypoints が尽きた場合は target_poi 座標への直線補間にフォールバックする。
+        これはウェイポイント列計算後に target が変わることがないため理論上起きないが、
+        防御的に実装しておく。
+        """
+        assert agent.target_poi is not None
+        remaining_budget = rules.STEP_M
+        lat, lon = agent.lat, agent.lon
+
+        while remaining_budget > 0 and agent.route_waypoints:
+            wp_lat, wp_lon = agent.route_waypoints[0]
+            d = rules.haversine_m(lat, lon, wp_lat, wp_lon)
+
+            if d <= remaining_budget:
+                # このウェイポイントは今 tick で通り越せる
+                remaining_budget -= d
+                lat, lon = wp_lat, wp_lon
+                agent.route_waypoints.pop(0)
+            else:
+                # このウェイポイントには今 tick で到達しない: 途中まで進む
+                fraction = remaining_budget / d
+                lat = lat + (wp_lat - lat) * fraction
+                lon = lon + (wp_lon - lon) * fraction
+                remaining_budget = 0
+
+        # 全ウェイポイントを消費 → 実際の目的地 (POI 座標) にスナップ
+        if not agent.route_waypoints:
+            dst_lat = agent.target_poi.lat
+            dst_lon = agent.target_poi.lon
+            d_final = rules.haversine_m(lat, lon, dst_lat, dst_lon)
+            if d_final <= remaining_budget + 1e-9:
+                return (dst_lat, dst_lon, True)
+            # まだ目的地まで距離がある場合は直線でもう一歩
+            if d_final > 0:
+                fraction = min(1.0, remaining_budget / d_final) if remaining_budget > 0 else 0.0
+                lat = lat + (dst_lat - lat) * fraction
+                lon = lon + (dst_lon - lon) * fraction
+            # 残り距離が STEP_M 以下なら到達
+            d_now = rules.haversine_m(lat, lon, dst_lat, dst_lon)
+            if d_now <= 1e-6:
+                return (dst_lat, dst_lon, True)
+            return (lat, lon, False)
+
+        return (lat, lon, False)
 
     def _time_based_exit_due(self, agent: _AgentRuntime, tick: int) -> bool:
         """時刻ベース滞在の退出時刻に達したか判定する (§9.6 / §20.5)。
@@ -610,7 +731,7 @@ class Simulation:
         # LLMProvider 経由で summary を生成 (§10.2 / spec §10.1)
         summary = self._generate_summary(ev_type, a_id, b_id, cand["poi_id"], from_state)
 
-        return {
+        event: dict = {
             "tick": tick,
             "day": day,
             "time": time_str,
@@ -620,6 +741,17 @@ class Simulation:
             "summary": summary,
             "relationship_delta": {"from": from_state, "to": to_state},
         }
+
+        # WO-008: relationship 変化時に理由文を生成して格納する (acceptance criterion 2)
+        # from_state != to_state の場合のみ生成する。
+        # RuleBasedProvider は決定論テンプレ文を返す (§13.3.2 byte 一致維持)。
+        if from_state != to_state:
+            reason = self._generate_relationship_reason(
+                ev_type, a_id, b_id, cand["poi_id"], from_state, to_state
+            )
+            event["relationship_reason"] = reason
+
+        return event
 
     def _generate_summary(
         self,
@@ -660,6 +792,102 @@ class Simulation:
             relationship_state=relationship_state,
         )
         return self.llm_provider.complete(prompt)
+
+    def _generate_relationship_reason(
+        self,
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        from_state: str,
+        to_state: str,
+    ) -> str:
+        """LLMProvider 経由で relationship 変化理由文を生成する (WO-008 §10.2)。
+
+        enable_summaries=False の場合は空文字を返す (summary と同じオプション)。
+        RuleBasedProvider 経路ではテンプレ文が返り、決定論が保たれる (§13.3.2)。
+        VertexGeminiProvider では Gemini が自然言語理由文を返す。
+
+        Args:
+            ev_type: interaction type (meeting / conversation / conflict / farewell)。
+            a_id: エージェント A の ID。
+            b_id: エージェント B の ID。
+            poi_id: 発生場所の POI ID。
+            from_state: 変化前の relationship state。
+            to_state: 変化後の relationship state。
+
+        Returns:
+            理由文テキスト (末尾改行なし)。
+        """
+        if not self._enable_summaries:
+            return ""
+
+        from app.llm_provider import build_prompt
+        # 表示名 lookup (summary と同じ方式)
+        a_name = self._agent_display_name.get(a_id, f"エージェント {a_id}")
+        b_name = self._agent_display_name.get(b_id, f"エージェント {b_id}")
+        poi_name = self._poi_display_name.get(poi_id, poi_id)
+
+        prompt = build_prompt(
+            prompt_type="relationship_reason",
+            agent_a_id=a_id,
+            agent_b_id=b_id,
+            event_type=ev_type,
+            location_poi_id=poi_id,
+            agent_a_name=a_name,
+            agent_b_name=b_name,
+            poi_name=poi_name,
+            relationship_state=from_state,
+            relationship_to=to_state,
+        )
+        try:
+            return self.llm_provider.complete(prompt)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).debug(
+                "relationship_reason 生成で例外 — §9.3 fallback テンプレ使用 (agent_a=%d, agent_b=%d)",
+                a_id,
+                b_id,
+            )
+            # fallback: テンプレ文を直接返す
+            return self._relationship_reason_text(
+                ev_type, a_id, b_id, poi_id,
+                a_name=a_name, b_name=b_name, poi_name=poi_name,
+                rel_from=from_state, rel_to=to_state,
+            )
+
+    @staticmethod
+    def _relationship_reason_text(
+        ev_type: str,
+        a_id: int,
+        b_id: int,
+        poi_id: str,
+        a_name: str = "",
+        b_name: str = "",
+        poi_name: str = "",
+        rel_from: str = "",
+        rel_to: str = "",
+    ) -> str:
+        """WO-008 関係変化理由のテンプレ文を返す。
+
+        RuleBasedProvider._template_relationship_reason と同一出力を保証する。
+        決定論 byte 一致 (§13.3.2) の根拠。変更時は両方を同期する。
+        """
+        verb = {
+            "meeting": "が出会ったことで関係が始まった",
+            "conversation": "の会話を通じて距離が縮まった",
+            "conflict": "の口論により関係が悪化した",
+            "farewell": "との別れにより関係が変化した",
+        }.get(ev_type, "との交流により関係が変化した")
+        display_a = a_name if a_name else f"エージェント {a_id}"
+        display_b = b_name if b_name else f"エージェント {b_id}"
+        display_poi = poi_name if poi_name else poi_id
+        if rel_from and rel_to and rel_from != rel_to:
+            return (
+                f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
+                f"関係: {rel_from} → {rel_to}。"
+            )
+        return f"{display_a} と {display_b} {verb} (場所: {display_poi})。"
 
     @staticmethod
     def _summary_text(

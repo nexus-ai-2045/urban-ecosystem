@@ -253,22 +253,28 @@ async function renderCurrentTick() {
     const tick       = ticks[tickIndex];
     const agentStates = statesByTick.get(tick) || [];
 
-    // id -> name マップを事前に構築 (upsertAgents / 詳細パネル両方で使う)
+    // id -> profile マップを事前に構築 (upsertAgents / 詳細パネル両方で使う)
     const profileMap = _buildProfileMap(state.data.profiles);
     const poiMap     = _buildPoiMap(state.data.pois);
 
     // adapter.upsertAgents に渡すデータ
-    // label: マーカー表示用の短縮名 (profile.name の先頭2文字 / なければ id)
+    // label: マーカー表示用の短縮名。surname があれば surname を使い、なければ name 先頭文字列 (WO-007)
     const markerData = agentStates.map(s => {
-        const name  = profileMap.get(s.agent_id);
-        const label = name ? name.slice(0, 2) : String(s.agent_id);
+        const profile = profileMap.get(s.agent_id);
+        let label;
+        if (profile) {
+            // surname ベース (WO-007): surname があれば使う。なければ name 先頭文字列にフォールバック
+            label = profile.surname || (profile.name ? profile.name.slice(0, 2) : String(s.agent_id));
+        } else {
+            label = String(s.agent_id);
+        }
         return {
             id:  s.agent_id,
             lat: s.lat,
             lon: s.lon,
             action: s.action,
             status: s.status,
-            role:   state.data.profiles.find(p => p.id === s.agent_id)?.role || "other",
+            role:   profile?.role || "other",
             label,
         };
     });
@@ -364,21 +370,24 @@ function handleAgentClick(agentId) {
     // 友達リンクを描画 (クリック時に即時反映)
     _updateSocialLinks(agentStates);
 
-    // id -> name マップ / poi -> 店名マップを ui_panels に渡す
+    // id -> profile マップ / poi -> 店名マップを ui_panels に渡す
     const profileMap = _buildProfileMap(state.data.profiles);
     const poiMap     = _buildPoiMap(state.data.pois);
     updateAgentDetail(detailEl, agentId, state.data, currentState, profileMap, poiMap);
 }
 
 /**
- * profiles 配列から id -> name のマップを生成する。
- * @param {Array<{id:number, name?:string}>} profiles
- * @returns {Map<number, string>}
+ * profiles 配列から id -> profile オブジェクトのマップを生成する (WO-007)。
+ * 旧: id -> name 文字列。新: id -> profile (name / surname / given / role 等を含む)。
+ * ui_panels.js の updateAgentDetail は profileMap.get(id) で profile を取得して
+ * surname / given フィールドを詳細パネルの表示に使う。
+ * @param {Array<{id:number, name?:string, surname?:string, given?:string}>} profiles
+ * @returns {Map<number, Object>}
  */
 function _buildProfileMap(profiles) {
     const map = new Map();
     for (const p of profiles) {
-        if (p.id != null && p.name) map.set(p.id, p.name);
+        if (p.id != null) map.set(p.id, p);
     }
     return map;
 }

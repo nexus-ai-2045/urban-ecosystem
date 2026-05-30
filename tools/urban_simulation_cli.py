@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""urban_simulation_cli.py — WO-URBAN-004 ルールベースシミュレーション実行 CLI。
+"""urban_simulation_cli.py — WO-URBAN-004/009 ルールベースシミュレーション実行 CLI。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §12.1 CLI 仕様 / §9 行動ルール / §13.3 検証
@@ -13,14 +13,16 @@ scope:
   # 静的データを内部生成してから simulate (--sample)
   python tools/urban_simulation_cli.py run --sample --out /tmp/urban_rule_run
 
-  # 既存の静的データを入力に simulate
+  # 既存の静的データを入力に simulate (--roadnet で道路追従移動)
   python tools/urban_simulation_cli.py run \
       --pois data/pois.geojson \
       --profiles data/agent_profiles_N100.json \
+      --roadnet data/roadnet.geojson \
       --seed 42 --out experiments/results/urban_demo
 
-  --aois / --roadnet は MVP では summary 件数集計のみに使う (シミュレーションは
-  直線補間移動のため road を使わない / §16 未決 #2)。
+  --aois は summary 件数集計のみ。
+  --roadnet が指定された場合 WO-009 の道路追従移動が有効になる。
+  指定がない場合は直線補間フォールバック (後方互換)。
 
 決定論:
   --seed で random.Random(seed) を初期化する。同一 seed・同一入力で 3 jsonl が
@@ -41,6 +43,8 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from environments.urban_2d.simulation import Simulation, load_inputs  # noqa: E402
+from environments.urban_2d.data_loader import load_roads  # noqa: E402
+from environments.urban_2d.road_graph import build_road_graph  # noqa: E402
 from app.llm_provider import make_llm_provider  # noqa: E402
 
 # run_id バリデーション (spec §21.1 / パストラバーサル防止)
@@ -128,6 +132,21 @@ def _run(args: argparse.Namespace) -> int:
     aoi_count = _count_features(aois_path)
     road_count = _count_features(roadnet_path)
 
+    # WO-009: roadnet が指定されていれば RoadGraph を構築して道路追従移動を有効化する。
+    # 指定がない場合は road_graph=None → 直線補間フォールバック (後方互換)。
+    road_graph = None
+    if roadnet_path is not None and roadnet_path.exists():
+        try:
+            roads = load_roads(roadnet_path)
+            road_graph = build_road_graph(roads)
+        except Exception as exc:
+            print(
+                f"warning: roadnet.geojson の読み込みに失敗しました ({exc}) "
+                "→ 直線補間フォールバックで実行します",
+                file=sys.stderr,
+            )
+            road_graph = None
+
     # LLMProvider を生成する (既定 "rule" = RuleBasedProvider / 決定論維持)
     # vertex 選択時は GOOGLE_CLOUD_PROJECT 必須 + ADC 前提 (spec §17.5)
     llm_kind: str = getattr(args, "llm", "rule")
@@ -155,6 +174,7 @@ def _run(args: argparse.Namespace) -> int:
         run_id=run_id,
         aois=aoi_count,
         roads=road_count,
+        road_graph=road_graph,
         llm_provider=provider,
         enable_summaries=enable_summaries,
     )

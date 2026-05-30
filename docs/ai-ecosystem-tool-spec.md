@@ -275,10 +275,16 @@ GeoJSON Feature (LineString/MultiLineString) で表現します。
 ```json
 {
   "id": 26,
-  "name": "Mori Akira",
-  "age": 35,
+  "name": "井上翔",
+  "surname": "井上",
+  "given": "翔",
+  "age": 30,
   "gender": "male",
-  "description": "A local guide who leads tours and runs.",
+  "occupation": "エンジニア",
+  "personality": "几帳面",
+  "hobbies": ["プログラミング", "ゲーム"],
+  "day_pattern": "morning",
+  "description": "A local engineer who codes by night.",
   "initial_position": {
     "lat": 35.0,
     "lon": 139.0
@@ -290,7 +296,8 @@ GeoJSON Feature (LineString/MultiLineString) で表現します。
 }
 ```
 
-必須: `id` (integer), `name`, `initial_position`／任意: `age`, `gender`, `description`, `home_poi_id`, `work_or_school_poi_id`, `role`, `social_networks`。`social_networks` は既存 agent id 配列で、自己 id を含めない・重複なし。
+必須: `id` (integer), `name`, `initial_position`／任意 (既存): `age`, `gender`, `description`, `home_poi_id`, `work_or_school_poi_id`, `role`, `social_networks`。`social_networks` は既存 agent id 配列で、自己 id を含めない・重複なし。
+任意 (WO-006 追加): `surname` (姓), `given` (名 / `name == surname + given`), `occupation` (職業詳細), `personality` (性格傾向), `hobbies` (趣味リスト / string[]), `day_pattern` (`"morning"` | `"night"` | `"balanced"`)。
 
 ### 6.5 Agent State
 
@@ -1083,15 +1090,39 @@ def gen_poi_coords(rng, n):
 | 属性 | 値の分布 |
 | --- | --- |
 | `id` | 0〜99 (integer) |
-| `name` | 姓 (20 パターン) + 名 (20 パターン) をランダム結合 [事実: 設計決定/§19.4.1] 姓リスト: `["田中","佐藤","鈴木","高橋","渡辺","伊藤","山本","中村","小林","加藤","吉田","山田","佐々木","山口","松本","井上","木村","林","清水","斎藤"]` / 名リスト: `["健","誠","拓也","翔","大輝","蓮","颯","陸","優斗","海斗","さくら","葵","陽菜","美咲","彩","結衣","莉子","七海","凜","ひかり"]` (実在人物の直接再現は意図せず。`generate_urban_sample.py` の定数としてハードコードする) |
+| `name` | `surname + given` で構成。`surname == name[:len(surname)]` が成立する (WO-006) |
+| `surname` | 姓 20 パターンからランダム選択 / リスト: `["田中","佐藤","鈴木","高橋","渡辺","伊藤","山本","中村","小林","加藤","吉田","山田","佐々木","山口","松本","井上","木村","林","清水","斎藤"]` |
+| `given` | 名 20 パターンからランダム選択 / リスト: `["健","誠","拓也","翔","大輝","蓮","颯","陸","優斗","海斗","さくら","葵","陽菜","美咲","彩","結衣","莉子","七海","凜","ひかり"]` (実在人物の直接再現は意図せず) |
 | `age` | 20〜65 の一様整数 |
 | `gender` | `"male"` 50 体 / `"female"` 50 体 |
 | `role` | `office_worker` 60% (60 体) / `student` 20% (20 体) / `other` 20% (20 体) |
+| `occupation` | role 別リストからランダム選択 (WO-006 / Step 10) |
+| `personality` | 12 パターンからランダム選択 (WO-006 / Step 11) |
+| `hobbies` | 18 種のプールから 1〜3 件をランダム選択 (WO-006 / Step 12) |
+| `day_pattern` | `"morning"` / `"night"` / `"balanced"` をシャッフルして割当て (WO-006 / Step 13) |
 
 ```python
 ROLES = (["office_worker"] * 60 + ["student"] * 20 + ["other"] * 20)
-rng.shuffle(ROLES)  # seed 由来のシャッフル
+rng.shuffle(ROLES)  # seed 由来のシャッフル (Step 2)
 ```
+
+rng 消費順序 (§19.7 + WO-006 拡張):
+
+| Step | 操作 |
+| --- | --- |
+| 1 | POI 座標 (lat/lon 各 n_pois 回) |
+| 2 | role shuffle |
+| 3 | home_poi_id 割当て (n_agents × choice) |
+| 4 | work_or_school_poi_id 割当て (office+student のみ × choice) |
+| 5 | social_networks (C(n,2) × random) |
+| 6 | road shuffle |
+| 7 | surname/given/name (n_agents × 2 choice) |
+| 8 | age (n_agents × randint) |
+| 9 | gender shuffle |
+| 10 | occupation (n_agents × choice / role 別リスト) |
+| 11 | personality (n_agents × choice) |
+| 12 | hobbies (n_agents × randint(1,3) + sample) |
+| 13 | day_pattern shuffle |
 
 #### 19.4.2 home_poi_id の割当て
 

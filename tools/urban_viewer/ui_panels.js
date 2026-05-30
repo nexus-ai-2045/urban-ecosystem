@@ -15,6 +15,13 @@
 "use strict";
 
 import { CATEGORY_COLORS } from "./colors.js";
+import {
+    CATEGORY_LABELS,
+    ROLE_LABELS,
+    INTERACTION_TYPE_LABELS,
+    ACTION_LABELS,
+    getLabel,
+} from "./labels.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 凡例パネル
@@ -50,7 +57,7 @@ export function updateLegend(legendEl, data, agentCount) {
 
     const total = document.createElement("div");
     total.className   = "legend-total";
-    total.textContent = `POI: ${pois.length} / AOI: ${aois.length} / Agents: ${agentCount}`;
+    total.textContent = `POI: ${pois.length} / AOI: ${aois.length} / エージェント: ${agentCount}`;
     legendEl.appendChild(total);
 
     const cats = document.createElement("div");
@@ -67,7 +74,8 @@ export function updateLegend(legendEl, data, agentCount) {
 
         const lbl = document.createElement("span");
         lbl.className   = "legend-label";
-        lbl.textContent = cat;
+        // 内部コードを日本語ラベルに変換 (未知カテゴリはコードをそのまま表示)
+        lbl.textContent = getLabel(CATEGORY_LABELS, cat);
 
         const count = document.createElement("span");
         count.className   = "legend-count";
@@ -92,7 +100,7 @@ export function updateLegend(legendEl, data, agentCount) {
  * @param {number|null} agentId - 選択中 agent id (null で空表示)
  * @param {Object} data - ViewerState.data
  * @param {Object|null} currentState - 現 tick の AgentState オブジェクト
- * @param {Map<number,string>} [profileMap] - agent id -> name マップ (友達名前解決用)
+ * @param {Map<number,Object>} [profileMap] - agent id -> profile オブジェクトのマップ (WO-007: id -> 全 profile)
  * @param {Map<string,string>} [poiMap] - poi id -> 店名マップ (訪問先名前解決用)
  */
 export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map(), poiMap = new Map()) {
@@ -109,31 +117,51 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
         return;
     }
 
-    const profiles = data.profiles || [];
-    const profile  = profiles.find(p => p.id === agentId) || null;
+    // profileMap から profile を取得する (WO-007: profileMap は id -> 全 profile)
+    const profile = profileMap.get(agentId) || null;
 
-    // ヘッダー: profile.name があれば「名前さん」、なければ「Agent N」
+    // ヘッダー: WO-007 surname ベース表示。
+    //   - surname + given がある場合: 「surname given さん」(例: 「井上 翔さん」)
+    //   - それ以外で name がある場合: 「name さん」(後方互換フォールバック)
+    //   - profile なし: 「Agent N」
     const header = document.createElement("div");
-    header.className   = "detail-header";
-    header.textContent = profile && profile.name
-        ? `${profile.name}さん`
-        : `Agent ${agentId}`;
+    header.className = "detail-header";
+    if (profile) {
+        const surname = profile.surname || "";
+        const given   = profile.given   || "";
+        if (surname && given) {
+            header.textContent = `${surname} ${given}さん`;
+        } else if (profile.name) {
+            header.textContent = `${profile.name}さん`;
+        } else {
+            header.textContent = `Agent ${agentId}`;
+        }
+    } else {
+        header.textContent = `Agent ${agentId}`;
+    }
     detailEl.appendChild(header);
 
     if (profile) {
         appendRow(detailEl, "年齢",  profile.age         != null ? profile.age : "—");
         appendRow(detailEl, "性別",  profile.gender      || "—");
         appendRow(detailEl, "説明",  profile.description || "—");
-        appendRow(detailEl, "role",  profile.role        || "—");
+        // role は日本語ラベルで表示 (内部コードは保持)
+        appendRow(detailEl, "役割", profile.role
+            ? getLabel(ROLE_LABELS, profile.role)
+            : "—");
 
         // 友達リストを id -> 名前に解決して表示
+        // profileMap は id -> 全 profile オブジェクトなので .name を取り出す (WO-007)
         const snIds = Array.isArray(profile.social_networks) ? profile.social_networks : [];
         let friendDisplay;
         if (snIds.length === 0) {
             friendDisplay = "なし";
         } else {
             // 名前に解決できた友達を列挙し、解決できない id は数字のままフォールバック
-            const names = snIds.map(id => profileMap.get(id) || String(id));
+            const names = snIds.map(id => {
+                const fp = profileMap.get(id);
+                return fp ? (fp.name || String(id)) : String(id);
+            });
             // 5件超は件数を末尾に追加
             if (names.length > 5) {
                 friendDisplay = names.slice(0, 5).join(", ") + `…(${names.length})`;
@@ -166,8 +194,11 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
         appendRow(detailEl, "現在位置", `${latVal}, ${lonVal}`);
         appendRow(detailEl, "現在 POI", currentPoiLabel);
         appendRow(detailEl, "目的 POI", targetPoiLabel);
-        appendRow(detailEl, "action",   currentState.action  || "—");
-        appendRow(detailEl, "status",   currentState.status  || "—");
+        // action / status は日本語ラベルで表示 (内部コードは保持)
+        appendRow(detailEl, "行動", currentState.action
+            ? getLabel(ACTION_LABELS, currentState.action)
+            : "—");
+        appendRow(detailEl, "状態",   currentState.status  || "—");
 
         // interaction summary: 空・null・undefined でもパネルが壊れないよう
         // 値がある時だけ表示する
