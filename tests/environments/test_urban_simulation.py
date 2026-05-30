@@ -769,6 +769,34 @@ class TestWO008BehaviorRelationshipLLM:
             assert isinstance(event["relationship_reason"], str)
             assert len(event["relationship_reason"]) > 0
 
+    def test_relationship_reason_omitted_when_summaries_disabled(
+        self, sample_inputs_100
+    ):
+        """enable_summaries=False のとき relationship_reason キーを出力しない
+        (WO-012 data-contract v0.4.0: 空文字の場合は出力しない)。"""
+        pois, profiles = sample_inputs_100
+        sim = Simulation(
+            pois, profiles, seed=42, ticks=24, enable_summaries=False
+        )
+        sim.simulate()
+
+        assert sim.interaction_events, "interaction イベントが 0 件"
+
+        delta_events = [
+            e for e in sim.interaction_events
+            if e.get("relationship_delta") and
+            e["relationship_delta"]["from"] != e["relationship_delta"]["to"]
+        ]
+        if not delta_events:
+            pytest.skip("relationship 変化イベントが 0 件 (テスト前提不成立)")
+
+        # enable_summaries=False では理由文が "" になるため、契約に従い
+        # relationship_reason キー自体が出力されない (空文字を格納しない)。
+        for event in delta_events:
+            assert "relationship_reason" not in event, (
+                f"enable_summaries=False で空 relationship_reason が出力された: {event}"
+            )
+
     def test_rule_based_10_agents_byte_identical(self, sample_inputs_10, tmp_path):
         """10 体 RuleBased で 3 jsonl が byte 一致する (§13.3.2 / WO-008)。"""
         pois, profiles = sample_inputs_10

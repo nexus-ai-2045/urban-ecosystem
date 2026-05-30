@@ -745,11 +745,14 @@ class Simulation:
         # WO-008: relationship 変化時に理由文を生成して格納する (acceptance criterion 2)
         # from_state != to_state の場合のみ生成する。
         # RuleBasedProvider は決定論テンプレ文を返す (§13.3.2 byte 一致維持)。
+        # WO-012 (data-contract v0.4.0): 空文字の場合はキーを出力しない。
+        # enable_summaries=False では理由文が "" になるため、契約に従い格納しない。
         if from_state != to_state:
             reason = self._generate_relationship_reason(
                 ev_type, a_id, b_id, cand["poi_id"], from_state, to_state
             )
-            event["relationship_reason"] = reason
+            if reason:
+                event["relationship_reason"] = reason
 
         return event
 

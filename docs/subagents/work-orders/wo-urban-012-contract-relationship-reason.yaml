@@ -1,0 +1,77 @@
+id: wo-urban-012-contract-relationship-reason
+title: "data-contract に relationship_reason を正式追加し v0.4.0 化"
+status: done
+owner_role: manager
+support_roles:
+  - quality-gate
+
+goal: >
+  WO-008 で simulation が emit 済みの optional フィールド relationship_reason を
+  urban-ecosystem-data-contract に正式に記載し、contract を v0.3.0 → v0.4.0 へ
+  バージョンアップする。ドキュメント整合と後方互換を担保することが主目的であり、
+  コード変更は行わない。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/subagents/work-orders/wo-urban-008-behavior-relationship-llm.yaml
+    - environments/urban_2d/simulation.py  # _generate_interaction_event / relationship_reason emit 形式の確認
+
+scope:
+  allowed_write_paths:
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/subagents/work-orders/wo-urban-012-contract-relationship-reason.yaml
+  read_only_paths:
+    - environments/urban_2d/simulation.py
+    - tests/
+  out_of_scope:
+    - "コード変更は行わない (contract ドキュメントのみ更新)。"
+    - "テスト追加は行わない (未整備の旨を risks に記載)。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0
+  produces:
+    - id: urban-ecosystem-data-contract
+      version: 0.4.0
+
+depends_on:
+  work_orders:
+    - wo-urban-008-behavior-relationship-llm
+
+human_gates:
+  before_start: []
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G3   # contract 変更の内容確認
+    - G4   # 他 WO との整合確認 (消費側 version 更新)
+
+commands:
+  required: []
+  optional:
+    - "grep -n relationship_reason environments/urban_2d/simulation.py"
+    - "grep -rn relationship_reason tests/"
+
+acceptance:
+  - "frontmatter の version が 0.4.0、updated が更新日付になっている。"
+  - "§Interaction Event JSONL の Optional 行に relationship_reason が記載されている (型・条件・生成元)。"
+  - "JSON 例に relationship_reason が含まれている。"
+  - "§Change Log に 0.4.0 エントリがあり、後方互換の旨が明記されている。"
+  - "§Summary JSON の決定論記述に relationship_reason の決定論/非決定論の補足が追加されている。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "既存テスト (test_llm_provider.py / test_urban_simulation.py) は relationship_reason の emit を既に検証済み。contract との整合テストは未整備 (risks 参照)。"
+  - "後方互換根拠: §Common Rules の「未知フィールド保持原則」により、既存 reader は追加フィールドを無視するため壊れない。"
+  - "RuleBasedProvider 経路では決定論テンプレ文が返り byte 一致を維持する (§13.3.2)。VertexGeminiProvider 経路は非決定論。"

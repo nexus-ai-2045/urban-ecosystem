@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.3.0
+version: 0.4.0
 owner: manager
-updated: 2026-05-30
+updated: 2026-05-31
 
 ## Purpose
 
@@ -196,12 +196,13 @@ Optional: `poi_id` (既存 POI id または予約値 `initial_position`), `reaso
   "agent_ids": [26, 92],
   "location_poi_id": "poi_123",
   "summary": "Two agents talked about lunch plans.",
-  "relationship_delta": { "from": "acquaintance", "to": "friend" }
+  "relationship_delta": { "from": "acquaintance", "to": "friend" },
+  "relationship_reason": "カフェでの会話が二人の関係を深めた。"
 }
 ```
 
 Required: `tick`, `day`, `time`, `type` (§Enumerations), `agent_ids` (既存 agent / 要素数 >= 2 / 重複なし / `[min_id, max_id]` 昇順正規化), `summary` (string)。
-Optional: `location_poi_id` (既存 POI id), `relationship_delta` (`{from, to}` / 各値は relationship state / state 不変でも `from == to` で出力可)。
+Optional: `location_poi_id` (既存 POI id), `relationship_delta` (`{from, to}` / 各値は relationship state / state 不変でも `from == to` で出力可), `relationship_reason` (string / 関係変化の理由文 / LLM 生成またはテンプレ文 / `from != to` のときのみ出力し、空文字の場合は出力しない)。
 
 同一 tick・同一正規化ペアの interaction は 1 件まで。1 tick あたりの総数は spec §9.8 の `MAX_INTERACTIONS_PER_TICK` で上限。
 
@@ -238,10 +239,11 @@ Required (出力する場合): `tick`, `agent_ids` (`[min_id, max_id]`), `score`
 
 Required: `run_id`, `seed`, `ticks`, `agents`, `pois`, `interactions`。Optional: `aois`, `roads`, `started_at`。
 
-**決定論との関係**: 再現性検証 (spec §13.3.2) は `agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl` の 3 ファイルの byte 一致を対象とする。`summary.json` は `started_at` 等の実行時刻を含むため byte 一致対象から除外する。
+**決定論との関係**: 再現性検証 (spec §13.3.2) は `agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl` の 3 ファイルの byte 一致を対象とする。`summary.json` は `started_at` 等の実行時刻を含むため byte 一致対象から除外する。`relationship_reason` は RuleBasedProvider 経路では決定論的なテンプレ文が返るため byte 一致に寄与する。VertexGeminiProvider 経路では Gemini が生成する自然言語テキストとなり非決定論になる。
 
 ## Change Log
 
 - 0.1.0: Initial MVP contract for data loader, viewer, simulation, and replay.
 - 0.2.0: spec 改訂 (Google Cloud Run + Google Maps + Vertex AI/Gemini, Groq/STT 全除去) に追従。§Coordinate Systems / §Naming Conventions / §Time and Tick / §Enumerations / §Relationship Snapshot を新設。POI/AOI/Road を GeoJSON Feature 構造へ統一し `geometry_type` プロパティを廃止。例の `poi_id` を `cafe_123`→`poi_123`、`category` を `"amenity - cafe"`→`amenity-cafe` に修正。`summary.json` に `seed` を追加し決定論対象外を明記。`relationships.jsonl` を File Names に追加。Purpose から動画要件抽出への言及を削除。
 - 0.3.0 (WO-006): §Agent Profile に optional 拡張フィールドを追加。`surname` / `given` (姓名分割 / `name == surname + given` 保証) / `occupation` (職業詳細) / `personality` (性格傾向) / `hobbies` (趣味リスト) / `day_pattern` (行動傾向 / `"morning"` | `"night"` | `"balanced"`)。後方互換: 全フィールドは optional で既存 simulation / viewer / replay は影響なし。`generate_urban_sample.py` は WO-006 から新フィールドを生成する (rng 消費 Step 10-13)。これは WO-007 (苗字キャラ表示) / WO-008 (LLM 行動決定) の共通土台。
+- 0.4.0 (WO-012): §Interaction Event JSONL に `relationship_reason` を optional フィールドとして正式追加。WO-008 で simulation が emit 済み (`from != to` のときのみ出力、空文字は出力しない)。後方互換: optional かつ §Common Rules の「未知フィールド保持原則」により既存 reader への影響なし。RuleBasedProvider 経路では決定論テンプレ文 (byte 一致維持)、VertexGeminiProvider 経路では Gemini 生成の自然言語テキスト (非決定論) となる。
