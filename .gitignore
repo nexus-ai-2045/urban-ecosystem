@@ -70,3 +70,6 @@ experiments/plans/generated_pdca/
 # Auto-implementation agent
 scripts/.env
 scripts/poll.log
+
+# 個人識別子 blocklist (公開しない)
+.pii-blocklist

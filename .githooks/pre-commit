@@ -1,0 +1,61 @@
+#!/bin/sh
+# urban-ecosystem 安全装置 (pre-commit): 著者ロック + secret/PII scan
+# 有効化: git config core.hooksPath .githooks
+# 緊急回避(非推奨): git commit --no-verify
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+expected_email="nexus-ai-2045@users.noreply.github.com"
+expected_name="nexus-ai-2045"
+fail=0
+
+# ── 1. 著者ロック (noreply 系のみ許可 / 個人メールを拒否) ──────────────
+author_ident="$(git var GIT_AUTHOR_IDENT)"
+author_email="$(printf '%s' "$author_ident" | sed -n 's/.*<\(.*\)>.*/\1/p')"
+author_name="$(printf '%s' "$author_ident" | sed -n 's/^\(.*\) <.*/\1/p')"
+if [ "$author_email" != "$expected_email" ]; then
+  echo "✋ 著者ロック: email '$author_email' は不正です (必須: $expected_email)" >&2
+  echo "   修正: git config --local user.email $expected_email" >&2
+  echo "         git config --local user.name  $expected_name" >&2
+  fail=1
+fi
+if [ "$author_email" = "$expected_email" ] && [ "$author_name" != "$expected_name" ]; then
+  echo "⚠ 著者 name が '$author_name' です (推奨: $expected_name)。email 一致のため許可。" >&2
+fi
+
+# ── staged 差分 (追加行のみ) と staged ファイル一覧 ──────────────────
+added="$(git diff --cached --no-color --diff-filter=ACM | grep -E '^\+' | grep -vE '^\+\+\+' || true)"
+staged_files="$(git diff --cached --name-only --diff-filter=ACM || true)"
+
+# ── 2. secret / API キー ────────────────────────────────────────────
+if printf '%s' "$added" | grep -nEi 'AIza[0-9A-Za-z_-]{20,}|gh[opsu]_[0-9A-Za-z]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ya29\.[0-9A-Za-z._-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----' >/dev/null 2>&1; then
+  echo "✋ secret / API キー らしき文字列が staged 差分に検出されました。" >&2
+  fail=1
+fi
+
+# ── 3. .env / *.db / credentials が staged ──────────────────────────
+if printf '%s' "$staged_files" | grep -nEi '(^|/)\.env($|\.)|\.db$|credentials.*\.json$|secret.*\.(json|ya?ml)$' >/dev/null 2>&1; then
+  echo "✋ .env / *.db / credentials 系ファイルが staged されています:" >&2
+  printf '%s\n' "$staged_files" | grep -nEi '(^|/)\.env($|\.)|\.db$|credentials.*\.json$|secret.*\.(json|ya?ml)$' >&2 || true
+  fail=1
+fi
+
+# ── 4. 個人識別子 blocklist (gitignored / リスト本体は非公開) ─────────
+blocklist="$REPO_ROOT/.pii-blocklist"
+if [ -f "$blocklist" ]; then
+  pat="$(grep -vE '^[[:space:]]*($|#)' "$blocklist" | sed 's/[][\.*^$/]/\\&/g' | paste -sd '|' -)"
+  if [ -n "$pat" ]; then
+    if printf '%s' "$added" | grep -niE "$pat" >/dev/null 2>&1; then
+      echo "✋ 個人識別子 (.pii-blocklist) が staged 差分に検出されました:" >&2
+      printf '%s' "$added" | grep -niE "$pat" | head -5 >&2 || true
+      fail=1
+    fi
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "" >&2
+  echo "commit を中止しました。修正してください (緊急時のみ --no-verify / 非推奨)。" >&2
+  exit 1
+fi
+exit 0
