@@ -1,5 +1,32 @@
 # Next Session Control Panel — urban-ecosystem
 
+updated: 2026-05-31
+
+## 2026-05-31 残論点 batch (WO-011..013) ローカル commit 済み / push は CEO 端末実行待ち
+
+ワークフロー (implementer 実装 → bug-hunter review) で残論点 #1/#3/#5 を実装。全 **398 passed** (旧 393 + 新規 5)。**ローカル commit 済み。push は bash-orchestrator hook で Type1 deny されるため CEO 端末で `bash /tmp/cc-urban-push-20260531.sh` を実行して反映する** (CEO 承認済み / script 内で secret 走査 → push)。
+
+- **WO-011 (#1 roadnet 一筆書き改善)** commit `a86780c`: `_build_roads` を Hamilton chain → Prim 法 MST。道路追従で迂回短縮し合成データでも交流発生 (agents=50/pois=30 で interactions=976 実証 / 旧 ≈0)。rng.shuffle は §19.7 Step6 消費位置保存のため維持し結果はトポロジー不使用 → agent_profiles byte 不変。テスト 26→30。spec §19.6.2 改訂。review: **approve**。
+  - 注意: `--agents 10 --pois 300` では POI 過多で interactions=0。交流発生には POI 密度 (agents≳pois) が必要 (WO yaml / spec に明記)。
+- **WO-012 (#3 contract v0.4.0)** commit `1cddf6d`: data-contract に `relationship_reason` を optional 正式化 (from!=to / 空文字は出力しない)。bug-hunter が **high finding** 検出 → `simulation.py` が `enable_summaries=False` で空文字 `""` を出力する WO-008 由来バグ。`if reason:` ガードで根本修正 + 回帰テスト追加。
+- **WO-013 (#5 highlight UX / park-LOW)** commit `16758fe`: `google_maps_adapter.js` の highlight 解除を DEFAULT 固定 → `_agentRoleColors` から role 別色復元。review: **approve**。
+  - 既知 (park-LOW / 未対応): 既存マーカー更新パスは `_agentRoleColors` を再保存しない。data-contract で role 不変のため現行実害なし。将来 role 可変化時に要対応 (bug-hunter medium)。
+
+### push 状態 (要対応)
+- origin/main = `ab160da` (5/30 時点)。local は **4 commit 先行** = `5282402`(前回 viewer 装飾) + `a86780c` + `1cddf6d` + `16758fe`。
+- push 手順: CEO 端末で `bash /tmp/cc-urban-push-20260531.sh` (clipboard 投入済み)。script が secret 走査 → `git push origin main`。push 後 `git -C ~/Projects/urban-ecosystem ls-remote origin main` で HEAD 一致確認。
+- gh active account が repo 著者 (nexus-ai-2045) と異なる場合がある。public repo なので HTTPS token で通る想定だが、404 が出たら `gh auth switch` で account 確認。
+
+### working tree 残 (未 commit / 私の WO とは無関係)
+- `tools/urban_viewer/colors.js` (ROLE_COLORS export 追加 = 未使用 dead code / 実際に色を使うのは google_maps_adapter.js の内部定義) + `tools/urban_viewer/styles.css` (再生ボタン .playing 装飾)。
+- これは別 viewer 改善作業 (`5282402` 系) の未コミット残骸。CEO 指示で「残変更はそのまま、push 判断を先に」→ 保留中。次セッションで viewer 装飾としてまとめて commit するか破棄するか判断。
+
+残: #2 実 Vertex run 目視 (課金/G2) / #4 N100 再生成 (コード不要・gitignore で都度生成) / WO-013 medium (将来対応)。
+
+---
+
+(以下は 2026-05-30 までの記録)
+
 updated: 2026-05-30
 
 方針 (2026-05-29 CEO 確定 / 2026-05-30 更新):
