@@ -1217,24 +1217,57 @@ AOI の座標も `[lon, lat]` 順 (data-contract §Coordinate Systems)。
 
 #### 19.6.2 Road (POI 間 LineString)
 
-MVP では表示専用 (§16 #2)。POI リストをシャッフルし隣接ペア間を結ぶ LineString を生成する。
+WO-011 (2026-05-31) でトポロジーを **距離順スパニングツリー (Prim 法 MST)** に変更した。
+従来の Hamilton chain (一筆書き / `rng.shuffle` 後の隣接ペア) は迂回が長く、
+道路追従 (--roadnet) シミュレーションで interaction が発生しにくい問題があった。
+MST は最寄り POI 同士を結ぶため迂回を最小化し、interaction 発生を改善する。
+
+rng 消費 (§19.7 Step 6): `rng.shuffle` 呼び出し自体は維持する。
+shuffle 後の順序はトポロジーに使わないが、下流 Step 7-13 (demographics) の
+rng 位置を変えないために消費を保存する。
 
 ```python
 def gen_roads(pois, rng):
+    # rng 位置保存のため shuffle は維持 (§19.7 Step 6 / 結果はトポロジーに使わない)
     shuffled = pois[:]
     rng.shuffle(shuffled)
+
+    n = len(pois)
+    # O(n^2) Prim 法: タイブレーク = (距離二乗, i, j) の昇順で決定論的に安定化
+    in_tree = [False] * n
+    nearest_dist = [float("inf")] * n
+    nearest_from = [-1] * n
+    in_tree[0] = True
+    for j in range(1, n):
+        nearest_dist[j] = (pois[0]["lat"]-pois[j]["lat"])**2 + (pois[0]["lon"]-pois[j]["lon"])**2
+        nearest_from[j] = 0
+
+    edges = []  # (min_idx, max_idx)
+    for _ in range(n - 1):
+        best_j = min((j for j in range(n) if not in_tree[j]),
+                     key=lambda j: (nearest_dist[j], j))
+        in_tree[best_j] = True
+        edges.append((min(nearest_from[best_j], best_j), max(nearest_from[best_j], best_j)))
+        for k in range(n):
+            if not in_tree[k]:
+                d = (pois[best_j]["lat"]-pois[k]["lat"])**2 + (pois[best_j]["lon"]-pois[k]["lon"])**2
+                if d < nearest_dist[k] or (d == nearest_dist[k] and best_j < nearest_from[k]):
+                    nearest_dist[k] = d
+                    nearest_from[k] = best_j
+
+    edges.sort()  # (min_idx, max_idx) 昇順で採番安定化
     roads = []
-    for i, (a, b) in enumerate(zip(shuffled, shuffled[1:]), 1):
-        coords = [[a["lon"], a["lat"]], [b["lon"], b["lat"]]]
+    for num, (i, j) in enumerate(edges, 1):
+        a, b = pois[i], pois[j]
         roads.append({
             "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": coords},
-            "properties": {"id": f"road_{i:03d}", "walkable": True},
+            "geometry": {"type": "LineString", "coordinates": [[a["lon"], a["lat"]], [b["lon"], b["lat"]]]},
+            "properties": {"id": f"road_{num:03d}", "walkable": True},
         })
     return roads
 ```
 
-POI=300 件の隣接ペア方式では road 数は ~299 本になる。[事実: 設計決定/§19.6.2] ~299 本で確定。summary.json 例の `"roads": 500` は hard requirement にしない。表示専用のネットワーク密度として 299 本で十分であり、格子ノード補完や複数ペア生成による本数水増しは行わない。`length_m` は省略可 (data-contract §Road Feature で Optional)。
+POI=300 件のスパニングツリーでは road 数は n_pois-1=299 本になる。[事実: 設計決定/§19.6.2] ~299 本で確定。summary.json 例の `"roads": 500` は hard requirement にしない。`length_m` は省略可 (data-contract §Road Feature で Optional)。
 
 ### 19.7 seed 固定と再現性の保証
 

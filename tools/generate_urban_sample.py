@@ -20,9 +20,10 @@ scope (2026-05-29 CEO 確定 / §19 準拠):
 
 rng 消費順序:
   §19.7 が定義する 6 step (POI座標 → role shuffle → home → work/school →
-  social → road shuffle) を記載順で消費する (変更禁止)。§19.7 が明示していない
-  name/age/gender は、6 step の rng 位置を保存するため road shuffle の後に
-  step 7-9 として追記する (本実装の確定事項)。
+  social → road shuffle) を記載順で消費する (変更禁止)。Step 6 は WO-011 で
+  トポロジーを Prim MST に変えたが rng.shuffle 呼び出し自体は維持し rng 位置を保存する。
+  §19.7 が明示していない name/age/gender は、6 step の rng 位置を保存するため
+  road shuffle の後に step 7-9 として追記する (本実装の確定事項)。
   WO-006 追加フィールド (occupation/personality/hobbies/day_pattern) は
   既存 step 7-9 の後に step 10-13 として追記する (変更禁止)。
 """
@@ -367,19 +368,92 @@ def _build_aois() -> list[dict[str, Any]]:
     return aois
 
 
+def _euclidean_sq(a: dict[str, Any], b: dict[str, Any]) -> float:
+    """緯度経度の簡易ユークリッド二乗距離 (ラジアン変換なし / 短距離で十分)。"""
+    dlat = a["lat"] - b["lat"]
+    dlon = a["lon"] - b["lon"]
+    return dlat * dlat + dlon * dlon
+
+
 def _build_roads(
     rng: random.Random, pois: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """POI をシャッフルし隣接ペア間を結ぶ LineString を生成する (§19.6.2 / Step 6)。"""
+    """POI を距離順スパニングツリー (Prim 法) で結ぶ LineString を生成する (§19.6.2 / Step 6)。
+
+    WO-011 で従来の Hamilton chain (一筆書き) を MST に置換した。MST により最寄り POI 同士を
+    結ぶため、道路追従 (--roadnet) 時の迂回が最小化され interaction が生まれやすくなる。
+
+    rng 消費 (§19.7 / Step 6):
+      shuffle 呼び出しは rng 位置保存のため維持する。
+      ただし shuffle 後の順序はトポロジーに使わない (下流 Step 7-13 の rng 位置を変えないための措置)。
+      コメント「# rng 位置保存のため」でその意図を明記する。
+
+    決定論:
+      タイブレークは (距離二乗, i, j) の昇順で完全に安定化する。
+      エッジは (min_idx, max_idx) で正規化・ソートしてから road_NNN を採番する。
+    """
     shuffled = pois[:]
-    rng.shuffle(shuffled)  # Step 6
+    rng.shuffle(shuffled)  # rng 位置保存のため (§19.7 Step 6 / 結果はトポロジーに使わない)
+
+    n = len(pois)
+    if n <= 1:
+        return []
+
+    # ── O(n^2) Prim 法 ──────────────────────────────────────────────────────
+    # in_tree[i]: POI インデックス i がすでに MST に追加済みか
+    # nearest_dist[i]: 現在 MST から i への最小距離二乗
+    # nearest_from[i]: i への最小距離辺の MST 側インデックス
+    in_tree = [False] * n
+    nearest_dist: list[float] = [float("inf")] * n
+    nearest_from: list[int] = [-1] * n
+
+    in_tree[0] = True
+    # MST の最初のノードからの距離を初期化
+    for j in range(1, n):
+        nearest_dist[j] = _euclidean_sq(pois[0], pois[j])
+        nearest_from[j] = 0
+
+    edges: list[tuple[int, int]] = []  # (min_idx, max_idx)
+
+    for _ in range(n - 1):
+        # MST 未追加ノードのうち最小距離のものを選ぶ
+        # タイブレーク: (距離二乗, インデックス) → Python の tuple 比較で自動的に安定化
+        best_j = -1
+        best_dist = float("inf")
+        for j in range(n):
+            if not in_tree[j]:
+                if nearest_dist[j] < best_dist or (
+                    nearest_dist[j] == best_dist and j < best_j
+                ):
+                    best_dist = nearest_dist[j]
+                    best_j = j
+
+        # best_j を MST に追加しエッジを記録
+        in_tree[best_j] = True
+        i = nearest_from[best_j]
+        edges.append((min(i, best_j), max(i, best_j)))
+
+        # best_j の追加により隣接距離が縮まったノードを更新
+        for k in range(n):
+            if not in_tree[k]:
+                d = _euclidean_sq(pois[best_j], pois[k])
+                if d < nearest_dist[k] or (
+                    d == nearest_dist[k] and best_j < nearest_from[k]
+                ):
+                    nearest_dist[k] = d
+                    nearest_from[k] = best_j
+
+    # エッジを (min_idx, max_idx) でソートし採番を安定化
+    edges.sort()
+
     roads: list[dict[str, Any]] = []
-    for i, (a, b) in enumerate(zip(shuffled, shuffled[1:]), 1):
+    for road_num, (i, j) in enumerate(edges, 1):
+        a, b = pois[i], pois[j]
         coords = [[a["lon"], a["lat"]], [b["lon"], b["lat"]]]
         roads.append({
             "type": "Feature",
             "geometry": {"type": "LineString", "coordinates": coords},
-            "properties": {"id": f"road_{i:03d}", "walkable": True},
+            "properties": {"id": f"road_{road_num:03d}", "walkable": True},
         })
     return roads
 

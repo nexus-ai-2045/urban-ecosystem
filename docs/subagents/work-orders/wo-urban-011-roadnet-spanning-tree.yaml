@@ -1,0 +1,92 @@
+id: wo-urban-011-roadnet-spanning-tree
+title: "Roadnet topology: Hamilton chain → distance-ordered spanning tree (Prim MST)"
+status: done
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  _build_roads を「距離順スパニングツリー (Prim 法 MST)」に置換し、
+  最寄り POI 同士を結んで迂回を最小化する。
+  WO-009 の道路追従移動と組み合わせた時に interaction が発生しやすくなることを目標とする。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md  # §19.6.2 Road / §19.7 rng 消費順序
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+  references:
+    - docs/subagents/work-orders/wo-urban-009-road-following-movement.yaml
+
+scope:
+  allowed_write_paths:
+    - tools/generate_urban_sample.py
+    - tests/tools/test_generate_urban_sample.py
+    - docs/ai-ecosystem-tool-spec.md           # §19.6.2 該当箇所のみ
+    - docs/subagents/work-orders/wo-urban-011-roadnet-spanning-tree.yaml
+  read_only_paths:
+    - environments/urban_2d/
+    - core/
+  out_of_scope:
+    - "シミュレーション本体 (environments/urban_2d/simulation.py) は触らない。"
+    - "WO-009 (road-following movement) の実装は触らない。"
+    - "POI 数・エージェント数・bbox 等のパラメータ変更はしない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.3.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-009-road-following-movement  # rng 消費順の踏襲・道路追従前提
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1   # 決定論出力が変わる可能性 (rng 位置保存で最小化済み)
+  before_long_run: []
+  before_claiming_result: []
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python -m pytest tests/tools/test_generate_urban_sample.py -q"
+  optional:
+    - "python tools/generate_urban_sample.py --agents 50 --pois 30 --seed 42 --out-dir /tmp/wo011_sample50"
+    - "python tools/urban_simulation_cli.py run --pois /tmp/wo011_sample50/pois.geojson --profiles /tmp/wo011_sample50/agent_profiles_N50.json --aois /tmp/wo011_sample50/aois.geojson --roadnet /tmp/wo011_sample50/roadnet.geojson --out /tmp/wo011_run50"
+
+acceptance:
+  - "決定論: 同 seed 2 回生成で roadnet.geojson が byte 一致する (test_roadnet_deterministic_same_seed_wo011)。"
+  - "連結性: 生成された road が全 POI を 1 連結成分に繋ぐ (Union-Find で検証 / test_roadnet_spanning_tree_connectivity)。"
+  - "edge 数: n_pois - 1 本 (スパニングツリーの定義 / test_roadnet_spanning_tree_edge_count)。"
+  - "agent_profiles が変更前後で byte 一致 (rng 位置保存確認 / test_agent_profiles_unchanged_by_topology_change)。"
+  - "agents=50, pois=30 の道路追従シミュレーションで interactions > 0 (実測: 976 / 2026-05-31)。"
+  - "既存テスト 26 件すべて pass (デグレなし)。"
+
+implementation_notes:
+  rng_position_preservation: >
+    rng.shuffle は WO-011 以降もトポロジーに使わないが呼び出しは維持する。
+    §19.7 Step 6 の rng 消費量 (rng.shuffle = n_pois draw) を保存することで
+    Step 7-13 (demographics) の rng 位置が変わらず agent_profiles の byte 出力が一致する。
+  prim_determinism: >
+    Prim 法のタイブレークは (距離二乗, j) の昇順で完全に安定化する。
+    エッジを (min_idx, max_idx) で正規化・ソートしてから採番することで road_NNN も安定する。
+  spec_update: >
+    docs/ai-ecosystem-tool-spec.md §19.6.2 を MST アルゴリズムの説明に更新した。
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "WO-009 の原則「決定論: 経路探索のタイブレークを id/座標で安定化し、rng 消費順を変えない」を踏襲。"
+  - "agent_profiles の byte 一致は rng 位置保存で担保。同 seed での golden hash は WO-011 以前と異なる点に注意 (roadnet 自体のトポロジーが変わるため roadnet.geojson は異なる)。"

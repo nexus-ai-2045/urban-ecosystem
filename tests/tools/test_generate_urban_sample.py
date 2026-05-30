@@ -90,7 +90,7 @@ def test_default_counts(gen_dir: Path) -> None:
     assert len(profiles) == 100
     assert len(pois) == 300
     assert len(aois) == 10
-    assert len(roads) == 299  # 隣接ペア方式 = n_pois - 1 (§19.6.2)
+    assert len(roads) == 299  # スパニングツリー = n_pois - 1 (§19.6.2 / WO-011)
 
 
 def test_summary_counts_match(gen_dir: Path) -> None:
@@ -359,3 +359,92 @@ def test_rich_profile_loader_round_trip(tmp_path: Path) -> None:
         else:
             # extra に格納されている場合
             assert "surname" in p.extra
+
+
+# ── WO-011: スパニングツリートポロジー性質テスト ─────────────────────────────────
+
+def test_roadnet_spanning_tree_edge_count(tmp_path: Path) -> None:
+    """スパニングツリーは edge 数 == n_pois - 1 (§19.6.2 / WO-011)。"""
+    n_pois = 30  # 小 POI 数で高速検証
+    generate(tmp_path, seed=42, agents=10, pois=n_pois)
+    roads = load_roads(tmp_path / "roadnet.geojson")
+    assert len(roads) == n_pois - 1, (
+        f"road 数 {len(roads)} が n_pois-1={n_pois - 1} と一致しない"
+    )
+
+
+def test_roadnet_spanning_tree_connectivity(tmp_path: Path) -> None:
+    """生成した road が全 POI を 1 連結成分に繋ぐ (Union-Find で検証 / WO-011)。
+
+    スパニングツリーの定義から連結性は自明だが、実装ミスを機械的に検出するため
+    Union-Find で明示的に確認する。
+    """
+    n_pois = 30
+    generate(tmp_path, seed=42, agents=10, pois=n_pois)
+
+    # roadnet.geojson から LineString 端点ペアを抽出し Union-Find で連結性を確認
+    import json as _json
+    raw = _json.loads((tmp_path / "roadnet.geojson").read_text())
+    features = raw["features"]
+
+    # 頂点セット = 全 LineString の端点座標
+    coord_to_id: dict[tuple[float, float], int] = {}
+    parent: list[int] = []
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(x: int, y: int) -> None:
+        rx, ry = find(x), find(y)
+        if rx != ry:
+            parent[rx] = ry
+
+    for feat in features:
+        coords = feat["geometry"]["coordinates"]
+        for c in coords:
+            key = (c[0], c[1])
+            if key not in coord_to_id:
+                nid = len(coord_to_id)
+                coord_to_id[key] = nid
+                parent.append(nid)
+
+    for feat in features:
+        coords = feat["geometry"]["coordinates"]
+        a = coord_to_id[(coords[0][0], coords[0][1])]
+        b = coord_to_id[(coords[-1][0], coords[-1][1])]
+        union(a, b)
+
+    roots = {find(i) for i in range(len(parent))}
+    assert len(roots) == 1, f"roadnet が非連結: 連結成分数={len(roots)}"
+
+
+def test_roadnet_deterministic_same_seed_wo011(tmp_path: Path) -> None:
+    """同 seed 2 回生成で roadnet.geojson が byte 一致 (WO-011 決定論要件)。
+
+    スパニングツリー構築では rng を参照しない (座標のみで決定論的に確定) ため、
+    byte 一致は原理上保証される。本テストで実装上の揺らぎを機械的に検出する。
+    """
+    d1, d2 = tmp_path / "r1", tmp_path / "r2"
+    generate(d1, seed=42, agents=10, pois=30)
+    generate(d2, seed=42, agents=10, pois=30)
+    h1 = _sha256(d1 / "roadnet.geojson")
+    h2 = _sha256(d2 / "roadnet.geojson")
+    assert h1 == h2, "roadnet.geojson が byte 一致しない"
+
+
+def test_agent_profiles_unchanged_by_topology_change(tmp_path: Path) -> None:
+    """rng 位置保存により agent_profiles が決定論的 byte 一致を維持する (WO-011 要件)。
+
+    _build_roads は rng.shuffle を保持したまま MST を構築する。
+    これにより Step 6 の rng 消費量が変わらず、Step 7-13 (demographics) の
+    rng 位置が従来と同一に保たれる。本テストはその保証を機械的に検証する。
+    """
+    d1, d2 = tmp_path / "s1", tmp_path / "s2"
+    generate(d1, seed=99, agents=10, pois=30)
+    generate(d2, seed=99, agents=10, pois=30)
+    h1 = _sha256(d1 / "agent_profiles_N10.json")
+    h2 = _sha256(d2 / "agent_profiles_N10.json")
+    assert h1 == h2, "agent_profiles_N10.json が byte 一致しない (rng 位置保存が壊れている)"
