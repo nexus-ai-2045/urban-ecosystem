@@ -14,7 +14,7 @@
 
 "use strict";
 
-import { CATEGORY_COLORS } from "./colors.js";
+import { CATEGORY_COLORS, ROLE_COLORS } from "./colors.js";
 
 /**
  * @typedef {Object} LatLon
@@ -426,7 +426,8 @@ export class FallbackMapAdapter {
         for (const agent of agents) {
             const { x, y } = this._project(agent.lat, agent.lon);
             const isSelected = agent.id === this._selectedAgentId;
-            const color = isSelected ? HIGHLIGHT_COLOR : AGENT_DEFAULT_COLOR;
+            const roleColor = ROLE_COLORS[agent.role] || AGENT_DEFAULT_COLOR;
+            const color = isSelected ? HIGHLIGHT_COLOR : roleColor;
 
             // 外枠
             ctx.beginPath();

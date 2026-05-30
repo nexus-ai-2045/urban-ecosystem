@@ -30,3 +30,12 @@ export const CATEGORY_COLORS = Object.freeze({
     "home-residential":    "#95a5a6",
     "other-misc":          "#7f8c8d",
 });
+
+/**
+ * Agent role -> color mapping（キャラらしさを出すための色分け）
+ */
+export const ROLE_COLORS = Object.freeze({
+    "student":       "#9b59b6",   // 紫（学生らしい）
+    "office_worker": "#3498db",   // 青（サラリーマンらしい）
+    "other":         "#7f8c8d",   // グレー
+});
