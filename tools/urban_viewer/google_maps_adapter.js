@@ -61,6 +61,9 @@ export class GoogleMapsAdapter {
         // agent: id -> PinElement のマップ (highlight で背景色を差し替えるために保持)
         this._agentPins = new Map();
 
+        // agent: id -> role 別色 のマップ (highlight 解除時に正しい色に戻すために保持)
+        this._agentRoleColors = new Map();
+
         // 選択中 agent
         this._selectedAgentId = null;
 
@@ -196,6 +199,8 @@ export class GoogleMapsAdapter {
                 });
                 this._agentMarkers.set(agent.id, marker);
                 this._agentPins.set(agent.id, pin);
+                // role 別色を保存。highlight 解除時に正しい色に戻すために参照する
+                this._agentRoleColors.set(agent.id, ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
             }
         }
 
@@ -225,13 +230,13 @@ export class GoogleMapsAdapter {
         const prevId = this._selectedAgentId;
         this._selectedAgentId = agentId;
 
-        // 前回選択マーカーをデフォルト色に戻す
+        // 前回選択マーカーを role 別色に戻す
         if (prevId !== null && prevId !== undefined && prevId !== agentId) {
             const prevPin = this._agentPins.get(prevId);
             if (prevPin) {
-                // ロール色に戻す (agentMarker の title から role は取れないため DEFAULT_ROLE_COLOR を使う)
-                // role は upsertAgents 時に設定済みの pin 色を直接 DEFAULT_ROLE_COLOR にリセットする
-                prevPin.background = DEFAULT_ROLE_COLOR;
+                // _agentRoleColors に upsertAgents 時の role 別色が保存されているため、
+                // DEFAULT_ROLE_COLOR 固定ではなく正しい role 色 (office_worker=青 / student=黄 など) に戻す
+                prevPin.background = this._agentRoleColors.get(prevId) || DEFAULT_ROLE_COLOR;
             }
         }
 

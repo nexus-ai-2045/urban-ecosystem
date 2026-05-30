@@ -1,0 +1,82 @@
+id: wo-urban-013-highlight-role-color-restore
+title: "highlight 解除時に agent を role 別色に正しく復元する"
+status: done
+owner_role: developer
+support_roles: []
+
+goal: >
+  google_maps_adapter.js の highlight(agentId) でハイライトを解除したとき、
+  前回選択だったマーカーの背景色が DEFAULT_ROLE_COLOR (#2c3e50 / 紺) に固定されて
+  いた UX 退行を修正する。
+  正しくは upsertAgents 時に決定した role 別色
+  (office_worker=#3498db 青 / student=#f1c40f 黄 / その他=#2c3e50 紺) に戻す。
+
+context:
+  must_read:
+    - tools/urban_viewer/google_maps_adapter.js
+    - docs/ai-ecosystem-tool-spec.md  # §5.1.4 生成/破棄しない方針
+  background: >
+    upsertAgents は新規 pin 作成時に ROLE_COLORS[role] || DEFAULT_ROLE_COLOR で
+    背景色を決定するが、highlight() の解除処理はマーカーから role を取り出せず
+    DEFAULT_ROLE_COLOR を固定でセットしていた (コメント 232-233 行に問題記録)。
+    本 WO はこの既知課題 (残論点 #5 / park-LOW) を解消する。
+
+scope:
+  allowed_write_paths:
+    - tools/urban_viewer/google_maps_adapter.js
+  out_of_scope:
+    - "Python テスト / 他 JS ファイルは触らない。"
+    - "upsertAgents の既存 agent 更新パスへの role 色更新は対象外 (新規作成パスのみで十分)。"
+
+contracts:
+  consumes: []
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-007-surname-display  # upsertAgents の更新パスに関する先行変更
+
+human_gates:
+  before_start: []
+  before_implementation: []
+  before_long_run: []
+  before_claiming_result: []
+  before_integration: []
+
+implementation_summary: >
+  1. constructor に _agentRoleColors (Map<agentId, color>) を追加した。
+  2. upsertAgents の新規作成ブロック末尾で
+     _agentRoleColors.set(agent.id, ROLE_COLORS[role] || DEFAULT_ROLE_COLOR) を呼び出す。
+  3. highlight() の解除処理で
+     prevPin.background = this._agentRoleColors.get(prevId) || DEFAULT_ROLE_COLOR
+     に変更した (DEFAULT_ROLE_COLOR 固定をやめる)。
+  4. コメント (旧 232-233 行) を修正後の実態に合わせて更新した。
+
+verification:
+  syntax_check: "node --check tools/urban_viewer/google_maps_adapter.js → syntax OK"
+  manual_steps:
+    - "viewer を起動し、office_worker (青) と student (黄) の混在シミュレーションを再生する。"
+    - "office_worker マーカーをクリックして赤くハイライトする。"
+    - "次に student マーカーをクリックする。"
+    - "前に選択した office_worker マーカーが #3498db (青) に戻ることを確認する (DEFAULT 紺 #2c3e50 にならない)。"
+    - "student マーカーを選択解除後、#f1c40f (黄) に戻ることを確認する。"
+
+acceptance:
+  - "highlight(newId) 呼び出し後、前回選択 agent の pin.background が role 別色 (office_worker=青 / student=黄) に戻る。"
+  - "DEFAULT_ROLE_COLOR (#2c3e50 紺) を持つ role (other) のマーカーは従来通り紺に戻る (影響なし)。"
+  - "§5.1.4 の marker/pin 生成・破棄しない方針を維持する (_agentRoleColors は delete しない)。"
+  - "node --check で構文エラーがない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "park-LOW: UX 退行修正。シミュレーション本体のロジックに影響しない。"
+  - "upsertAgents の既存 agent 更新パス (marker.position 更新のみ) では role が渡ってくるが、
+    新規作成時に _agentRoleColors が設定される設計のため再出現 agent の色は正しく保持される。"
+  - "既存 agent の role が run 跨ぎで変化するケースは現行 contract 外のため対象外。"
