@@ -1,9 +1,10 @@
 # Next Session Control Panel — urban-ecosystem
 
-updated: 2026-05-29
+updated: 2026-05-30
 
-方針 (2026-05-29 CEO 確定):
-- **ローカルオンリーで開発を進める**。Cloud Run への再デプロイ / 公開 / 実 Maps 化 (= Type1) は、公開が必要になった節目まで保留。
+方針 (2026-05-29 CEO 確定 / 2026-05-30 更新):
+- **ローカルオンリーで開発を進める**。Cloud Run への再デプロイ / 公開切替 / 実 Maps 化 (= Type1) は、公開が必要になった節目まで保留。
+- **2026-05-30: GitHub に公開済み** — PUBLIC リポジトリ `github.com/nexus-ai-2045/urban-ecosystem` (著者 nexus-ai-2045)。日本語 README も公開済み。今後の push は**都度 CEO 確認** (Type1)。
 - 理由: コアは local だけで完動。実 Google Maps も Vertex/Gemini も local からキー/認証を入れれば使える。Cloud Run の本質価値は「公開URL・常時稼働」だけで開発速度には寄与せず、毎デプロイの Type1 承認ゲートが開発ループを遅くするため。
 - Cloud Run 限定デプロイ (revision 00001-t48 / Ready) は最小で完了済みなので捨てない。節目で再デプロイすればよい。
 
@@ -11,83 +12,77 @@ updated: 2026-05-29
 - 都市地図上で 100 体の AI エージェントが 1 日を過ごす「人工生態系」アプリの MVP。基盤=(将来) Google Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini。第一成果物=「100体が Day0 を過ごす 1 日リプレイが動く」← **local で達成済み**。
 
 現在地:
-- 🏙️ **2026-05-29 realism 要件バッチ (CEO / 7+1 件) — Phase 1 完了**:
-  - #7 viewer ラベル平易化: POI→お店・施設 / AOI→エリア / Agents→住人 (commit `bcb0d0d`)
-  - #5土台 行動決定 LLM 化: Gemini が目的地カテゴリ(§19.3.1 の12択)を選択 / RuleBased 既定で決定論維持 / 不正・例外は rule fallback (commit `ba7fe8d`)
-  - #2/#4/#1: 会話要約+viewer で agent 表示名(`profile.name`+さん)・実店名(POI `properties.name`/欠落時 id) / `--no-summaries` で会話生成をオプション化(--llm と独立) (commit `9b202e8`/`7a54129`)。**276 passed**。
-  - #2 実際の表示: マーカー glyph は `name` 先頭2文字(≒苗字 例「井上翔」→「井上」)、詳細パネルは `name`+さん。真の surname 分割は #3 で profile に surname/given を持たせると精度向上。
-  - 既知 (Phase1 review): (a) [MEDIUM] `enable_summaries` off/on で interaction_events.jsonl の summary 空化を byte 検証するテスト未追加 (回帰見逃しリスク)。(b) [LOW] `google_maps_adapter.upsertAgents` の既存マーカー更新パスは glyph/title を初回生成時のみ反映 (tick毎・run跨ぎで未更新)。
-- **残要件 (次セッション / 未着手)** — 推奨着手順 #3 → #8 → #4拡充/#6 → #5本体:
-  - **#3 リッチプロフィール**: 職業詳細/趣味/性格/1日傾向 + surname/given 分割。`generate_urban_sample.py` 拡張 + 再生成。#2 の苗字と #5 の文脈の土台。
-  - **#8 物理制約 (CEO multiSelect: 到達可能性・道路追従・移動手段(電車)・viewer動き)** = 移動モデル大改修。現状 `simulation.py` の移動は `rules.step_towards` の**直線補間で建物/道路を貫通**(roadnet は表示専用)。要: roadnet→ルーティンググラフ+最短経路で道路追従 / 残り時間で到達可能性判定 / 遠距離は鉄道高速エッジ / viewer は経路アニメ。建物 footprint は現データに無く OSM 等で別取得の要否を CEO 相談。
-  - **#4 拡充**: POI に住所/評価/primaryType 等 Places フィールド追加 (`fetch_places_sample.py` の FieldMask 拡張 + 再 fetch)。
-  - **#6 人数可変**: `--agents` は既存 (fetch/sim CLI)。生成→sim→viewer を任意 N で通す + UI/config 露出。
-  - **#5 本体**: 時間軸×リッチプロフィール行動 (#3 後に `build_destination_prompt` の context へ profile/time を厚く注入)。
-- 🤖 **2026-05-29 LLM エージェント化 (会話生成) 稼働**: spec §10 の `LLMProvider` 抽象を実装。`RuleBasedProvider`(既定/決定論) + `VertexGeminiProvider`(Gemini `gemini-2.5-flash` / ADC)。interaction の会話要約を実 Gemini 生成 → run `urban_real_llm` (POI 435 / interactions 184 / 全 summary が Gemini フル文)。commit `46b1396`/`cc1eedd`/`96b104d`。
-  - **学び**: (1) Vertex の GA は `gemini-2.5-flash`(`2.0-flash` は 404)。(2) 2.5-flash は思考モデル → `thinking_config(thinking_budget=0)` 必須 (無いと max_output_tokens を思考が食い summary が ~16字で途中切れ)。
-  - 決定論維持: RuleBased 既定で agent_states/interaction_events byte 一致 (249 passed)。Gemini は `--llm vertex` opt-in。実 LLM はテスト非経路 (mock)。
+- 🆕 **2026-05-30 realism batch (WO-006..010) 実装・公開済み** (workflow / TDD / 全体 393 passed / 回帰ゼロ):
+  - **WO-006 リッチプロフィール**: `AgentProfile` に surname/given + occupation/personality/hobbies/day_pattern を optional 追加。data-contract を v0.3.0 に MINOR 改訂。`generate_urban_sample.py` 拡張 (`--agents 10` 対応)。苗字表示と行動決定LLMの共通土台。
+  - **WO-007 苗字キャラ表示**: viewer マーカー glyph = 姓、詳細パネル「姓 名 さん」。`upsertAgents` の tick/run 跨ぎ更新漏れ (既知LOW) も解消。
+  - **WO-008 行動決定LLM本体 + 関係理由文**: `choose_destination_category` の context に profile/time を注入。`relationship_reason` を simulation に配線し Gemini 生成。RuleBased 既定で決定論 (byte 一致) 維持 / Vertex は `--llm vertex` opt-in。
+  - **WO-009 道路追従移動**: roadnet をルーティンググラフ化 (新規 `environments/urban_2d/road_graph.py`)、最短経路で道路追従。直線貫通を廃止。建物 footprint は取得しない (CEO 確定)。
+  - **WO-010 ラベル日本語化**: POIカテゴリ/役割/交流イベント/行動理由を日本語表示 (新規 `tools/urban_viewer/labels.py` / `labels.js`)。内部 JSONL/contract の値は英語コード維持。
+  - **10体 viewer fix**: `urban_viewer_server.py` の許可ファイルを `agent_profiles_N*.json` glob 対応 (10体運用の 403 解消 / パストラバーサルは別ガード維持)。
+  - commit: `cfc15d2` (realism batch) / `640d07d` (README) — origin/main へ push 済み。
+- 🤖 **2026-05-29 LLM エージェント化 (会話生成) 稼働**: spec §10 の `LLMProvider` 抽象。`RuleBasedProvider`(既定/決定論) + `VertexGeminiProvider`(`gemini-2.5-flash` / ADC)。
+  - **学び**: (1) Vertex GA は `gemini-2.5-flash`(`2.0-flash` は 404)。(2) 2.5-flash は思考モデル → `thinking_config(thinking_budget=0)` 必須 (無いと max_output_tokens を思考が食い summary が途中切れ)。
   - 実行: `GOOGLE_CLOUD_PROJECT=nexus-ai-2045 python tools/urban_simulation_cli.py run --llm vertex --pois ... --out data/<run>` (ADC + Vertex AI API 有効化済 / SDK `google-genai` venv 導入済)。
-  - 残 LLM 対象 (§10.2): 行動決定 / 関係理由文の Gemini 化は未着手 (会話生成のみ稼働)。
-- 🚀 **2026-05-29 実データ + 実 Google Maps 反映 (CEO 目視確認済「でた」)**: Google Places API (New) で渋谷の実在 POI **435件**取得 → ルールシミュ (interactions 184) → **実 Google Maps** (DEMO_MAP_ID / Advanced Markers) 上で local 表示。commit `a23d3b5` + app.js durable 化。
-  - fetcher: `tools/fetch_places_sample.py` (urllib stdlib / key=env / 渋谷 bbox 4タイル searchNearby / cache `data/.places_cache/` / `--dry-run`)。Places API + Maps JS API は nexus-ai-2045 で有効化済。
-  - 配線 fix: `/static/app.js` を StaticFiles mount より前の templating route にしてキー/Map ID を注入 (旧: raw 配信で placeholder 残り fallback 固定だった)。
-  - 環境: `.env` (gitignore) に GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY (同値1本 / Places+MapsJS に API 制限) / GOOGLE_MAPS_MAP_ID=DEMO_MAP_ID。`app/main.py` が __main__ で .env を自動 load (Cloud Run は no-op)。
-  - 実データ run = `urban_real` (POI 435 / interactions 184 / 100 agents)。合成 run = `urban_demo` も併存。
-  - 既知 LOW: `fetch_places_sample.py` に未使用 helper (`_poi_feature` / `_places_type_to_category`) が残存 (Pyright)。動作影響なし / 次回削除候補。
-- 独立 git リポジトリ `~/Projects/urban-ecosystem` (branch=main / remote 未設定 / 著者 nexus-ai-2045)。
-- **2026-05-29 仕上げ session (workflow)**: 3 commit 追加。
-  - `a6d46dd` refactor(viewer): CATEGORY_COLORS を `colors.js` (ES module SSOT / Object.freeze) に集約し 3 ファイル重複を解消 / google adapter の `highlight()` 実装・`upsertAgents` await・`_waitForGoogleMaps` 10s timeout / **HIGH bug fix** = 非表示後に再出現した agent が永続非表示になる問題を修正 (`marker.map` 復元 + pin 参照保持)。
-  - `c5ce2fa` chore(deps): 未使用依存 (Pillow/anthropic/numpy/matplotlib/pyyaml/requests/python-dotenv) 削除 / runtime=fastapi・uvicorn・httpx + dev=pytest のみ / `pyproject.toml` 追加 (pytest rootdir 固定 + pyright source roots)。
-  - `44abeac` docs(deploy): `--max-instances`/`--concurrency` 推奨レンジ + SA ハードニング (build/run SA 分離・最小権限) 追記。
-  - workflow 検証: venv pytest **175 passed** (回帰なし) / 並列レビュー = deps・docs は adopt / viewer-js の HIGH 指摘は本 session で修正済み。
-- WO-001〜005 実装 + commit 済み (既存)。E2E: generate→simulate→viewer 全レイヤー 200 (agent_states 2400 行 / interactions 395)。
-- Cloud Run 限定デプロイ (revision `urban-ecosystem-00001-t48` / Ready / 非公開 / fallback 地図) は live 稼働中だが **旧ビューア** (今回の仕上げは未反映 = local-only 方針で再デプロイ保留)。
-- **ローカル稼働中**: `localhost:8080` (BG)。fallback 地図 (Maps key 未設定) で 100 体リプレイ閲覧可。
+- 🚀 **2026-05-29 実データ + 実 Google Maps (CEO 目視「でた」)**: Google Places API (New) で渋谷の実在 POI **435件** → ルールシミュ → **実 Google Maps** (DEMO_MAP_ID / Advanced Markers) で local 表示。commit `a23d3b5`。
+  - fetcher: `tools/fetch_places_sample.py` (urllib / key=env / 渋谷 bbox 4タイル searchNearby / cache `data/.places_cache/`)。Places API + Maps JS API は nexus-ai-2045 で有効化済。
+  - 環境: `.env` (gitignore) に GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY / GOOGLE_MAPS_MAP_ID=DEMO_MAP_ID。`app/main.py` が __main__ で .env を自動 load。
+  - 実データ run = `urban_real` (POI 435 / 100 agents)。合成 run = `urban_demo` も併存。
+- 独立 git リポジトリ `~/Projects/urban-ecosystem` (branch=main / **remote=origin → github.com/nexus-ai-2045/urban-ecosystem (公開済み)** / 著者 nexus-ai-2045)。
+- Cloud Run 限定デプロイ (revision `urban-ecosystem-00001-t48` / Ready / 非公開 / **旧ビューア** / 再デプロイ保留)。
+- **ローカル稼働**: `localhost:8080` (BG)。fallback 地図 (Maps key 未設定) で 100 体リプレイ閲覧可。
 
 ローカル起動 (SSOT):
 ```bash
 # venv (初回のみ): python3 -m venv /tmp/urban-venv && /tmp/urban-venv/bin/pip install -r requirements.txt
 cd ~/Projects/urban-ecosystem
 
-# (任意) 実データ再取得 + シミュ (.env にキー必須 / 既に data/urban_real があれば不要):
+# (任意) 合成データ 10 体生成:
+/tmp/urban-venv/bin/python tools/generate_urban_sample.py --agents 10 --seed 42 --out-dir data/sample
+
+# (任意) 実データ再取得 (.env にキー必須 / 既に data/urban_real があれば不要):
 /tmp/urban-venv/bin/python tools/fetch_places_sample.py --out-dir data/urban_real --run-id urban_real
+
+# シミュレーション (合成 10 体の例):
 /tmp/urban-venv/bin/python tools/urban_simulation_cli.py run \
-  --pois data/urban_real/pois.geojson --profiles data/urban_real/agent_profiles_N100.json \
-  --aois data/urban_real/aois.geojson --roadnet data/urban_real/roadnet.geojson --out data/urban_real
+  --pois data/sample/pois.geojson --profiles data/sample/agent_profiles_N10.json \
+  --aois data/sample/aois.geojson --roadnet data/sample/roadnet.geojson --out data/sample
 
 # サーバー起動 (app/main.py が .env を自動 load → 実 Google Maps):
 DATA_DIR="$HOME/Projects/urban-ecosystem/data" PORT=8080 /tmp/urban-venv/bin/python -m app.main
-# → http://localhost:8080 で run_id=urban_real を選択 = 実渋谷 Google Maps + 実 POI 435
-# テスト: /tmp/urban-venv/bin/pytest tests/ -q  → 214 passed
+# → http://localhost:8080 で run を選択
+# テスト: /tmp/urban-venv/bin/pytest tests/ -q  → 393 passed
 ```
 
-待ち / 保留 (local-only 方針で当面やらない):
-- 実 Google Maps 化: local で見たいだけなら `GOOGLE_MAPS_API_KEY` を env に入れれば実タイル表示 (Cloud Run 不要)。Maps API 有効化 + Map ID 発行 (Cloud Console) が前提。
-- Cloud Run 再デプロイ / 公開切替 / GitHub push: いずれも Type1 / 公開が必要になった節目で CEO 実行。手順は `docs/deploy.md`。
-- **§9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突**。WO-004 は §20.5 優先で実装 (office_worker/student は lunch に出ず、lunch は other 20 体のみ)。厳密化は spec オーナー (manager) 判断。現状は §20.5 優先で進行。
+残論点 (realism batch 後 / 次回):
+1. 🛣️ **合成 roadnet が一筆書き (Hamilton chain)**: 道路追従を有効化すると合成データでは迂回が長すぎ 24tick で interaction≈0 (**実 roadnet.geojson では問題なし**)。`generate_urban_sample.py:_build_roads` を距離順スパニングツリー (Prim 等) 化すると改善するが §19.6.2 の rng 消費順が変わり WO-002 byte 一致の再定義が要る → **別 WO 起票推奨**。
+2. 🔑 **実 Vertex run の目視確認** (G2 / 課金 / ADC): 実装は mock テスト済み、実 Gemini 出力 (行動決定/関係理由文/会話) は未目視。`GOOGLE_CLOUD_PROJECT=nexus-ai-2045 ... run --llm vertex --agents 10`。
+3. 📋 **data-contract に `relationship_reason` 正式追加** (v0.4.0 相当 / 今は未定義フィールド保持で互換)。
+4. 🔄 **既存 `agent_profiles_N100.json` 再生成**: profile 拡張で rng 消費順が変わり byte 一致が崩れる (同 seed 再生成で決定論的に復元可)。
+5. 🟡 (park / LOW) google adapter `highlight()` の選択解除時、ロール別色 (office_worker=#3498db / student=#f1c40f) に戻さず DEFAULT_ROLE_COLOR にリセットする UX 退行。
 
-次にやる (local-first):
-1. (優先軸 = ローカル主で開発加速) 次の機能/調整を local で回す。候補: LLM エージェント化 (Vertex/Gemini で WO-004 のルールベース挙動を拡張) / 実 Maps を local キーで確認 / viewer UX の追加改善。
-2. (park / LOW) google adapter `highlight()` の選択解除時、ロール別色 (office_worker=#3498db / student=#f1c40f) に戻さず DEFAULT_ROLE_COLOR にリセットしている UX 退行。`upsertAgents` 時の role を pin に保持する設計で対処 (次スプリント)。
+次にやる:
+1. 残論点 1-4 から選択。優先候補: **roadnet 一筆書き改善** (道路追従でも交流が見えるように) または **実 Vertex run 確認**。
+2. その他 local 機能拡張 (viewer UX / 人数可変 UI 露出 / #4 Places フィールド拡充 等)。
 
 実行メモ:
-- テストは fastapi が要る。venv: `/tmp/urban-venv`。base 環境では WO-003/005 テストは importorskip で skip。
-- docker はローカル未インストール → 節目の再デプロイ時のみ Cloud Build / `gcloud run deploy --source .` でビルド。
+- テストは fastapi が要る。venv: `/tmp/urban-venv`。base 環境では一部テストは importorskip で skip。
+- docker はローカル未インストール → 節目の再デプロイ時のみ `gcloud run deploy --source .`。
 - viewer の static JS はリクエスト毎に disk から読むため、JS 編集はサーバー再起動不要でブラウザ再読込で反映。
+- §9.3「12:00-13:00 全員 lunch」vs §20.5「再評価契機=滞在消化のみ」が衝突。WO-004 は §20.5 優先で実装。厳密化は spec オーナー判断。
 
 証跡:
-- commit (今回): `a6d46dd`(viewer 仕上げ) / `c5ce2fa`(deps+pyproject) / `44abeac`(deploy docs) — 著者 nexus-ai-2045
-- commit (既存): `2f9f308`(WO-002) / `2581986`(WO-004) / `c34b333`(WO-003) / `560d416`(WO-004 統合) / `8c6397c`(viewer UX)
-- test: venv `pytest tests/ -q` → **175 passed**
-- local live: `curl localhost:8080/api/health` = `{"status":"ok","maps_key":"absent","data_source":"local"}` / `/api/runs` = urban_demo (100 agents / 24 ticks / interactions 395)
+- commit (2026-05-30): `cfc15d2`(realism batch WO-006..010 + 10体 viewer fix) / `640d07d`(日本語 README) — 著者 nexus-ai-2045 / **origin/main へ push 済み**
+- commit (既存): `a6d46dd`(viewer 仕上げ) / `c5ce2fa`(deps+pyproject) / `44abeac`(deploy docs) / `2f9f308`(WO-002) / `2581986`(WO-004) / `c34b333`(WO-003) / `560d416`(WO-004 統合) / `8c6397c`(viewer UX)
+- test: venv `pytest tests/ -q` → **393 passed**
+- PII チェック (2026-05-30 push 前): 個人情報 / API キー / token / 秘密鍵 = **ゼロ**確認済み。GCP project id `nexus-ai-2045` は事業識別子として露出 (CEO 許容 / 秘密情報ではない)。
 
 禁止:
-- GitHub push / remote 作成 / Cloud Run 公開切替 = Type1 (外部公開)。CEO 承認まで実行しない。
+- Cloud Run 公開切替 = Type1。GitHub push は公開済みだが**都度 CEO 確認** (Type1 / 外部公開)。
 - commit 著者は `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` を使う (private-author で commit しない)。
 - `data/*.db` 削除禁止 / API キーをコード・ログに出さない。
 
 注意:
-- git 操作は `git -C ~/Projects/urban-ecosystem` + commit は inline `-c user.name=nexus-ai-2045 -c user.email=nexus-ai-2045@users.noreply.github.com` (`git config` 直書きは hook deny)。**新規 (untracked) ファイルは `commit --` で拾えないため、先に `git add <path>` が要る**。
-- root commit `a651046` のみ著者 private-author (amend=履歴書換が deny。push 前に再著者化は任意)。
-- urban-ecosystem は Projects monorepo 内にネストした独立 repo。Projects 側に commit を混入させない (status -s に出ず分離済み)。
-- pyproject.toml 配置済み (pytest rootdir を urban-ecosystem に固定)。
+- git 操作は `git -C ~/Projects/urban-ecosystem` + commit は inline `-c user.name=nexus-ai-2045 -c user.email=nexus-ai-2045@users.noreply.github.com` (`git config` 直書きは hook deny)。**新規 (untracked) ファイルは先に `git add <path>` が要る** (`commit --` で拾えない)。
+- root commit `a651046` のみ別著者 (private-author)。amend (履歴書換) は deny。
+- urban-ecosystem は Projects monorepo 内にネストした独立 repo。Projects 側に commit を混入させない (`git -C` で分離操作)。
+- README.md は日本語で公開済み。pyproject.toml 配置済み (pytest rootdir 固定 + pyright source roots)。
