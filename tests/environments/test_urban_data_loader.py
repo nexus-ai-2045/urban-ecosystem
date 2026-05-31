@@ -1126,6 +1126,17 @@ class TestRichProfileFields:
         with pytest.raises(ValidationError, match="hobbies"):
             load_agent_profiles(p)
 
+    def test_hobbies_null_raises_type_error(self, tmp_path):
+        """異常系: hobbies が present かつ null の場合は「list でない」型エラーになる (#6 回帰)。
+
+        null を [] に丸めてから件数検査すると「1 件以上」件数エラーに化けるため、
+        型チェックを件数チェックより前に置く。
+        """
+        profiles = [_agent_profile(0, hobbies=None)]  # "hobbies": null (present)
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        with pytest.raises(ValidationError, match="list of strings"):
+            load_agent_profiles(p)
+
     def test_hobbies_present_empty_raises(self, tmp_path):
         """異常系: hobbies が明示的に空リスト ([]) の場合 ValidationError を raise する。
 

@@ -815,6 +815,15 @@ class TestBuildDestinationPrompt:
         prompt = build_destination_prompt(context=ctx_minimal, allowed_categories=self._ALLOWED)
         assert "None" not in prompt
 
+    def test_recent_interactions_rendered_as_json_not_repr(self):
+        """recent_interactions は JSON 整形され Python repr (シングルクォート dict) が混入しない (#7 回帰)。"""
+        ctx = dict(self._CTX)
+        ctx["recent_interactions"] = [{"tick": 3, "agent_ids": [0, 1], "type": "chat"}]
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        assert "'tick'" not in prompt   # Python repr のシングルクォート dict は禁止
+        assert '"tick"' in prompt        # JSON のダブルクォート整形
+        assert "直近のやりとり" in prompt
+
     def test_empty_allowed_categories(self):
         """allowed_categories が空でもクラッシュしない。"""
         prompt = build_destination_prompt(context=self._CTX, allowed_categories=[])
