@@ -18,6 +18,7 @@ import { GoogleMapsAdapter }   from "./google_maps_adapter.js";
 import {
     updateLegend,
     updateAgentDetail,
+    updateLoadStatus,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -46,7 +47,7 @@ const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
 
 /**
  * @typedef {Object} ViewerState
- * @property {{ pois:Object[], aois:Object[], roads:Object[], profiles:Object[] }} data
+ * @property {{ pois:Object[], aois:Object[], roads:Object[], profiles:Object[], visitRecords:Object[] }} data
  * @property {{ ticks:number[], tickIndex:number, playing:boolean, speed:1|2|5, statesByTick:Map<number,Object[]> }} replay
  * @property {{ agentId:number|null }} selection
  * @property {{ poi:boolean, aoi:boolean, road:boolean, agent:boolean }} layerVisible
@@ -55,10 +56,12 @@ const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
 /** @type {ViewerState} */
 const state = {
     data: {
-        pois:     [],
-        aois:     [],
-        roads:    [],
-        profiles: [],
+        pois:         [],
+        aois:         [],
+        roads:        [],
+        profiles:     [],
+        /** poi_visit_records.jsonl のレコード一覧 (§5.2 / §5.5) */
+        visitRecords: [],
     },
     replay: {
         ticks:       [],
@@ -94,6 +97,7 @@ const mapContainer  = document.getElementById("map-container");
 const mapCanvas     = document.getElementById("map-canvas");
 const legendEl      = document.getElementById("legend-panel");
 const detailEl      = document.getElementById("detail-panel");
+const loadStatusEl  = document.getElementById("load-status");
 const timeEl        = document.getElementById("time-display");
 const playBtn       = document.getElementById("btn-play");
 const stepBtn       = document.getElementById("btn-step");
@@ -185,13 +189,14 @@ async function fetchRunFile(runId, file) {
 async function loadRun(runId) {
     if (!runId) return;
 
-    // 並列ロード
-    const [poisData, aoisData, roadsData, profilesData, statesRaw] = await Promise.all([
+    // 並列ロード (poi_visit_records.jsonl は任意 / §5.2)
+    const [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw] = await Promise.all([
         fetchRunFile(runId, "pois.geojson"),
         fetchRunFile(runId, "aois.geojson"),
         fetchRunFile(runId, "roadnet.geojson"),
         fetchRunFile(runId, "agent_profiles_N100.json"),
         fetchRunFile(runId, "agent_states.jsonl"),
+        fetchRunFile(runId, "poi_visit_records.jsonl"),
     ]);
 
     // data を正規化してセット
@@ -200,9 +205,11 @@ async function loadRun(runId) {
         lat: f.geometry?.coordinates?.[1],
         lon: f.geometry?.coordinates?.[0],
     })) || [];
-    state.data.aois     = aoisData?.features    || [];
-    state.data.roads    = roadsData?.features   || [];
-    state.data.profiles = Array.isArray(profilesData) ? profilesData : [];
+    state.data.aois         = aoisData?.features    || [];
+    state.data.roads        = roadsData?.features   || [];
+    state.data.profiles     = Array.isArray(profilesData) ? profilesData : [];
+    /** poi_visit_records.jsonl: 任意ファイル。null (ロード失敗) の場合は空配列にフォールバック */
+    state.data.visitRecords = Array.isArray(visitRecordsRaw) ? visitRecordsRaw : [];
 
     // agent_states を tick 別にインデックス化
     const statesByTick = new Map();
@@ -226,6 +233,41 @@ async function loadRun(runId) {
     if (adapter instanceof FallbackMapAdapter) {
         adapter._recomputeBounds();
     }
+
+    // ロード結果をデータ読込パネルに表示する (§5.2: 件数 / 検証結果 / エラー件数)
+    updateLoadStatus(loadStatusEl, [
+        {
+            file:   "pois.geojson",
+            count:  poisData     ? state.data.pois.length            : null,
+            errors: 0,
+        },
+        {
+            file:   "aois.geojson",
+            count:  aoisData     ? state.data.aois.length            : null,
+            errors: 0,
+        },
+        {
+            file:   "roadnet.geojson",
+            count:  roadsData    ? state.data.roads.length           : null,
+            errors: 0,
+        },
+        {
+            file:   "agent_profiles_N100.json",
+            count:  profilesData ? state.data.profiles.length        : null,
+            errors: 0,
+        },
+        {
+            file:   "poi_visit_records.jsonl",
+            // 任意ファイル: ロード失敗 (null) と 0 件を区別するため visitRecordsRaw で判定
+            count:  visitRecordsRaw !== null ? state.data.visitRecords.length : null,
+            errors: 0,
+        },
+        {
+            file:   "agent_states.jsonl",
+            count:  statesRaw    ? ticks.length                      : null,
+            errors: 0,
+        },
+    ]);
 
     // 凡例更新
     updateLegend(legendEl, state.data, state.data.profiles.length);
@@ -294,8 +336,16 @@ async function renderCurrentTick() {
 
     // 詳細パネル更新
     const selectedState = agentStates.find(s => s.agent_id === state.selection.agentId) || null;
-    // profileMap / poiMap は上記で構築済み
-    updateAgentDetail(detailEl, state.selection.agentId, state.data, selectedState, profileMap, poiMap);
+    // profileMap / poiMap は上記で構築済み。visitRecords は state.data に格納済み
+    updateAgentDetail(
+        detailEl,
+        state.selection.agentId,
+        state.data,
+        selectedState,
+        profileMap,
+        poiMap,
+        state.data.visitRecords,
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -307,18 +357,81 @@ let _rafHandle    = null;
 
 /**
  * 再生ループフレーム。
+ * 隣接 tick 間の lat/lon を線形補間して描画フレーム単位で中間位置を表示する (§5.1.4)。
+ * 状態の真値 (tickIndex) はここでは変えない。補間は描画専用。
  * @param {DOMHighResTimeStamp} now
  */
 function playLoop(now) {
     if (!state.replay.playing) return;
 
     const msPerTick = MS_PER_TICK_AT_1X / state.replay.speed;
-    if (now - _lastTickTime >= msPerTick) {
+    const elapsed   = now - _lastTickTime;
+
+    if (elapsed >= msPerTick) {
+        // tick 境界を越えたら真値を進める
         _lastTickTime = now;
         stepTick();
+    } else {
+        // tick 境界前: 描画専用の補間座標でマーカーを更新する
+        const alpha = Math.max(0, Math.min(1, elapsed / msPerTick));
+        _renderInterpolated(alpha);
     }
 
     _rafHandle = requestAnimationFrame(playLoop);
+}
+
+/**
+ * 補間座標でエージェントマーカーを更新する (§5.1.4)。
+ * tickIndex の真値は変えず、描画専用の中間位置を生成する。
+ * @param {number} alpha - 補間係数 [0, 1]
+ */
+function _renderInterpolated(alpha) {
+    const { ticks, tickIndex, statesByTick } = state.replay;
+    if (ticks.length === 0) return;
+
+    const currentTick = ticks[tickIndex];
+    // 最終 tick では補間しない
+    const nextTick    = tickIndex < ticks.length - 1 ? ticks[tickIndex + 1] : null;
+
+    const currentAgentStates = statesByTick.get(currentTick) || [];
+    const nextAgentStates    = nextTick != null ? (statesByTick.get(nextTick) || []) : [];
+
+    // 次 tick 状態を agent_id で高速引き当てするマップを構築
+    const nextStateMap = new Map();
+    for (const s of nextAgentStates) {
+        nextStateMap.set(s.agent_id, s);
+    }
+
+    const profileMap = _buildProfileMap(state.data.profiles);
+
+    // 補間座標を生成して adapter に渡す
+    const markerData = currentAgentStates.map(s => {
+        const profile = profileMap.get(s.agent_id);
+        let label;
+        if (profile) {
+            label = profile.surname || (profile.name ? profile.name.slice(0, 2) : String(s.agent_id));
+        } else {
+            label = String(s.agent_id);
+        }
+
+        // 次 tick の状態があれば線形補間。なければ現在位置をそのまま使う
+        const next = nextStateMap.get(s.agent_id);
+        const lat  = next ? (s.lat + (next.lat - s.lat) * alpha) : s.lat;
+        const lon  = next ? (s.lon + (next.lon - s.lon) * alpha) : s.lon;
+
+        return {
+            id:     s.agent_id,
+            lat,
+            lon,
+            action: s.action,
+            status: s.status,
+            role:   profile?.role || "other",
+            label,
+        };
+    });
+
+    // fire-and-forget: 補間描画は軽量のため Promise エラーはコンソールに出る
+    adapter.upsertAgents(markerData);
 }
 
 /** 再生開始 */
@@ -373,7 +486,15 @@ function handleAgentClick(agentId) {
     // id -> profile マップ / poi -> 店名マップを ui_panels に渡す
     const profileMap = _buildProfileMap(state.data.profiles);
     const poiMap     = _buildPoiMap(state.data.pois);
-    updateAgentDetail(detailEl, agentId, state.data, currentState, profileMap, poiMap);
+    updateAgentDetail(
+        detailEl,
+        agentId,
+        state.data,
+        currentState,
+        profileMap,
+        poiMap,
+        state.data.visitRecords,
+    );
 }
 
 /**

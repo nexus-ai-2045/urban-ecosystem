@@ -1085,3 +1085,47 @@ class TestRichProfileFields:
         assert r.personality == "内向的"
         assert r.hobbies == ("プログラミング", "ゲーム")
         assert r.day_pattern == "night"
+
+    # ── hobbies 要素型 / 空リスト検証 (data-contract v0.3.0 §Agent Profile) ──
+
+    def test_hobbies_element_not_string_raises(self, tmp_path):
+        """異常系: hobbies に string 以外の要素が含まれる場合 ValidationError を raise する。
+
+        contract §Agent Profile: hobbies は string の配列。
+        """
+        profiles = [_agent_profile(0, hobbies=["読書", 123])]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        with pytest.raises(ValidationError, match="hobbies"):
+            load_agent_profiles(p)
+
+    def test_hobbies_element_none_raises(self, tmp_path):
+        """異常系: hobbies 要素に None が含まれる場合 ValidationError を raise する。"""
+        profiles = [_agent_profile(0, hobbies=["読書", None])]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        with pytest.raises(ValidationError, match="hobbies"):
+            load_agent_profiles(p)
+
+    def test_hobbies_present_empty_raises(self, tmp_path):
+        """異常系: hobbies が明示的に空リスト ([]) の場合 ValidationError を raise する。
+
+        contract §Agent Profile: hobbies は 1 件以上。
+        absent (キー自体がない) は許容 (後方互換)、present で空は不可。
+        """
+        profiles = [_agent_profile(0, hobbies=[])]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        with pytest.raises(ValidationError, match="hobbies"):
+            load_agent_profiles(p)
+
+    def test_hobbies_absent_is_valid(self, tmp_path):
+        """正常系: hobbies キーが存在しない場合はエラーにならない (後方互換)。"""
+        profiles = [_agent_profile(0)]  # hobbies キーなし
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].hobbies == ()
+
+    def test_hobbies_single_string_element_valid(self, tmp_path):
+        """正常系: hobbies に string 要素が 1 件の場合は有効。"""
+        profiles = [_agent_profile(0, hobbies=["読書"])]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        result = load_agent_profiles(p)
+        assert result[0].hobbies == ("読書",)

@@ -39,7 +39,9 @@ from environments.urban_2d.models import (
     ACTION_VALUES,
     AGENT_STATUS_VALUES,
     INTERACTION_TYPE_VALUES,
+    POI,
     RELATIONSHIP_STATE_VALUES,
+    AgentProfile,
 )
 from environments.urban_2d.simulation import (
     Simulation,
@@ -829,3 +831,70 @@ class TestWO008BehaviorRelationshipLLM:
             # relationship_reason は str か存在しない
             if "relationship_reason" in event:
                 assert isinstance(event["relationship_reason"], str)
+
+
+class TestTick0InitialArrival:
+    """§20.2 項4/項5: tick=0 で初期位置 = 目的地 POI に一致する場合の arrived / visit 出力。
+
+    spec docs/ai-ecosystem-tool-spec.md §20.2:
+      - 項4: tick=0 の status は、目的地を引けた場合 moving、初期位置=目的地POI一致のみ arrived。
+      - 項5: tick=0 で arrived となる場合のみ poi_visit_records.jsonl に 1 行出力する。
+    """
+
+    def _worker_at_work(self):
+        """初期位置が勤務先 POI 座標と完全一致する office_worker を 1 体作る。"""
+        work = POI(id="poi_work", category="office", lon=139.700, lat=35.690)
+        prof = AgentProfile(
+            id=1,
+            name="出社 太郎",
+            initial_lat=35.690,
+            initial_lon=139.700,  # = poi_work の座標 (完全一致)
+            role="office_worker",
+            work_or_school_poi_id="poi_work",
+        )
+        return [work], [prof]
+
+    def test_tick0_initial_at_destination_is_arrived(self):
+        """初期位置 = 目的地 POI 一致 → tick=0 status は arrived (§20.2 項4)。"""
+        pois, profiles = self._worker_at_work()
+        sim = Simulation(pois, profiles, seed=42, ticks=1)
+        sim.simulate()
+        assert sim.agent_states[0]["tick"] == 0
+        assert sim.agent_states[0]["status"] == "arrived"
+
+    def test_tick0_arrived_emits_visit_record(self):
+        """arrived のとき poi_visit_records に 1 行出力する (§20.2 項5)。"""
+        pois, profiles = self._worker_at_work()
+        sim = Simulation(pois, profiles, seed=42, ticks=1)
+        sim.simulate()
+        # tick=0 は day=0 (tick_to_day_time は 0 始まり)
+        recs = [v for v in sim.visit_records if v["agent_id"] == 1 and v["day"] == 0]
+        assert len(recs) == 1
+        assert recs[0]["poi_id"] == "poi_work"
+        assert recs[0]["reason"] == "commute"
+
+    def test_tick0_moving_when_not_at_destination(self):
+        """初期位置 != 目的地 POI → tick=0 は moving、visit 出力なし (§20.2 項4)。"""
+        work = POI(id="poi_work", category="office", lon=139.710, lat=35.700)
+        prof = AgentProfile(
+            id=1,
+            name="通勤 次郎",
+            initial_lat=35.690,
+            initial_lon=139.700,  # work とは別座標 (約 1km)
+            role="office_worker",
+            work_or_school_poi_id="poi_work",
+        )
+        sim = Simulation([work], [prof], seed=42, ticks=1)
+        sim.simulate()
+        assert sim.agent_states[0]["status"] == "moving"
+        tick0_visits = [v for v in sim.visit_records if v["day"] == 0]
+        assert tick0_visits == []
+
+    def test_later_tick_staying_not_arrived(self):
+        """tick=0 は arrived だが、以降の勤務滞在中は staying (just_arrived は tick 毎にリセット)。"""
+        pois, profiles = self._worker_at_work()
+        sim = Simulation(pois, profiles, seed=42, ticks=4)
+        sim.simulate()
+        states = [s for s in sim.agent_states if s["agent_id"] == 1]
+        assert states[0]["status"] == "arrived"
+        assert all(s["status"] == "staying" for s in states[1:])

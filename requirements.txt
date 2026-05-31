@@ -13,3 +13,7 @@ httpx>=0.24.0
 # [dev] ローカル開発・CI テストにのみ必要な依存 (Cloud Run イメージには不要)
 # Dockerfile は requirements.txt を丸ごと pip install するため物理分割は行わない。
 pytest>=7.0.0
+# [dev/E2E] フロント E2E (§13.2 / tests/e2e/) 用。pip パッケージのみ列挙する。
+# ブラウザ実体は別途 `playwright install chromium` で取得する (Cloud Run イメージには焼かない)。
+# 未インストール環境では tests/e2e/ は pytest.mark.skipif で自動 skip される。
+playwright>=1.40.0

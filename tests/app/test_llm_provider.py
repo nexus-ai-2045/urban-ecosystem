@@ -1265,3 +1265,146 @@ class TestInteractionEventRelationshipReason:
                 assert "relationship_reason" in event
                 # Gemini provider の応答は mock テキストになる
                 assert event["relationship_reason"] == gemini_reason_text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §10.3 gap: build_destination_prompt の 4 フィールド注入
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBuildDestinationPromptContextFields:
+    """§10.3 仕様ギャップ修正: build_destination_prompt が nearby_pois / nearby_agents /
+    recent_interactions / agent_profile を context から抽出してプロンプトに含める。"""
+
+    _ALLOWED = ["amenity-cafe", "amenity-restaurant"]
+
+    def test_nearby_pois_included(self):
+        """context の nearby_pois がプロンプトに含まれる。"""
+        ctx = {
+            "agent_id": 1,
+            "role": "other",
+            "current_time": "12:00:00",
+            "nearby_pois": ["poi_cafe_001", "poi_restaurant_002"],
+        }
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        assert "poi_cafe_001" in prompt, "nearby_pois の poi_cafe_001 がプロンプトに含まれていない"
+        assert "poi_restaurant_002" in prompt, "nearby_pois の poi_restaurant_002 がプロンプトに含まれていない"
+
+    def test_nearby_agents_included(self):
+        """context の nearby_agents がプロンプトに含まれる。"""
+        ctx = {
+            "agent_id": 2,
+            "role": "office_worker",
+            "current_time": "09:00:00",
+            "nearby_agents": [5, 12, 33],
+        }
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        # エージェント ID のいずれかが含まれる
+        assert any(str(aid) in prompt for aid in [5, 12, 33]), (
+            "nearby_agents の ID がプロンプトに含まれていない"
+        )
+
+    def test_recent_interactions_included(self):
+        """context の recent_interactions がプロンプトに含まれる。"""
+        ctx = {
+            "agent_id": 3,
+            "role": "student",
+            "current_time": "15:00:00",
+            "recent_interactions": [
+                {"type": "conversation", "agent_ids": [3, 7]},
+            ],
+        }
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        assert "conversation" in prompt, "recent_interactions の type がプロンプトに含まれていない"
+
+    def test_agent_profile_included(self):
+        """context の agent_profile がプロンプトに含まれる。"""
+        ctx = {
+            "agent_id": 4,
+            "role": "office_worker",
+            "current_time": "08:00:00",
+            "agent_profile": {"name": "山田太郎", "age": 30, "occupation": "エンジニア"},
+        }
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        assert "山田太郎" in prompt or "エンジニア" in prompt, (
+            "agent_profile の内容がプロンプトに含まれていない"
+        )
+
+    def test_absent_fields_omit_none(self):
+        """4 フィールドが context にない場合、プロンプトに 'None' が現れない。"""
+        ctx = {"agent_id": 5, "role": "other"}
+        prompt = build_destination_prompt(context=ctx, allowed_categories=self._ALLOWED)
+        assert "None" not in prompt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §10.3 gap: _build_destination_context の 4 フィールド注入
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBuildDestinationContextNewFields:
+    """§10.3 仕様ギャップ修正: Simulation._build_destination_context が
+    nearby_pois / nearby_agents / recent_interactions / agent_profile を
+    context dict に含める。"""
+
+    @pytest.fixture(scope="class")
+    def sim_and_agent(self):
+        """10 agent / 50 POI の最小シミュレーションと AgentRuntime を返す。"""
+        from environments.urban_2d.simulation import Simulation, _AgentRuntime, load_inputs
+        from tools.generate_urban_sample import generate as gen_sample
+        import tempfile, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tmp = tempfile.mkdtemp(prefix="ctx_new_fields_test_")
+            gen_sample(tmp, seed=42, agents=10, pois=50, ticks=4, run_id="urban_sample")
+            pois, profiles = load_inputs(
+                Path(tmp) / "pois.geojson",
+                Path(tmp) / "agent_profiles_N10.json",
+            )
+        sim = Simulation(pois, profiles, seed=42, ticks=4)
+        agent = _AgentRuntime(
+            profile=profiles[0],
+            lat=profiles[0].initial_lat,
+            lon=profiles[0].initial_lon,
+        )
+        return sim, agent
+
+    def test_nearby_pois_in_context(self, sim_and_agent):
+        """nearby_pois が context dict に含まれる (list[str])。"""
+        sim, agent = sim_and_agent
+        ctx = sim._build_destination_context(agent, tick=4)
+        assert "nearby_pois" in ctx, "nearby_pois が context に含まれていない"
+        assert isinstance(ctx["nearby_pois"], list), "nearby_pois は list であること"
+        # 近傍 POI が存在すれば文字列 ID を持つ
+        for poi_id in ctx["nearby_pois"]:
+            assert isinstance(poi_id, str), f"nearby_pois の要素が str でない: {poi_id!r}"
+
+    def test_nearby_agents_in_context(self, sim_and_agent):
+        """nearby_agents が context dict に含まれる (list[int])。"""
+        sim, agent = sim_and_agent
+        ctx = sim._build_destination_context(agent, tick=4)
+        assert "nearby_agents" in ctx, "nearby_agents が context に含まれていない"
+        assert isinstance(ctx["nearby_agents"], list), "nearby_agents は list であること"
+
+    def test_recent_interactions_in_context(self, sim_and_agent):
+        """recent_interactions が context dict に含まれる (list)。"""
+        sim, agent = sim_and_agent
+        ctx = sim._build_destination_context(agent, tick=4)
+        assert "recent_interactions" in ctx, "recent_interactions が context に含まれていない"
+        assert isinstance(ctx["recent_interactions"], list), "recent_interactions は list であること"
+
+    def test_agent_profile_in_context(self, sim_and_agent):
+        """agent_profile が context dict に含まれる (dict)。"""
+        sim, agent = sim_and_agent
+        ctx = sim._build_destination_context(agent, tick=4)
+        assert "agent_profile" in ctx, "agent_profile が context に含まれていない"
+        assert isinstance(ctx["agent_profile"], dict), "agent_profile は dict であること"
+        # 少なくとも agent_id と name が含まれる
+        assert "id" in ctx["agent_profile"], "agent_profile に id が含まれていない"
+
+    def test_determinism_preserved(self, sim_and_agent):
+        """_build_destination_context の出力が決定論的 (同一入力で同一出力)。"""
+        sim, agent = sim_and_agent
+        ctx1 = sim._build_destination_context(agent, tick=4)
+        ctx2 = sim._build_destination_context(agent, tick=4)
+        # dict の値が一致する (list は sorted 等を考慮して set 比較)
+        assert ctx1["nearby_pois"] == ctx2["nearby_pois"]
+        assert ctx1["agent_profile"] == ctx2["agent_profile"]

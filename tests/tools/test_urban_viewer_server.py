@@ -70,6 +70,16 @@ _MIN_AGENT_STATES = [
 
 _MIN_INTERACTION_EVENTS: list[dict] = []
 
+# contract §VisitRecord 必須: agent_id / day / time / action / lat / lon
+_MIN_VISIT_RECORDS = [
+    {"agent_id": 0, "day": 0, "time": "08:05:00", "poi_id": "poi_001",
+     "action": "visit", "reason": "commute",
+     "lat": 35.661, "lon": 139.701},
+    {"agent_id": 1, "day": 0, "time": "08:10:00", "poi_id": "poi_002",
+     "action": "visit", "reason": "lunch",
+     "lat": 35.662, "lon": 139.702},
+]
+
 _MIN_SUMMARY = {
     "run_id":       "test_run",
     "seed":         42,
@@ -123,6 +133,12 @@ def sample_run_dir(tmp_path_factory):
     with open(agent_states_path, "w", encoding="utf-8") as fh:
         for state in _MIN_AGENT_STATES:
             fh.write(json.dumps(state, ensure_ascii=False) + "\n")
+
+    # poi_visit_records.jsonl: 最小 fixture を手作り (gap §5.2 / §5.5)
+    visit_records_path = run_dir / "poi_visit_records.jsonl"
+    with open(visit_records_path, "w", encoding="utf-8") as fh:
+        for rec in _MIN_VISIT_RECORDS:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
     # interaction_events.jsonl: 空ファイル
     interaction_path = run_dir / "interaction_events.jsonl"
@@ -827,3 +843,224 @@ class TestAgentProfileSurnameFields:
 
         # name なし profile → 「Agent N」
         assert _panel_title({"id": 3}) == "Agent 3"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# gap §5.2: ロード結果表示 / §5.5: poi_visit_records ロード (viewer-ux-1/2/3)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestPoiVisitRecordsEndpoint:
+    """poi_visit_records.jsonl がサーバー経由で取得できる (gap §5.2 / §5.5)。
+
+    受け入れ条件:
+    - /api/data/{run_id}/poi_visit_records.jsonl が 200 を返す。
+    - レスポンスは NDJSON 形式 (JSON 配列ではない)。
+    - 各行に contract §VisitRecord 必須フィールドが含まれる。
+    """
+
+    def test_poi_visit_records_returns_200(self, client_no_key):
+        """`poi_visit_records.jsonl` エンドポイントは 200 を返す。"""
+        res = client_no_key.get("/api/data/test_run/poi_visit_records.jsonl")
+        assert res.status_code == 200, f"got {res.status_code}: {res.text[:200]}"
+
+    def test_poi_visit_records_content_type_ndjson(self, client_no_key):
+        """Content-Type は application/x-ndjson。"""
+        res = client_no_key.get("/api/data/test_run/poi_visit_records.jsonl")
+        assert res.status_code == 200
+        ct = res.headers.get("content-type", "")
+        assert "ndjson" in ct or "x-ndjson" in ct, f"unexpected content-type: {ct}"
+
+    def test_poi_visit_records_is_ndjson_not_array(self, client_no_key):
+        """レスポンスは JSON 配列ではなく NDJSON 形式。"""
+        res = client_no_key.get("/api/data/test_run/poi_visit_records.jsonl")
+        assert res.status_code == 200
+        assert not res.text.strip().startswith("["), "JSONL が JSON 配列として返っている"
+
+    def test_poi_visit_records_required_fields(self, client_no_key):
+        """各行に contract §VisitRecord 必須フィールドが含まれる。"""
+        res = client_no_key.get("/api/data/test_run/poi_visit_records.jsonl")
+        assert res.status_code == 200
+        lines = [l for l in res.text.strip().split("\n") if l.strip()]
+        assert len(lines) >= 1, "レコードが 0 件"
+        for line in lines:
+            obj = json.loads(line)
+            for field in ("agent_id", "day", "time", "action", "lat", "lon"):
+                assert field in obj, f"必須フィールド {field!r} が欠けている: {obj}"
+
+
+class TestLoadStatusDomElement:
+    """index.html に load-status 表示領域が存在する (gap §5.2: ロード結果表示)。
+
+    受け入れ条件 (§5.2):
+    - 読込後は各ファイルの件数・検証結果・エラー件数を表示する。
+    - HTML に id="load-status" を持つ要素が存在すること (サーバーが静的 HTML を返す前提)。
+    """
+
+    def test_html_has_load_status_element(self, client_no_key):
+        """HTML レスポンスに id='load-status' 要素が含まれる。"""
+        res = client_no_key.get("/")
+        assert res.status_code == 200
+        assert 'id="load-status"' in res.text, (
+            "index.html に id='load-status' 要素が存在しない (gap §5.2: ロード結果表示)"
+        )
+
+
+class TestInterpolationLogic:
+    """§5.1.4 線形補間: 隣接 tick 間 lat/lon 補間のロジック検証 (Python 等価実装)。
+
+    JS 側 playLoop の RAF コールバック内で行う補間ロジックを Python で等価実装して確認する。
+    受け入れ条件:
+    - alpha=0 のとき現在 tick の位置を返す。
+    - alpha=1 のとき次 tick の位置を返す。
+    - alpha=0.5 のとき中間位置を返す (線形補間)。
+    - alpha は [0, 1] にクランプされる。
+    - 状態の真値 (tickIndex) は変えない (補間は描画専用)。
+    """
+
+    @staticmethod
+    def _lerp(a: float, b: float, alpha: float) -> float:
+        """線形補間: a + (b - a) * alpha (JS 側 playLoop の等価実装)。"""
+        return a + (b - a) * alpha
+
+    def test_alpha_0_returns_current_position(self):
+        """alpha=0 のとき現在 tick の位置を返す。"""
+        lat0, lon0 = 35.660, 139.700
+        lat1, lon1 = 35.670, 139.710
+        assert self._lerp(lat0, lat1, 0.0) == pytest.approx(lat0)
+        assert self._lerp(lon0, lon1, 0.0) == pytest.approx(lon0)
+
+    def test_alpha_1_returns_next_position(self):
+        """alpha=1 のとき次 tick の位置を返す。"""
+        lat0, lon0 = 35.660, 139.700
+        lat1, lon1 = 35.670, 139.710
+        assert self._lerp(lat0, lat1, 1.0) == pytest.approx(lat1)
+        assert self._lerp(lon0, lon1, 1.0) == pytest.approx(lon1)
+
+    def test_alpha_half_returns_midpoint(self):
+        """alpha=0.5 のとき中間位置を返す。"""
+        lat0, lon0 = 35.660, 139.700
+        lat1, lon1 = 35.680, 139.720
+        assert self._lerp(lat0, lat1, 0.5) == pytest.approx(35.670)
+        assert self._lerp(lon0, lon1, 0.5) == pytest.approx(139.710)
+
+    def test_alpha_clamp_below_zero(self):
+        """alpha < 0 は 0 にクランプされ、現在 tick 位置を返す。"""
+        lat0, lat1 = 35.660, 35.670
+        alpha = max(0.0, min(1.0, -0.5))  # clamp
+        assert self._lerp(lat0, lat1, alpha) == pytest.approx(lat0)
+
+    def test_alpha_clamp_above_one(self):
+        """alpha > 1 は 1 にクランプされ、次 tick 位置を返す。"""
+        lat0, lat1 = 35.660, 35.670
+        alpha = max(0.0, min(1.0, 1.5))  # clamp
+        assert self._lerp(lat0, lat1, alpha) == pytest.approx(lat1)
+
+    def test_interpolated_lat_within_range(self):
+        """補間 lat は [lat0, lat1] の範囲に収まる (テレポート検知)。"""
+        lat0, lat1 = 35.660, 35.670
+        for alpha in (0.0, 0.25, 0.5, 0.75, 1.0):
+            result = self._lerp(lat0, lat1, alpha)
+            assert lat0 <= result <= lat1, (
+                f"alpha={alpha}: result {result} が [{lat0}, {lat1}] 外"
+            )
+
+    def test_interpolated_lon_within_range(self):
+        """補間 lon は [lon0, lon1] の範囲に収まる。"""
+        lon0, lon1 = 139.700, 139.710
+        for alpha in (0.0, 0.25, 0.5, 0.75, 1.0):
+            result = self._lerp(lon0, lon1, alpha)
+            assert lon0 <= result <= lon1, (
+                f"alpha={alpha}: result {result} が [{lon0}, {lon1}] 外"
+            )
+
+    def test_alpha_calculation_from_elapsed_time(self):
+        """elapsed / msPerTick から alpha を計算するロジック検証。
+
+        再生ループ: alpha = clamp(elapsed / msPerTick, 0, 1)。
+        elapsed=0 なら alpha=0、elapsed=msPerTick ならalpha=1。
+        """
+        ms_per_tick = 1000  # 1x 速度での 1tick あたり ms
+
+        # フレーム開始直後 (elapsed=0)
+        elapsed = 0
+        alpha = max(0.0, min(1.0, elapsed / ms_per_tick))
+        assert alpha == pytest.approx(0.0)
+
+        # tick 境界 (elapsed == msPerTick)
+        elapsed = 1000
+        alpha = max(0.0, min(1.0, elapsed / ms_per_tick))
+        assert alpha == pytest.approx(1.0)
+
+        # 中間フレーム (elapsed=500ms / 1x)
+        elapsed = 500
+        alpha = max(0.0, min(1.0, elapsed / ms_per_tick))
+        assert alpha == pytest.approx(0.5)
+
+        # 2x 速度 (msPerTick=500ms)
+        ms_per_tick_2x = 500
+        elapsed = 250
+        alpha = max(0.0, min(1.0, elapsed / ms_per_tick_2x))
+        assert alpha == pytest.approx(0.5)
+
+
+class TestVisitRecordDetailLogic:
+    """§5.3 / §5.5 エージェント詳細「直近 POI / 理由」「直近の会話またはイベント」表示ロジック。
+
+    JS 側 updateAgentDetail に visitRecords を渡して最新訪問を表示する
+    ロジックを Python で等価実装して確認する。
+    """
+
+    def _latest_visit(self, agent_id: int, visit_records: list) -> dict | None:
+        """agent_id の最新訪問レコードを返す (JS 側等価実装)。
+
+        visitRecords は時系列順 (到着 tick 順) に格納されている前提。
+        同一 agent_id の最後のレコードを返す。
+        """
+        latest = None
+        for rec in visit_records:
+            if rec.get("agent_id") == agent_id:
+                latest = rec
+        return latest
+
+    def test_latest_visit_found_for_agent(self):
+        """正しい agent_id の最新レコードを返す。"""
+        records = [
+            {"agent_id": 0, "day": 0, "time": "08:05:00", "poi_id": "poi_001",
+             "action": "visit", "reason": "commute", "lat": 35.660, "lon": 139.700},
+            {"agent_id": 1, "day": 0, "time": "08:10:00", "poi_id": "poi_002",
+             "action": "visit", "reason": "lunch", "lat": 35.661, "lon": 139.701},
+            {"agent_id": 0, "day": 0, "time": "12:00:00", "poi_id": "poi_003",
+             "action": "visit", "reason": "lunch", "lat": 35.662, "lon": 139.702},
+        ]
+        result = self._latest_visit(0, records)
+        assert result is not None
+        assert result["poi_id"] == "poi_003"
+        assert result["reason"] == "lunch"
+        assert result["time"]   == "12:00:00"
+
+    def test_latest_visit_returns_none_when_no_record(self):
+        """訪問レコードがない agent_id には None を返す。"""
+        records = [
+            {"agent_id": 1, "day": 0, "time": "08:10:00", "poi_id": "poi_002",
+             "action": "visit", "reason": "lunch", "lat": 35.661, "lon": 139.701},
+        ]
+        result = self._latest_visit(99, records)
+        assert result is None
+
+    def test_latest_visit_returns_none_for_empty_records(self):
+        """空の visitRecords に対して None を返す。"""
+        result = self._latest_visit(0, [])
+        assert result is None
+
+    def test_latest_visit_shows_poi_and_reason(self):
+        """最新 visit の poi_id と reason が詳細パネル表示に使える。"""
+        records = [
+            {"agent_id": 5, "day": 0, "time": "12:00:00", "poi_id": "poi_cafe",
+             "action": "visit", "reason": "lunch", "lat": 35.660, "lon": 139.700},
+        ]
+        rec = self._latest_visit(5, records)
+        assert rec is not None
+        # 表示ロジック: 「{time} {poi_id} ({reason})」形式で組み立て可能
+        display = f"{rec['time']} {rec.get('poi_id', '—')} ({rec.get('reason', '—')})"
+        assert "poi_cafe" in display
+        assert "lunch"    in display

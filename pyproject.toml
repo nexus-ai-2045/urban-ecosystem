@@ -8,6 +8,11 @@
 # conftest.py が PROJECT_ROOT を sys.path に追加しているため、
 # environments/ / app/ / tools/ への import は引き続き解決される。
 testpaths = ["tests"]
+# カスタムマーカー登録 (§18.4 CI 方針)。
+# CI では `-m 'not requires_api'` で外部 API 依存テストを除外する。
+markers = [
+    "requires_api: 外部 API (Vertex AI / Gemini / Google Maps) の認証情報が必要なテスト。CI ではスキップする。",
+]
 
 [tool.pyright]
 # ソースルートを urban-ecosystem 内に限定する。

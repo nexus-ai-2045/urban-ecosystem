@@ -472,8 +472,24 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
     social_networks = tuple(sn_raw)
 
     # WO-006: hobbies は list[str] → tuple[str, ...]
-    hobbies_raw = obj.get("hobbies", [])
+    # contract §Agent Profile: hobbies は string の配列 / 1 件以上 (present の場合のみ)
+    hobbies_raw = obj.get("hobbies")
+    hobbies_present = "hobbies" in obj
+    if hobbies_raw is None:
+        hobbies_raw = []
     _require(isinstance(hobbies_raw, list), loc, "hobbies", "list of strings")
+    if hobbies_present:
+        # present かつ空リストは contract 違反 (1 件以上)
+        _require(
+            len(hobbies_raw) >= 1,
+            loc, "hobbies", "1 件以上の string (present の場合)", hobbies_raw,
+        )
+        # 全要素が string であることを検証する
+        _require(
+            all(isinstance(x, str) for x in hobbies_raw),
+            loc, "hobbies", "全要素が string",
+            [x for x in hobbies_raw if not isinstance(x, str)] or None,
+        )
 
     extra = _extract_extra(obj, _PROFILE_KNOWN_KEYS)
     return AgentProfile(

@@ -87,6 +87,8 @@ class _AgentRuntime:
     dwell_remaining: Optional[int] = None
     # 直前 tick に moving だったか (arrived 判定用 §9.2)
     was_moving: bool = False
+    # 当 tick に初期位置=目的地一致で到達扱いになったか (§20.2 項4/項5 / tick=0 限定)
+    just_arrived: bool = False
     # 当 tick に出力する status (contract 語彙)
     out_status: str = "staying"
     # WO-009: 道路追従用の残りウェイポイント列 [(lat, lon), ...]
@@ -223,12 +225,22 @@ class Simulation:
         self,
         agent: _AgentRuntime,
         tick: int,
+        poi_presence: Optional[dict[str, set[int]]] = None,
     ) -> dict:
         """§10.3 コンテキスト dict を組む (choose_destination_category 用)。
 
         WO-008: occupation / personality / hobbies / day_pattern / current_time を
         context に含める (acceptance criterion 1)。
         各フィールドは AgentProfile (WO-006 追加) から取得し、存在する場合のみ注入する。
+
+        §10.3 gap 修正: nearby_pois / nearby_agents / recent_interactions / agent_profile
+        の 4 フィールドを追加注入する。
+          - nearby_pois: エージェント座標から近い順に最大 NEIGHBOR_K 件の POI ID リスト。
+          - nearby_agents: 同 POI に滞在/向かっている他エージェント ID リスト
+                          (poi_presence が渡された場合のみ)。
+          - recent_interactions: self.interaction_events からこのエージェントが
+                                 関与した直近 5 件 (tick 降順)。
+          - agent_profile: プロフィールの主要フィールドを dict 化したもの。
         """
         day, time_str = tick_to_day_time(tick)
         ctx: dict = {
@@ -247,6 +259,52 @@ class Simulation:
             ctx["day_pattern"] = agent.profile.day_pattern
         if agent.current_poi_id:
             ctx["current_location"] = agent.current_poi_id
+
+        # §10.3 gap: nearby_pois — エージェント座標からの最近傍 NEIGHBOR_K 件
+        sorted_pois = sorted(
+            self.pois,
+            key=lambda p: rules.haversine_m(agent.lat, agent.lon, p.lat, p.lon),
+        )
+        ctx["nearby_pois"] = [p.id for p in sorted_pois[: rules.NEIGHBOR_K]]
+
+        # §10.3 gap: nearby_agents — 同 POI に居る他エージェント (poi_presence 利用)
+        nearby_agent_ids: list[int] = []
+        if poi_presence is not None and agent.current_poi_id:
+            co_present = poi_presence.get(agent.current_poi_id, set())
+            nearby_agent_ids = sorted(
+                aid for aid in co_present if aid != agent.profile.id
+            )
+        ctx["nearby_agents"] = nearby_agent_ids
+
+        # §10.3 gap: recent_interactions — このエージェントが関与した直近 5 件
+        agent_id = agent.profile.id
+        recent: list[dict[str, Any]] = [
+            ev for ev in self.interaction_events
+            if agent_id in ev.get("agent_ids", [])
+        ]
+        # tick 降順で上位 5 件 (immutable コピーを渡す)
+        recent_sorted = sorted(recent, key=lambda ev: ev.get("tick", 0), reverse=True)
+        ctx["recent_interactions"] = [dict(ev) for ev in recent_sorted[:5]]
+
+        # §10.3 gap: agent_profile — プロフィール主要フィールドの dict
+        profile = agent.profile
+        agent_profile: dict[str, Any] = {"id": profile.id}
+        if profile.name:
+            agent_profile["name"] = profile.name
+        if profile.age is not None:
+            agent_profile["age"] = profile.age
+        if profile.gender:
+            agent_profile["gender"] = profile.gender
+        if profile.occupation:
+            agent_profile["occupation"] = profile.occupation
+        if profile.personality:
+            agent_profile["personality"] = profile.personality
+        if profile.hobbies:
+            agent_profile["hobbies"] = list(profile.hobbies)
+        if profile.day_pattern:
+            agent_profile["day_pattern"] = profile.day_pattern
+        ctx["agent_profile"] = agent_profile
+
         return ctx
 
     def _llm_narrow_candidates(
@@ -254,6 +312,7 @@ class Simulation:
         agent: _AgentRuntime,
         tick: int,
         cands: list[POI],
+        poi_presence: Optional[dict[str, set[int]]] = None,
     ) -> list[POI]:
         """LLMProvider で候補 POI を 1 カテゴリに絞り込む。
 
@@ -261,13 +320,15 @@ class Simulation:
         VertexGeminiProvider が有効カテゴリを返した場合のみ絞り込む。
         不正カテゴリ/例外は §9.3 ルール (cands 全体) にフォールバックし、
         fallback を debug ログに記録する (プロンプト本文は出力しない)。
+
+        poi_presence: §10.3 nearby_agents 計算用 (None の場合は nearby_agents = [])。
         """
         if not cands:
             return cands
 
         # 候補の distinct カテゴリリストを allowed_categories として渡す
         allowed = sorted({p.category for p in cands})
-        ctx = self._build_destination_context(agent, tick)
+        ctx = self._build_destination_context(agent, tick, poi_presence=poi_presence)
 
         try:
             chosen = self.llm_provider.choose_destination_category(ctx, allowed)
@@ -329,7 +390,7 @@ class Simulation:
         if mode == "nearest":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
             # LLM カテゴリ絞り込み (RuleBased は no-op)
-            cands = self._llm_narrow_candidates(agent, tick, cands)
+            cands = self._llm_narrow_candidates(agent, tick, cands, poi_presence=poi_presence)
             poi = rules.nearest_poi(agent.lat, agent.lon, cands)
             if poi is None:
                 return (None, "no_target", mode)
@@ -338,7 +399,7 @@ class Simulation:
         if mode == "weighted":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
             # LLM カテゴリ絞り込み (RuleBased は no-op)
-            cands = self._llm_narrow_candidates(agent, tick, cands)
+            cands = self._llm_narrow_candidates(agent, tick, cands, poi_presence=poi_presence)
             poi = rules.weighted_nearest_poi(agent.lat, agent.lon, cands, self.rng)
             if poi is None:
                 return (None, "no_target", mode)
@@ -347,7 +408,7 @@ class Simulation:
         if mode == "social":
             cands = [p for p in self.pois if rules.category_matches(p.category, vocab)]
             # LLM カテゴリ絞り込み (RuleBased は no-op)
-            cands = self._llm_narrow_candidates(agent, tick, cands)
+            cands = self._llm_narrow_candidates(agent, tick, cands, poi_presence=poi_presence)
             # §9.10: social_networks メンバーが滞在/向かっている POI を FRIEND_GRAVITY 倍
             friend_pois = self._friend_target_pois(agent, poi_presence)
 
@@ -410,6 +471,7 @@ class Simulation:
         visit: Optional[dict[str, Any]] = None
         prev_internal = agent.internal
         agent.was_moving = prev_internal == "moving"
+        agent.just_arrived = False  # §20.2 項4: 当 tick の到達フラグは毎 tick リセット
 
         # ── 再評価契機判定 (§20.5): idle / 滞在消化済み のみ §9.3 を引く ──
         need_reevaluate = False
@@ -435,10 +497,19 @@ class Simulation:
                 agent.dwell_remaining = 0
                 agent.route_waypoints = []
             elif target.id == agent.current_poi_id and self._at_poi_coords(agent, target):
-                # 既に目的地 POI に居る (stay_current 等): 移動せず滞在
+                # 既に目的地 POI に居る (stay_current / 初期位置一致): 移動せず滞在
                 agent.internal = "at_poi"
-                agent.dwell_remaining = self._dwell_for(action)
                 agent.route_waypoints = []
+                if tick == 0:
+                    # §20.2 項4/項5: tick=0 で初期位置=目的地 POI に一致 → 「到達」扱い。
+                    # arrived を出力し、visit record を 1 行出力する (移動開始は記録しない §9.5)。
+                    agent.just_arrived = True
+                    visit = self._make_visit(agent, tick)
+                    # §20.1 項2 と整合: commute 即着なら work/study に切替 (dwell は時刻ベース None)。
+                    if agent.action == "commute":
+                        agent.action = "study" if agent.profile.role == "student" else "work"
+                # 非 tick=0 / 非 commute は action 不変のため dwell の rng 消費順は従来と一致。
+                agent.dwell_remaining = self._dwell_for(agent.action)
             else:
                 agent.internal = "moving"
                 # WO-009: 道路追従ルートを計算して waypoints に格納する。
@@ -587,8 +658,9 @@ class Simulation:
         if agent.internal == "moving":
             return "moving"
         if agent.internal == "at_poi":
-            # 直前 tick が moving で当 tick にスナップ → arrived
-            if prev_internal == "moving":
+            # 直前 tick が moving で当 tick にスナップ → arrived。
+            # tick=0 初期位置=目的地一致 (just_arrived) も arrived (§20.2 項4)。
+            if prev_internal == "moving" or agent.just_arrived:
                 return "arrived"
             return "staying"
         # idle → staying

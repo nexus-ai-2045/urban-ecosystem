@@ -694,4 +694,23 @@ def build_destination_prompt(
     if recent_visits:
         lines.append(f"- 直近の訪問: {recent_visits}")
 
+    # §10.3 gap: nearby_pois / nearby_agents / recent_interactions / agent_profile
+    nearby_pois = context.get("nearby_pois")
+    if nearby_pois:
+        pois_str = ", ".join(str(p) for p in nearby_pois)
+        lines.append(f"- 近傍 POI: {pois_str}")
+
+    nearby_agents = context.get("nearby_agents")
+    if nearby_agents is not None and len(nearby_agents) > 0:
+        agents_str = ", ".join(str(a) for a in nearby_agents)
+        lines.append(f"- 近傍エージェント: {agents_str}")
+
+    recent_interactions = context.get("recent_interactions")
+    if recent_interactions:
+        lines.append(f"- 直近のやりとり: {recent_interactions}")
+
+    agent_profile = context.get("agent_profile")
+    if agent_profile:
+        lines.append(f"- エージェントプロフィール: {agent_profile}")
+
     return "\n".join(lines)

@@ -102,8 +102,9 @@ export function updateLegend(legendEl, data, agentCount) {
  * @param {Object|null} currentState - 現 tick の AgentState オブジェクト
  * @param {Map<number,Object>} [profileMap] - agent id -> profile オブジェクトのマップ (WO-007: id -> 全 profile)
  * @param {Map<string,string>} [poiMap] - poi id -> 店名マップ (訪問先名前解決用)
+ * @param {Object[]} [visitRecords] - poi_visit_records.jsonl の全レコード (§5.2 / §5.5)
  */
-export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map(), poiMap = new Map()) {
+export function updateAgentDetail(detailEl, agentId, data, currentState, profileMap = new Map(), poiMap = new Map(), visitRecords = []) {
     if (!detailEl) return;
 
     // 既存 DOM を空にして再構築
@@ -200,13 +201,43 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
             : "—");
         appendRow(detailEl, "状態",   currentState.status  || "—");
 
-        // interaction summary: 空・null・undefined でもパネルが壊れないよう
-        // 値がある時だけ表示する
-        const summary = currentState.summary;
-        if (summary != null && String(summary).trim() !== "") {
-            appendRow(detailEl, "summary", String(summary));
+        // 直近 POI / 理由: poi_visit_records.jsonl から選択中 agent の最新訪問を表示 (§5.2 / §5.5)
+        const latestVisit = _findLatestVisit(agentId, visitRecords);
+        if (latestVisit) {
+            const visitPoiRaw   = latestVisit.poi_id || null;
+            const visitPoiLabel = visitPoiRaw
+                ? (poiMap.get(visitPoiRaw) || visitPoiRaw)
+                : "—";
+            const visitReason   = latestVisit.reason || "—";
+            const visitTime     = latestVisit.time   || "—";
+            appendRow(detailEl, "直近 POI / 理由", `${visitPoiLabel} / ${visitReason} (${visitTime})`);
+
+            // 直近の会話またはイベント (§5.3): visit record の reason / poi / timestamp を表示
+            appendRow(detailEl, "直近の会話またはイベント",
+                `${visitTime} — ${visitPoiLabel} にて ${visitReason}`);
+        } else {
+            appendRow(detailEl, "直近 POI / 理由", "—");
+            appendRow(detailEl, "直近の会話またはイベント", "—");
         }
     }
+}
+
+/**
+ * visitRecords から指定 agent_id の最新訪問レコードを返す。
+ * 同一 agent_id が複数ある場合は配列の最後のレコードを返す (時系列順格納を前提)。
+ * @param {number} agentId
+ * @param {Object[]} visitRecords
+ * @returns {Object|null}
+ */
+function _findLatestVisit(agentId, visitRecords) {
+    if (!Array.isArray(visitRecords) || visitRecords.length === 0) return null;
+    let latest = null;
+    for (const rec of visitRecords) {
+        if (rec.agent_id === agentId) {
+            latest = rec;
+        }
+    }
+    return latest;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -249,6 +280,61 @@ export function updatePlayButton(btnEl, playing) {
 // ─────────────────────────────────────────────────────────────────────────────
 // データ読込パネル
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * データ読込パネルにロード結果 (件数 / 検証結果 / エラー件数) を表示する (§5.2)。
+ * DOM 要素を直接生成し innerHTML は使わない (XSS 防止)。
+ *
+ * @param {HTMLElement} statusEl - id="load-status" の要素
+ * @param {Array<{file:string, count:number|null, errors:number}>} results
+ *   - file: ファイル名
+ *   - count: ロード件数 (null = ロード失敗)
+ *   - errors: バリデーションエラー件数
+ */
+export function updateLoadStatus(statusEl, results) {
+    if (!statusEl) return;
+
+    // 既存 DOM を空にして再構築
+    while (statusEl.firstChild) statusEl.removeChild(statusEl.firstChild);
+
+    if (!results || results.length === 0) return;
+
+    const list = document.createElement("ul");
+    list.className = "load-status-list";
+
+    for (const r of results) {
+        const item = document.createElement("li");
+        item.className = "load-status-item";
+
+        const fileName = document.createElement("span");
+        fileName.className   = "load-status-file";
+        fileName.textContent = r.file;
+
+        const status = document.createElement("span");
+        status.className = "load-status-result";
+
+        if (r.count === null) {
+            // ロード失敗
+            status.textContent    = "読込失敗";
+            status.classList.add("load-status--error");
+        } else {
+            // 成功: 件数とエラー件数を表示
+            const errPart = r.errors > 0 ? ` / エラー: ${r.errors}` : "";
+            status.textContent = `${r.count} 件${errPart}`;
+            if (r.errors > 0) {
+                status.classList.add("load-status--warning");
+            } else {
+                status.classList.add("load-status--ok");
+            }
+        }
+
+        item.appendChild(fileName);
+        item.appendChild(status);
+        list.appendChild(item);
+    }
+
+    statusEl.appendChild(list);
+}
 
 /**
  * データ読込パネルに run 一覧を反映する。
