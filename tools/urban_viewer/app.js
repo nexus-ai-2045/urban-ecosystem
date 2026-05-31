@@ -51,6 +51,7 @@ const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
  * @property {{ ticks:number[], tickIndex:number, playing:boolean, speed:1|2|5, statesByTick:Map<number,Object[]> }} replay
  * @property {{ agentId:number|null }} selection
  * @property {{ poi:boolean, aoi:boolean, road:boolean, agent:boolean }} layerVisible
+ * @property {Map<number,Object>} profileMapCache - loadRun 時に 1 度だけ構築して再利用する profileMap (#5)
  */
 
 /** @type {ViewerState} */
@@ -77,6 +78,8 @@ const state = {
         road:  false,   // ランダム道路はデフォルト非表示 (意味の薄い飾り)
         agent: true,
     },
+    /** profiles から構築した id -> profile マップ。loadRun 時に 1 度だけ生成してキャッシュ (#5) */
+    profileMapCache: new Map(),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -211,6 +214,10 @@ async function loadRun(runId) {
     /** poi_visit_records.jsonl: 任意ファイル。null (ロード失敗) の場合は空配列にフォールバック */
     state.data.visitRecords = Array.isArray(visitRecordsRaw) ? visitRecordsRaw : [];
 
+    // profileMap を loadRun 時に 1 度だけ構築してキャッシュする (#5)
+    // _renderInterpolated (RAF 60fps) と renderCurrentTick の両方がこれを参照する
+    state.profileMapCache = _buildProfileMap(state.data.profiles);
+
     // agent_states を tick 別にインデックス化
     const statesByTick = new Map();
     for (const s of (statesRaw || [])) {
@@ -264,7 +271,9 @@ async function loadRun(runId) {
         },
         {
             file:   "agent_states.jsonl",
-            count:  statesRaw    ? ticks.length                      : null,
+            // 実 record 件数 (全 agent × tick の行数) を表示する (#4)
+            // ticks.length (distinct tick 数) ではなく statesRaw の配列長を使う
+            count:  statesRaw    ? statesRaw.length                  : null,
             errors: 0,
         },
     ]);
@@ -295,8 +304,9 @@ async function renderCurrentTick() {
     const tick       = ticks[tickIndex];
     const agentStates = statesByTick.get(tick) || [];
 
-    // id -> profile マップを事前に構築 (upsertAgents / 詳細パネル両方で使う)
-    const profileMap = _buildProfileMap(state.data.profiles);
+    // profileMap は loadRun 時にキャッシュ済みのものを再利用する (#5: 毎フレーム再生成を避ける)
+    // profiles は loadRun 後不変なのでキャッシュが最新であることが保証される
+    const profileMap = state.profileMapCache;
     const poiMap     = _buildPoiMap(state.data.pois);
 
     // adapter.upsertAgents に渡すデータ
@@ -402,7 +412,8 @@ function _renderInterpolated(alpha) {
         nextStateMap.set(s.agent_id, s);
     }
 
-    const profileMap = _buildProfileMap(state.data.profiles);
+    // profileMap は loadRun 時にキャッシュ済みのものを再利用する (#5: RAF 毎の再生成を排除)
+    const profileMap = state.profileMapCache;
 
     // 補間座標を生成して adapter に渡す
     const markerData = currentAgentStates.map(s => {
@@ -483,8 +494,8 @@ function handleAgentClick(agentId) {
     // 友達リンクを描画 (クリック時に即時反映)
     _updateSocialLinks(agentStates);
 
-    // id -> profile マップ / poi -> 店名マップを ui_panels に渡す
-    const profileMap = _buildProfileMap(state.data.profiles);
+    // profileMap はキャッシュを参照 (#5) / poiMap は pois から都度構築
+    const profileMap = state.profileMapCache;
     const poiMap     = _buildPoiMap(state.data.pois);
     updateAgentDetail(
         detailEl,
