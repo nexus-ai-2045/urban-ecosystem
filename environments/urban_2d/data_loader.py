@@ -217,7 +217,7 @@ def _check_geojson_feature_collection(data: Any, filename: str) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _POI_KNOWN_PROPS = {"id", "category", "name", "source"}
-_CATEGORY_RE = re.compile(r"^[A-Za-z0-9_]+-[A-Za-z0-9_]+")
+_CATEGORY_RE = re.compile(r"^[A-Za-z0-9_]+-[A-Za-z0-9_]+$")
 
 
 def _parse_poi_feature(feature: Any, idx: int, filename: str) -> POI:
@@ -460,6 +460,13 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
     if role not in AGENT_ROLE_VALUES:
         _warn_enum(loc, "role", role, AGENT_ROLE_VALUES)
 
+    optional_strings: dict[str, str | None] = {}
+    for field in ("surname", "given", "occupation", "personality", "day_pattern"):
+        val = obj.get(field)
+        if field in obj:
+            _require(isinstance(val, str), loc, field, "string", val)
+        optional_strings[field] = val
+
     sn_raw = obj.get("social_networks", [])
     _require(isinstance(sn_raw, list), loc, "social_networks", "list")
     # 全要素が int 型 (bool は int サブクラスだが除外) であることを事前検証する (R2)。
@@ -504,12 +511,12 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
         work_or_school_poi_id=obj.get("work_or_school_poi_id"),
         role=role,
         social_networks=social_networks,
-        surname=obj.get("surname"),
-        given=obj.get("given"),
-        occupation=obj.get("occupation"),
-        personality=obj.get("personality"),
+        surname=optional_strings["surname"],
+        given=optional_strings["given"],
+        occupation=optional_strings["occupation"],
+        personality=optional_strings["personality"],
         hobbies=tuple(hobbies_raw),
-        day_pattern=obj.get("day_pattern"),
+        day_pattern=optional_strings["day_pattern"],
         extra=extra,
     )
 
@@ -801,8 +808,12 @@ def _parse_interaction_event(obj: dict, lineno: int, filename: str) -> Interacti
         len(set(agent_ids_raw)) == len(agent_ids_raw),
         loc, "agent_ids", "重複なし", agent_ids_raw,
     )
-    # 昇順正規化 (contract: [min_id, max_id])
-    agent_ids = tuple(sorted(agent_ids_raw))
+    # contract: agent_ids は caller が昇順正規化済みの値を渡す。
+    _require(
+        agent_ids_raw == sorted(agent_ids_raw),
+        loc, "agent_ids", "昇順ソート済み", agent_ids_raw,
+    )
+    agent_ids = tuple(agent_ids_raw)
 
     _require(isinstance(obj["summary"], str), loc, "summary", "string")
 
