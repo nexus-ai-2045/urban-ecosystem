@@ -84,14 +84,32 @@ pip install -r requirements.txt   # fastapi / pytest が必要
 pytest tests/ -q
 ```
 
+## 課金について（重要）
+
+**このリポジトリはデフォルトで完全無料です。Google Cloud の課金は一切発生しません。**
+
+課金が発生するのは、**あなた自身が明示的に Google Cloud の API キー / プロジェクトを設定した場合のみ**です。設定すると、その課金は**あなた自身の Google Cloud アカウント**に対して発生します（リポジトリ作者には課金されません）。
+
+| 機能 | デフォルト（無料） | 課金が発生する明示操作 | 課金先 |
+|---|---|---|---|
+| シミュレーション | ルールベース（LLM 呼び出しなし） | `--llm vertex` + `GOOGLE_CLOUD_PROJECT` を**自分で**設定 | 自分の GCP |
+| 地図表示 | fallback 地図（canvas 描画） | `GOOGLE_MAPS_API_KEY` を**自分で**設定 | 自分の GCP |
+| POI 取得 | 同梱データ / 合成データ | `GOOGLE_PLACES_API_KEY` を**自分で**設定し `fetch_places_sample.py` を実行 | 自分の GCP |
+
+- API キー / 環境変数を**設定しない限り**、Google Cloud には接続せず、課金経路には一切入りません（fallback / ルールベースで完動）。
+- `--llm vertex` は環境変数 `GOOGLE_CLOUD_PROJECT` と `google-genai` パッケージの両方が無ければエラーで停止します（誤って課金 API を叩かないための二重ゲート）。
+- **環境変数を設定する = その API の課金に同意する、とみなしてください。** 料金は各 Google Cloud サービスの公式料金体系に従います。
+
 ## 環境変数（`.env` / gitignore 済み）
 
-| 変数 | 用途 |
-|---|---|
-| `GOOGLE_MAPS_API_KEY` | 実 Google Maps タイル表示（未設定なら fallback 地図） |
-| `GOOGLE_MAPS_MAP_ID` | Advanced Markers 用 Map ID |
-| `GOOGLE_PLACES_API_KEY` | 実 POI 取得（`fetch_places_sample.py`） |
-| `GOOGLE_CLOUD_PROJECT` | Vertex AI Gemini（`--llm vertex`） |
+> ⚠️ 下記はすべて **任意（設定すると自分の Google Cloud に課金が発生し得る）**。未設定がデフォルトで、無料の fallback / ルールベースで動きます。
+
+| 変数 | 用途 | 設定時の課金 |
+|---|---|---|
+| `GOOGLE_MAPS_API_KEY` | 実 Google Maps タイル表示（未設定なら fallback 地図） | あり（自分の GCP） |
+| `GOOGLE_MAPS_MAP_ID` | Advanced Markers 用 Map ID | 単体では課金なし |
+| `GOOGLE_PLACES_API_KEY` | 実 POI 取得（`fetch_places_sample.py`） | あり（自分の GCP） |
+| `GOOGLE_CLOUD_PROJECT` | Vertex AI Gemini（`--llm vertex`） | あり（自分の GCP） |
 
 > API キー・トークンはコードや git にコミットしないでください（`.env` は gitignore 済み）。
 
