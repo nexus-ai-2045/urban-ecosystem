@@ -80,9 +80,19 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 ## テスト
 
 ```bash
-pip install -r requirements.txt   # fastapi / pytest が必要
-pytest tests/ -q
+pip install -r requirements.txt
+python -m pytest tests -q -m "not requires_api"
 ```
+
+fallback フロント E2E もローカルで走らせる場合:
+
+```bash
+python -m playwright install chromium
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python -m pytest tests/e2e -q
+```
+
+GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fallback 地図経路を検証します。
 
 ## 課金について（重要）
 
