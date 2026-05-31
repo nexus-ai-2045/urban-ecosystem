@@ -333,6 +333,40 @@ class TestRuns:
         for field in ("run_id", "seed", "ticks", "agents", "pois", "interactions"):
             assert field in run, f"必須フィールド {field!r} が欠けている"
 
+    def test_matching_summary_run_id_keeps_existing_label(self, client_no_key):
+        """summary.json.run_id がディレクトリ名と同じなら従来通り run_id だけで表示できる。"""
+        body = client_no_key.get("/api/runs").json()
+        run = body["runs"][0]
+        assert run["run_id"] == "test_run"
+        assert "display_run_id" not in run
+
+    def test_mismatched_summary_run_id_returns_loadable_directory_id(self, tmp_path, monkeypatch):
+        """summary の run_id が違っても、API の run_id はロード可能なディレクトリ名にする。"""
+        run_dir = tmp_path / "dir_name"
+        run_dir.mkdir()
+        (run_dir / "summary.json").write_text(
+            json.dumps({
+                "run_id": "summary_name",
+                "seed": 1,
+                "ticks": 1,
+                "agents": 1,
+                "pois": 1,
+                "interactions": 0,
+            }),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+
+        client = TestClient(app, raise_server_exceptions=True)
+        runs_res = client.get("/api/runs")
+        assert runs_res.status_code == 200
+        runs = runs_res.json()["runs"]
+        assert len(runs) == 1
+        assert runs[0]["run_id"] == "dir_name"
+        assert runs[0]["display_run_id"] == "summary_name"
+        assert client.get("/api/data/dir_name/summary.json").status_code == 200
+        assert client.get("/api/data/summary_name/summary.json").status_code == 404
+
     def test_zero_runs_returns_empty_list(self, tmp_path, monkeypatch):
         """data ディレクトリが空でも 200 で空リストを返す。"""
         monkeypatch.setenv("DATA_DIR", str(tmp_path))
