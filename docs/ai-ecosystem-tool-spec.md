@@ -898,7 +898,7 @@ MVPは Service のみで成立する (同梱サンプルデータでリプレイ
 | 合成 GeoJSON / profiles / 小規模リプレイ JSONL | イメージ同梱 (`data/`) | 同左 or GCS |
 | 大規模リプレイ JSONL (数十MB超) | — | GCS バケット `gs://nexus-ai-2045-urban-data/runs/<run_id>/` |
 
-`app/data_access.py` が `DATA_SOURCE` (`local`/`gcs`) env で経路を切り替える。local=同梱パス、gcs=`google-cloud-storage` SDK + Application Default Credentials。フロントは `/api/data/<run_id>/agent_states.jsonl` 等のAPI越しに取得 (CORS同一オリジン)。
+MVP の viewer API は `DATA_SOURCE=local` のみを実装する。`DATA_SOURCE=gcs` はスケール時の予約値であり、GCS 配信実装が入るまでは `/api/runs` と `/api/data/{run_id}/{file}` が 501 を返す。フロントは `/api/data/<run_id>/agent_states.jsonl` 等のAPI越しに取得 (CORS同一オリジン)。
 
 ### 17.3 API エンドポイント (FastAPI)
 
@@ -916,7 +916,7 @@ MVPは Service のみで成立する (同梱サンプルデータでリプレイ
 | 項目 | ローカル | Cloud Run 本番 |
 | --- | --- | --- |
 | Maps APIキー | `.env` `GOOGLE_MAPS_API_KEY` (無→fallback地図) | Secret Manager → env 注入 |
-| データ経路 | `DATA_SOURCE=local` (同梱) | `local` (MVP同梱) / `gcs` (スケール時) |
+| データ経路 | `DATA_SOURCE=local` (同梱) | `local` (MVP同梱) / `gcs` (スケール時予約値・現時点は501) |
 | 認証 | ADC (gcloud auth) / なし | サービスアカウント (Workload Identity) |
 | 起動 | `uvicorn app.main:app --reload --port 8080` | `uvicorn` Dockerコンテナ |
 | LLM後段 | ルールベースモック | Vertex AI / Gemini |
@@ -1410,7 +1410,7 @@ python generate_urban_sample.py [--seed SEED] [--agents N] [--pois N] [--out-dir
 発見方法 (§17.2 `data/` 同梱 / §17.3 `/api/runs`):
 
 - MVP (local): `data/` 配下のサブディレクトリを走査し、`summary.json` を持つものを run として列挙する。
-- スケール時 (gcs): GCS バケット `gs://nexus-ai-2045-urban-data/runs/` 直下のプレフィックスを列挙する。
+- スケール時 (gcs): GCS 実装追加後に、GCS バケット `gs://nexus-ai-2045-urban-data/runs/` 直下のプレフィックスを列挙する。現時点で `DATA_SOURCE=gcs` を設定した場合は 501 を返す。
 - フロントは必ず `/api/runs` を経由して run_id を取得し、`data/` を直接走査しない。
 - manifest ファイルは設けない。[事実: 設計決定/§21.1 — summary.json の存在をマニフェスト代わりとする方針を確定]
 
@@ -1523,7 +1523,8 @@ Content-Type: application/json
 {
   "status": "ok",
   "maps_key": "present",
-  "data_source": "local"
+  "data_source": "local",
+  "data_source_supported": true
 }
 ```
 
@@ -1532,6 +1533,8 @@ Content-Type: application/json
 | `status` | string | `"ok"` 固定 | 200 を返す時点で常に `"ok"` |
 | `maps_key` | string | `"present"` / `"absent"` | `GOOGLE_MAPS_API_KEY` の設定有無。キー値は返さない |
 | `data_source` | string | `"local"` / `"gcs"` | `DATA_SOURCE` env の値 |
+| `data_source_supported` | boolean | `true` / `false` | 現在の viewer API で配信可能な data source か |
+| `data_source_error` | string | optional | `data_source_supported=false` の理由 |
 
 - `maps_key` が `"absent"` でも 200 を返す (フォールバック地図で起動するため。§13.4 「APIキー未設定時はフォールバック地図で起動し、500 を返さない」)。
 - Cloud Run liveness probe は HTTP 200 を判定基準とし、ボディの中身は probe が解釈しない。

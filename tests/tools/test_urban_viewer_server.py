@@ -247,6 +247,7 @@ def _create_minimal_static_files(run_dir: Path) -> None:
 def client_no_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY 未設定のクライアント。"""
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+    monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
     return TestClient(app, raise_server_exceptions=True)
 
@@ -255,6 +256,7 @@ def client_no_key(sample_run_dir, monkeypatch):
 def client_with_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY が設定されたクライアント (テスト用ダミーキー)。"""
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+    monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
     return TestClient(app, raise_server_exceptions=True)
 
@@ -289,6 +291,25 @@ class TestHealth:
         text = client_with_key.get("/api/health").text
         assert "TEST_DUMMY_KEY_NOT_REAL" not in text
 
+    def test_local_data_source_is_reported_supported(self, client_no_key):
+        """local data source は実装済みとして報告される。"""
+        body = client_no_key.get("/api/health").json()
+        assert body["data_source"] == "local"
+        assert body["data_source_supported"] is True
+        assert "data_source_error" not in body
+
+    def test_gcs_data_source_is_reported_unsupported(self, sample_run_dir, monkeypatch):
+        """DATA_SOURCE=gcs は health で未対応と明示する。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("DATA_SOURCE", "gcs")
+        monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+        res = TestClient(app).get("/api/health")
+        assert res.status_code == 200
+        body = res.json()
+        assert body["data_source"] == "gcs"
+        assert body["data_source_supported"] is False
+        assert "not implemented" in body["data_source_error"]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # /api/runs テスト (§21.2)
@@ -315,10 +336,19 @@ class TestRuns:
     def test_zero_runs_returns_empty_list(self, tmp_path, monkeypatch):
         """data ディレクトリが空でも 200 で空リストを返す。"""
         monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("DATA_SOURCE", raising=False)
         monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
         res = TestClient(app).get("/api/runs")
         assert res.status_code == 200
         assert res.json()["runs"] == []
+
+    def test_gcs_data_source_returns_501(self, tmp_path, monkeypatch):
+        """DATA_SOURCE=gcs は local の空リストにフォールバックせず明示エラーにする。"""
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "missing"))
+        monkeypatch.setenv("DATA_SOURCE", "gcs")
+        res = TestClient(app).get("/api/runs")
+        assert res.status_code == 501
+        assert "not implemented" in res.json()["detail"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -426,6 +456,14 @@ class TestDataEndpoint:
         assert res.status_code in (403, 404, 422), (
             f"パストラバーサル run_id が 200 を返してはならない: {res.status_code}"
         )
+
+    def test_gcs_data_source_returns_501(self, sample_run_dir, monkeypatch):
+        """DATA_SOURCE=gcs では local ファイルを配信せず明示エラーにする。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("DATA_SOURCE", "gcs")
+        res = TestClient(app).get("/api/data/test_run/summary.json")
+        assert res.status_code == 501
+        assert "not implemented" in res.json()["detail"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -310,7 +310,6 @@ gcloud run jobs create urban-sim-job \
   --image <Artifact Registry のイメージ URI> \
   --region asia-northeast1 \
   --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com \
-  --set-env-vars=DATA_SOURCE=gcs \
   --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest \
   --command="python" \
   --args="tools/urban_simulation_cli.py,--agents,1000,--ticks,288,--output-bucket,gs://nexus-ai-2045-urban-data/runs/run-001/"
@@ -338,6 +337,9 @@ gcloud run jobs executions list \
 ```
 
 > **MVP 判断**: MVP は Service のみで動作します。Job は Milestone 6 (スケール対応) で追加してください。
+> 現時点の viewer API は `DATA_SOURCE=local` のみ実装済みです。
+> `DATA_SOURCE=gcs` を Service に設定すると `/api/runs` と `/api/data/...` は 501 を返します。
+> GCS からの run 列挙・ファイル配信は、GCS 実装を追加するPRで有効化してください。
 
 ---
 

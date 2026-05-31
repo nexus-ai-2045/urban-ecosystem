@@ -94,7 +94,7 @@ def test_default_counts(gen_dir: Path) -> None:
 
 
 def test_summary_counts_match(gen_dir: Path) -> None:
-    summary = json.loads((gen_dir / "summary.json").read_text())
+    summary = json.loads((gen_dir / "summary.json").read_text(encoding="utf-8"))
     pois = load_pois(gen_dir / "pois.geojson")
     aois = load_aois(gen_dir / "aois.geojson")
     roads = load_roads(gen_dir / "roadnet.geojson")
@@ -257,7 +257,7 @@ def test_custom_agent_count_filename(tmp_path: Path) -> None:
 def test_rich_profile_fields_present(tmp_path: Path) -> None:
     """全エージェントに surname/given/occupation/personality/hobbies/day_pattern が存在する。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         assert "surname" in agent, f"id={agent['id']}: surname 欠落"
         assert "given" in agent, f"id={agent['id']}: given 欠落"
@@ -270,7 +270,7 @@ def test_rich_profile_fields_present(tmp_path: Path) -> None:
 def test_surname_given_consistent_with_name(tmp_path: Path) -> None:
     """surname + given を結合すると name と一致する。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         assert agent["name"] == agent["surname"] + agent["given"], (
             f"id={agent['id']}: name={agent['name']!r} != surname={agent['surname']!r}+given={agent['given']!r}"
@@ -292,7 +292,7 @@ def test_rich_profile_deterministic_agents10(tmp_path: Path) -> None:
 def test_occupation_is_string(tmp_path: Path) -> None:
     """occupation は非空文字列。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         assert isinstance(agent["occupation"], str) and agent["occupation"], (
             f"id={agent['id']}: occupation が空/非文字列"
@@ -302,7 +302,7 @@ def test_occupation_is_string(tmp_path: Path) -> None:
 def test_personality_is_string(tmp_path: Path) -> None:
     """personality は非空文字列。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         assert isinstance(agent["personality"], str) and agent["personality"], (
             f"id={agent['id']}: personality が空/非文字列"
@@ -312,7 +312,7 @@ def test_personality_is_string(tmp_path: Path) -> None:
 def test_hobbies_is_nonempty_list_of_strings(tmp_path: Path) -> None:
     """hobbies は 1 件以上の文字列リスト。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         h = agent["hobbies"]
         assert isinstance(h, list) and len(h) >= 1, (
@@ -326,7 +326,7 @@ def test_hobbies_is_nonempty_list_of_strings(tmp_path: Path) -> None:
 def test_day_pattern_is_string(tmp_path: Path) -> None:
     """day_pattern は非空文字列 (例: 'morning', 'night', 'balanced')。"""
     generate(tmp_path, seed=42, agents=10, pois=300)
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     for agent in raw:
         assert isinstance(agent["day_pattern"], str) and agent["day_pattern"], (
             f"id={agent['id']}: day_pattern が空/非文字列"
@@ -337,7 +337,7 @@ def test_cli_agents10(tmp_path: Path) -> None:
     """--agents 10 で CLI が正常終了し rich profile フィールドが存在する。"""
     rc = main(["--seed", "42", "--out-dir", str(tmp_path), "--agents", "10", "--pois", "300"])
     assert rc == 0
-    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text())
+    raw = json.loads((tmp_path / "agent_profiles_N10.json").read_text(encoding="utf-8"))
     assert len(raw) == 10
     for agent in raw:
         assert "surname" in agent
@@ -384,7 +384,7 @@ def test_roadnet_spanning_tree_connectivity(tmp_path: Path) -> None:
 
     # roadnet.geojson から LineString 端点ペアを抽出し Union-Find で連結性を確認
     import json as _json
-    raw = _json.loads((tmp_path / "roadnet.geojson").read_text())
+    raw = _json.loads((tmp_path / "roadnet.geojson").read_text(encoding="utf-8"))
     features = raw["features"]
 
     # 頂点セット = 全 LineString の端点座標

@@ -62,6 +62,9 @@ CONTENT_TYPES: dict[str, str] = {
     ".jsonl":   "application/x-ndjson",
 }
 
+# 現在の viewer API は local data source のみ実装済み。
+SUPPORTED_DATA_SOURCES: frozenset[str] = frozenset({"local"})
+
 # run_id バリデーション正規表現 (§21.1)
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
 
@@ -85,7 +88,7 @@ def _get_maps_map_id() -> str:
 
 
 def _get_data_source() -> str:
-    """DATA_SOURCE 環境変数 ('local' | 'gcs')。デフォルト 'local'。"""
+    """DATA_SOURCE 環境変数。現時点の実装済み値は 'local' のみ。"""
     return os.environ.get("DATA_SOURCE", "local")
 
 
@@ -96,6 +99,26 @@ def _get_data_root() -> Path:
         return Path(data_dir)
     # urban-ecosystem ルートの data/ ディレクトリ
     return Path(__file__).parent.parent / "data"
+
+
+def _data_source_error(data_source: str) -> str:
+    """未対応 DATA_SOURCE の説明を返す。"""
+    if data_source == "gcs":
+        return (
+            "DATA_SOURCE=gcs is configured, but GCS serving is not implemented. "
+            "Use DATA_SOURCE=local until GCS support is wired."
+        )
+    return (
+        f"Unsupported DATA_SOURCE={data_source!r}. "
+        "Supported values in this build: local."
+    )
+
+
+def _ensure_data_source_supported() -> None:
+    """ローカル以外の DATA_SOURCE を明示的な 501 にする。"""
+    data_source = _get_data_source()
+    if data_source not in SUPPORTED_DATA_SOURCES:
+        raise HTTPException(status_code=501, detail=_data_source_error(data_source))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HTML 生成 (APIキー注入 / §5.1.1)
@@ -180,6 +203,7 @@ def _list_runs() -> list[dict]:
     §21.1: summary.json の存在をマニフェスト代わりとする。
     §21.2: runs 配列は started_at 降順。
     """
+    _ensure_data_source_supported()
     data_root = _get_data_root()
     runs = []
 
@@ -335,11 +359,15 @@ async def health() -> JSONResponse:
     """
     api_key     = _get_maps_api_key()
     data_source = _get_data_source()
-    return JSONResponse({
+    body = {
         "status":      "ok",
         "maps_key":    "present" if api_key else "absent",
         "data_source": data_source,
-    })
+        "data_source_supported": data_source in SUPPORTED_DATA_SOURCES,
+    }
+    if data_source not in SUPPORTED_DATA_SOURCES:
+        body["data_source_error"] = _data_source_error(data_source)
+    return JSONResponse(body)
 
 
 @app.get("/api/runs")
@@ -370,6 +398,7 @@ async def get_data_file(run_id: str, file: str) -> StreamingResponse | JSONRespo
 
     JSONL は raw stream / GeoJSON・JSON はそのまま転送。
     """
+    _ensure_data_source_supported()
     file_path    = _validate_run_and_file(run_id, file)
     content_type = _content_type_for(file)
 
