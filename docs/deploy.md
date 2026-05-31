@@ -17,7 +17,7 @@
 | Cloud Run Service デプロイ | 外部公開 / 課金発生 |
 | `--allow-unauthenticated` 付きデプロイ | インターネット全公開 |
 | サービスアカウント作成 / IAM ロール付与 | 権限変更 |
-| Cloud Run Job 実行 | 課金・GCS 書き込み |
+| Cloud Run Job 実行 | 課金・コンテナ内一時出力 (GCS 書き込みはスケール対応実装後) |
 
 ---
 
@@ -298,9 +298,13 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
 
 ### 6.2 Cloud Run Job (バッチ処理)
 
-**用途**: 大規模シミュレーションの事前生成 (リプレイ用 JSONL を GCS へ書き出す)
+**用途**: 大規模シミュレーションの事前生成。
 
-Service と同一イメージを使い、`tools/urban_simulation_cli.py` をエントリポイントに差し替えます。
+Service と同一イメージを使い、`tools/urban_simulation_cli.py run` をエントリポイントとして実行します。
+現行 CLI は `--out <dir>` へのローカルファイル出力のみ対応しています。Cloud Run Job のコンテナ内
+ファイルシステムは実行後に破棄されるため、以下の例は大規模 run の smoke / benchmark 用です。
+永続化されたリプレイ成果物を Cloud Run Service から読むには、Milestone 6 で GCS 書き出しと
+`DATA_SOURCE=gcs` 読み取りを実装してから使用してください。
 
 #### Job の作成
 
@@ -310,9 +314,8 @@ gcloud run jobs create urban-sim-job \
   --image <Artifact Registry のイメージ URI> \
   --region asia-northeast1 \
   --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com \
-  --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest \
   --command="python" \
-  --args="tools/urban_simulation_cli.py,--agents,1000,--ticks,288,--output-bucket,gs://nexus-ai-2045-urban-data/runs/run-001/"
+  --args="tools/urban_simulation_cli.py,run,--sample,--agents,1000,--ticks,288,--out,/tmp/urban_runs/run-001"
 ```
 
 > **注意**: Job 作成に使うイメージ URI は `gcloud run deploy --source .` 後に
