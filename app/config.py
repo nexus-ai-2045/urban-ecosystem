@@ -53,9 +53,10 @@ def is_maps_api_key_present() -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_data_source() -> str:
-    """DATA_SOURCE 環境変数 ('local' | 'gcs') を返す。デフォルト 'local'。
+    """DATA_SOURCE 環境変数を返す。デフォルト 'local'。
 
-    §17.2: local=同梱パス / gcs=GCS SDK 経由 (スケール時)。
+    現在の viewer API 実装済み値は local のみ。
+    gcs は将来のスケール対応用の予約値で、設定時は API が明示的に 501 を返す。
     """
     return os.environ.get("DATA_SOURCE", "local")
 
