@@ -310,6 +310,13 @@ class TestIDIntegrity:
         with pytest.raises(ValidationError, match="poi_"):
             load_pois(p)
 
+    def test_poi_category_rejects_trailing_path_payload(self, tmp_path):
+        """異常系: category は <group>-<sub> 全体一致で、後続の不正文字列を許容しない。"""
+        fc = _make_poi_fc([_poi_feature(category="amenity-cafe/../../bad")])
+        p = _write_json(tmp_path, "pois.geojson", fc)
+        with pytest.raises(ValidationError, match="category"):
+            load_pois(p)
+
     def test_aoi_invalid_id_prefix(self, tmp_path):
         """異常系: AOI ID が aoi_ で始まらない。"""
         fc = {
@@ -400,12 +407,12 @@ class TestIDIntegrity:
         with pytest.raises(ValidationError, match="duplicate"):
             load_interaction_events(p)
 
-    def test_interaction_event_agent_ids_normalized(self, tmp_path):
-        """正常系: agent_ids は昇順正規化される。"""
+    def test_interaction_event_unsorted_agent_ids_rejected(self, tmp_path):
+        """異常系: agent_ids は入力時点で昇順ソート済みである必要がある。"""
         rows = [_interaction_event(tick=1, time="08:05:00", agent_ids=[5, 2])]
         p = _write_jsonl(tmp_path, "interactions.jsonl", rows)
-        events = load_interaction_events(p)
-        assert events[0].agent_ids == (2, 5)
+        with pytest.raises(ValidationError, match="agent_ids"):
+            load_interaction_events(p)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1052,6 +1059,20 @@ class TestRichProfileFields:
         p = _write_json(tmp_path, "profiles.json", profiles)
         result = load_agent_profiles(p)
         assert result[0].day_pattern == "morning"
+
+    @pytest.mark.parametrize("field", [
+        "surname",
+        "given",
+        "occupation",
+        "personality",
+        "day_pattern",
+    ])
+    def test_optional_profile_string_field_rejects_non_string(self, tmp_path, field):
+        """異常系: optional profile 文字列フィールドは、存在するなら string でなければならない。"""
+        profiles = [_agent_profile(0, **{field: 123})]
+        p = _write_json(tmp_path, "profiles.json", profiles)
+        with pytest.raises(ValidationError, match=field):
+            load_agent_profiles(p)
 
     def test_rich_profile_all_optional(self, tmp_path):
         """正常系: rich フィールドを全て省略しても既存 profile は正常ロードできる (後方互換)。"""
