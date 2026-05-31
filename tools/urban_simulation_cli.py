@@ -107,13 +107,17 @@ def _run(args: argparse.Namespace) -> int:
         # 残すことで、run dir 単体でリプレイビューア (WO-003) が POI/AOI/road/
         # profile の全レイヤーを描画できる (1 コマンドで完全な replay 可能 run)。
         # 静的 summary.json はこの後 sim.run が挙動 summary で上書きする。
-        _generate_sample(
-            out_dir,
-            seed=args.seed,
-            agents=args.agents,
-            pois=args.pois_count,
-            ticks=args.ticks,
-        )
+        try:
+            _generate_sample(
+                out_dir,
+                seed=args.seed,
+                agents=args.agents,
+                pois=args.pois_count,
+                ticks=args.ticks,
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
         pois_path = out_dir / "pois.geojson"
         profiles_path = out_dir / f"agent_profiles_N{args.agents}.json"
         aois_path = out_dir / "aois.geojson"

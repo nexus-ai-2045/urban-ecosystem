@@ -452,6 +452,27 @@ def test_cli_requires_inputs_without_sample(tmp_path):
     assert result.returncode != 0
 
 
+@pytest.mark.parametrize("sample_pois", [1, 2])
+def test_cli_sample_rejects_tiny_pois_without_traceback(tmp_path, sample_pois):
+    """--sample-pois 1/2 は IndexError ではなく readable validation error で終了する。"""
+    out = tmp_path / f"tiny_pois_{sample_pois}"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run",
+            "--sample",
+            "--agents", "2",
+            "--sample-pois", str(sample_pois),
+            "--ticks", "1",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 2
+    assert "pois は 3 以上" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert "IndexError" not in result.stderr
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # WO-009 道路追従移動 (road-following movement)
 # ─────────────────────────────────────────────────────────────────────────────
