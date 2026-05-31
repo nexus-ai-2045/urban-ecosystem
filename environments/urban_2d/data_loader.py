@@ -480,12 +480,12 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
 
     # WO-006: hobbies は list[str] → tuple[str, ...]
     # contract §Agent Profile: hobbies は string の配列 / 1 件以上 (present の場合のみ)
-    hobbies_raw = obj.get("hobbies")
     hobbies_present = "hobbies" in obj
-    if hobbies_raw is None:
-        hobbies_raw = []
-    _require(isinstance(hobbies_raw, list), loc, "hobbies", "list of strings")
     if hobbies_present:
+        hobbies_raw = obj.get("hobbies")
+        # present の場合はまず型を検証する。null / 非 list を [] に丸めてから件数検査すると
+        # 「list でない」型エラーが「1 件以上」件数エラーに化けるため、型チェックを先に置く。
+        _require(isinstance(hobbies_raw, list), loc, "hobbies", "list of strings", hobbies_raw)
         # present かつ空リストは contract 違反 (1 件以上)
         _require(
             len(hobbies_raw) >= 1,
@@ -497,6 +497,9 @@ def _parse_agent_profile(obj: Any, idx: int, filename: str) -> AgentProfile:
             loc, "hobbies", "全要素が string",
             [x for x in hobbies_raw if not isinstance(x, str)] or None,
         )
+    else:
+        # absent (キーなし) は後方互換: 空扱い
+        hobbies_raw = []
 
     extra = _extract_extra(obj, _PROFILE_KNOWN_KEYS)
     return AgentProfile(

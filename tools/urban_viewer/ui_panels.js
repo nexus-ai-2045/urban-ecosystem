@@ -202,7 +202,8 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
         appendRow(detailEl, "状態",   currentState.status  || "—");
 
         // 直近 POI / 理由: poi_visit_records.jsonl から選択中 agent の最新訪問を表示 (§5.2 / §5.5)
-        const latestVisit = _findLatestVisit(agentId, visitRecords);
+        // 現在の再生位置 (day / time) 以前のレコードだけを対象にする (#3)
+        const latestVisit = _findLatestVisit(agentId, visitRecords, currentState.day, currentState.time);
         if (latestVisit) {
             const visitPoiRaw   = latestVisit.poi_id || null;
             const visitPoiLabel = visitPoiRaw
@@ -224,20 +225,39 @@ export function updateAgentDetail(detailEl, agentId, data, currentState, profile
 
 /**
  * visitRecords から指定 agent_id の最新訪問レコードを返す。
- * 同一 agent_id が複数ある場合は配列の最後のレコードを返す (時系列順格納を前提)。
+ *
+ * VisitRecord は tick を持たず day(int) + time("HH:MM:SS") で時刻を表す (#3)。
+ * 「現在の再生位置 (currentDay / currentTime) 以下」のレコードのみを候補とし、
+ * その中で (day, time) が最大のレコードを返す。
+ * 候補がない場合は null を返す。
+ *
  * @param {number} agentId
  * @param {Object[]} visitRecords
+ * @param {number} currentDay  - 現在の再生 day (AgentState.day)
+ * @param {string} currentTime - 現在の再生 time (AgentState.time, "HH:MM:SS")
  * @returns {Object|null}
  */
-function _findLatestVisit(agentId, visitRecords) {
+function _findLatestVisit(agentId, visitRecords, currentDay, currentTime) {
     if (!Array.isArray(visitRecords) || visitRecords.length === 0) return null;
-    let latest = null;
+    let best = null;
     for (const rec of visitRecords) {
-        if (rec.agent_id === agentId) {
-            latest = rec;
+        if (rec.agent_id !== agentId) continue;
+        const rDay  = rec.day  ?? 0;
+        const rTime = rec.time ?? "";
+        // (day, time) タプル比較: 現在位置より未来のレコードを除外
+        if (rDay > currentDay || (rDay === currentDay && rTime > currentTime)) {
+            continue;
+        }
+        // 候補の中で最大 (day, time) を選択
+        if (
+            best === null ||
+            rDay > best.day ||
+            (rDay === best.day && rTime > (best.time ?? ""))
+        ) {
+            best = rec;
         }
     }
-    return latest;
+    return best;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

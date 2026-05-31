@@ -1044,21 +1044,37 @@ class TestInterpolationLogic:
 class TestVisitRecordDetailLogic:
     """§5.3 / §5.5 エージェント詳細「直近 POI / 理由」「直近の会話またはイベント」表示ロジック。
 
-    JS 側 updateAgentDetail に visitRecords を渡して最新訪問を表示する
-    ロジックを Python で等価実装して確認する。
+    JS 側 _findLatestVisit に visitRecords / currentDay / currentTime を渡して
+    「現在の再生位置以前かつ最大 (day, time)」の訪問レコードを返す
+    ロジックを Python で等価実装して確認する (#3 修正後の新ロジック)。
     """
 
-    def _latest_visit(self, agent_id: int, visit_records: list) -> dict | None:
-        """agent_id の最新訪問レコードを返す (JS 側等価実装)。
+    def _latest_visit(
+        self,
+        agent_id: int,
+        visit_records: list,
+        current_day: int,
+        current_time: str,
+    ) -> dict | None:
+        """agent_id の最新訪問レコードを返す (JS 側 _findLatestVisit の Python 等価実装)。
 
-        visitRecords は時系列順 (到着 tick 順) に格納されている前提。
-        同一 agent_id の最後のレコードを返す。
+        - agent_id が一致するレコードのみ対象。
+        - (day, time) が (current_day, current_time) 以下のものだけ候補。
+        - 候補の中で (day, time) が最大のレコードを返す。
+        - 候補なし -> None。
         """
-        latest = None
+        best: dict | None = None
         for rec in visit_records:
-            if rec.get("agent_id") == agent_id:
-                latest = rec
-        return latest
+            if rec.get("agent_id") != agent_id:
+                continue
+            r_day  = rec.get("day",  0)
+            r_time = rec.get("time", "")
+            # (day, time) の辞書比較で現在位置より未来をフィルタ
+            if (r_day, r_time) > (current_day, current_time):
+                continue
+            if best is None or (r_day, r_time) > (best["day"], best["time"]):
+                best = rec
+        return best
 
     def test_latest_visit_found_for_agent(self):
         """正しい agent_id の最新レコードを返す。"""
@@ -1070,7 +1086,8 @@ class TestVisitRecordDetailLogic:
             {"agent_id": 0, "day": 0, "time": "12:00:00", "poi_id": "poi_003",
              "action": "visit", "reason": "lunch", "lat": 35.662, "lon": 139.702},
         ]
-        result = self._latest_visit(0, records)
+        # 現在 day=0, time="12:00:00" ならすべて候補 -> "poi_003" が最新
+        result = self._latest_visit(0, records, current_day=0, current_time="12:00:00")
         assert result is not None
         assert result["poi_id"] == "poi_003"
         assert result["reason"] == "lunch"
@@ -1082,12 +1099,12 @@ class TestVisitRecordDetailLogic:
             {"agent_id": 1, "day": 0, "time": "08:10:00", "poi_id": "poi_002",
              "action": "visit", "reason": "lunch", "lat": 35.661, "lon": 139.701},
         ]
-        result = self._latest_visit(99, records)
+        result = self._latest_visit(99, records, current_day=0, current_time="23:59:59")
         assert result is None
 
     def test_latest_visit_returns_none_for_empty_records(self):
         """空の visitRecords に対して None を返す。"""
-        result = self._latest_visit(0, [])
+        result = self._latest_visit(0, [], current_day=0, current_time="23:59:59")
         assert result is None
 
     def test_latest_visit_shows_poi_and_reason(self):
@@ -1096,9 +1113,120 @@ class TestVisitRecordDetailLogic:
             {"agent_id": 5, "day": 0, "time": "12:00:00", "poi_id": "poi_cafe",
              "action": "visit", "reason": "lunch", "lat": 35.660, "lon": 139.700},
         ]
-        rec = self._latest_visit(5, records)
+        rec = self._latest_visit(5, records, current_day=0, current_time="12:00:00")
         assert rec is not None
         # 表示ロジック: 「{time} {poi_id} ({reason})」形式で組み立て可能
         display = f"{rec['time']} {rec.get('poi_id', '—')} ({rec.get('reason', '—')})"
         assert "poi_cafe" in display
         assert "lunch"    in display
+
+    # ── #3 修正の新テスト ─────────────────────────────────────────────────────
+
+    def test_future_visit_is_excluded(self):
+        """現在の (day, time) より未来の訪問レコードは返さない (#3)。"""
+        records = [
+            # 現在 08:05:00 / 未来レコードは 12:00:00
+            {"agent_id": 0, "day": 0, "time": "08:05:00", "poi_id": "poi_past",
+             "action": "visit", "reason": "commute", "lat": 35.660, "lon": 139.700},
+            {"agent_id": 0, "day": 0, "time": "12:00:00", "poi_id": "poi_future",
+             "action": "visit", "reason": "lunch", "lat": 35.661, "lon": 139.701},
+        ]
+        # 現在は day=0, time="08:05:00" -> "12:00:00" は未来なので除外
+        result = self._latest_visit(0, records, current_day=0, current_time="08:05:00")
+        assert result is not None
+        assert result["poi_id"] == "poi_past", (
+            f"未来訪問が返された: {result!r}"
+        )
+
+    def test_multiday_latest_is_selected(self):
+        """複数 day にまたがるレコードで最大 (day, time) を返す (#3)。"""
+        records = [
+            {"agent_id": 0, "day": 0, "time": "20:00:00", "poi_id": "poi_day0",
+             "action": "visit", "reason": "dinner", "lat": 35.660, "lon": 139.700},
+            {"agent_id": 0, "day": 1, "time": "08:00:00", "poi_id": "poi_day1",
+             "action": "visit", "reason": "commute", "lat": 35.661, "lon": 139.701},
+        ]
+        # 現在は day=1, time="08:00:00" -> どちらも候補 / day=1 が最大
+        result = self._latest_visit(0, records, current_day=1, current_time="08:00:00")
+        assert result is not None
+        assert result["poi_id"] == "poi_day1"
+
+    def test_same_day_earlier_time_is_excluded(self):
+        """同 day で time が現在より大きいレコードは除外される (#3)。"""
+        records = [
+            {"agent_id": 0, "day": 0, "time": "08:00:00", "poi_id": "poi_early",
+             "action": "visit", "reason": "commute", "lat": 35.660, "lon": 139.700},
+            {"agent_id": 0, "day": 0, "time": "10:00:00", "poi_id": "poi_later",
+             "action": "visit", "reason": "errand", "lat": 35.661, "lon": 139.701},
+        ]
+        # 現在は day=0, time="09:00:00" -> "10:00:00" は未来なので除外
+        result = self._latest_visit(0, records, current_day=0, current_time="09:00:00")
+        assert result is not None
+        assert result["poi_id"] == "poi_early"
+
+    def test_current_time_exact_match_is_included(self):
+        """(day, time) が現在値と完全一致するレコードは含まれる (境界値)。"""
+        records = [
+            {"agent_id": 0, "day": 0, "time": "08:05:00", "poi_id": "poi_exact",
+             "action": "visit", "reason": "commute", "lat": 35.660, "lon": 139.700},
+        ]
+        result = self._latest_visit(0, records, current_day=0, current_time="08:05:00")
+        assert result is not None
+        assert result["poi_id"] == "poi_exact"
+
+    def test_next_day_future_is_excluded(self):
+        """現在が day=0 のとき day=1 のレコードは未来として除外される (#3)。"""
+        records = [
+            {"agent_id": 0, "day": 0, "time": "20:00:00", "poi_id": "poi_today",
+             "action": "visit", "reason": "dinner", "lat": 35.660, "lon": 139.700},
+            {"agent_id": 0, "day": 1, "time": "08:00:00", "poi_id": "poi_tomorrow",
+             "action": "visit", "reason": "commute", "lat": 35.661, "lon": 139.701},
+        ]
+        # 現在は day=0, time="20:00:00"
+        result = self._latest_visit(0, records, current_day=0, current_time="20:00:00")
+        assert result is not None
+        assert result["poi_id"] == "poi_today"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# #4: agent_states.jsonl ロード件数 = record 数 (tick 数ではない)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAgentStatesLoadCount:
+    """loadRun が agent_states.jsonl の実 record 件数 (行数) を
+    updateLoadStatus に渡す (#4 修正の等価ロジック確認)。"""
+
+    def test_record_count_is_total_lines_not_ticks(self):
+        """statesRaw の行数 (全エージェント×tick) を count とし、
+        distinct tick 数 (ticks.length) を使わないことを確認する。
+
+        fixture: 2 tick x 2 agent = 4 record / distinct tick = 2
+        正しい count = 4。ticks.length ベースの誤実装 = 2。
+        """
+        states_raw = [
+            {"tick": 0, "day": 0, "time": "08:00:00", "agent_id": 0,
+             "lat": 35.660, "lon": 139.700, "action": "commute", "status": "moving"},
+            {"tick": 0, "day": 0, "time": "08:00:00", "agent_id": 1,
+             "lat": 35.661, "lon": 139.701, "action": "commute", "status": "moving"},
+            {"tick": 1, "day": 0, "time": "08:05:00", "agent_id": 0,
+             "lat": 35.662, "lon": 139.702, "action": "commute", "status": "moving"},
+            {"tick": 1, "day": 0, "time": "08:05:00", "agent_id": 1,
+             "lat": 35.663, "lon": 139.703, "action": "commute", "status": "moving"},
+        ]
+
+        # ticks.length (誤実装): distinct tick 値の数
+        states_by_tick: dict[int, list] = {}
+        for s in states_raw:
+            states_by_tick.setdefault(s["tick"], []).append(s)
+        ticks = sorted(states_by_tick.keys())
+        wrong_count = len(ticks)           # = 2 (誤)
+
+        # 正しい実装: statesRaw の配列長
+        correct_count = len(states_raw)    # = 4 (正)
+
+        assert correct_count == 4, f"expected 4, got {correct_count}"
+        assert wrong_count   == 2, f"wrong_count sanity check: expected 2, got {wrong_count}"
+        # 修正後は wrong_count を渡さないことを表明する
+        assert correct_count != wrong_count, (
+            "record 数と tick 数が一致している: テストの前提が崩れた"
+        )

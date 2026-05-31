@@ -29,6 +29,7 @@ SDK の遅延 import:
 
 from __future__ import annotations
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Optional
@@ -594,7 +595,8 @@ def build_prompt(
         lines.append(f"- 直近の訪問: {recent_visits}")
 
     if recent_interactions:
-        lines.append(f"- 直近のやりとり: {recent_interactions}")
+        # list[dict] を Python repr のまま渡すと LLM に生 dict 文字列が入るため JSON 整形する。
+        lines.append(f"- 直近のやりとり: {json.dumps(recent_interactions, ensure_ascii=False)}")
 
     if relationship_state:
         lines.append(f"- 現在の関係状態: {relationship_state}")
@@ -707,7 +709,8 @@ def build_destination_prompt(
 
     recent_interactions = context.get("recent_interactions")
     if recent_interactions:
-        lines.append(f"- 直近のやりとり: {recent_interactions}")
+        # list[dict] を Python repr のまま渡すと LLM に生 dict 文字列が入るため JSON 整形する。
+        lines.append(f"- 直近のやりとり: {json.dumps(recent_interactions, ensure_ascii=False)}")
 
     agent_profile = context.get("agent_profile")
     if agent_profile:

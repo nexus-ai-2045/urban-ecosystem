@@ -42,10 +42,11 @@ import pytest
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from playwright.sync_api import sync_playwright, Page, Browser
+    from playwright.sync_api import sync_playwright, Page, Browser, Error as PlaywrightError
     _PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     _PLAYWRIGHT_AVAILABLE = False
+    PlaywrightError = Exception  # フォールバック: import 失敗時は pytestmark で全 skip される
 
 # playwright が使えない環境では本モジュールの全テストを skip する
 pytestmark = pytest.mark.skipif(
@@ -159,12 +160,30 @@ def live_server():
 
 @pytest.fixture(scope="module")
 def playwright_browser(live_server):  # noqa: F841  live_server はサーバー起動保証のため依存
-    """Playwright Chromium ヘッドレスブラウザを返す fixture。"""
+    """Playwright Chromium ヘッドレスブラウザを返す fixture。
+
+    chromium 実体が取得されていない環境 (playwright install chromium 未実行) では
+    playwright.sync_api.Error が発生するため、起動失敗を捕捉して skip に落とす。
+    """
     if not _PLAYWRIGHT_AVAILABLE:
         pytest.skip("playwright not available")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        try:
+            browser = p.chromium.launch(headless=True)
+        except PlaywrightError as exc:
+            # "Executable doesn't exist" / "executable not found" 系のメッセージを
+            # ブラウザ未取得として skip に変換する。
+            msg = str(exc).lower()
+            if any(
+                keyword in msg
+                for keyword in ("executable", "not found", "does not exist", "browser is not installed")
+            ):
+                pytest.skip(
+                    f"chromium 未取得 — `playwright install chromium` を実行してください: {exc}"
+                )
+            # ブラウザ未取得以外の起動エラーは再 raise する
+            raise
         yield browser
         browser.close()
 
