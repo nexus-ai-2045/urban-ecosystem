@@ -1,41 +1,49 @@
 # Next Session Control Panel — urban-ecosystem
 
-updated: 2026-05-31
+updated: 2026-06-01
 
-## 2026-05-31 セッション最新状態 (要対応あり)
+## 2026-06-01 セッション最新状態 (UE-TECH tracker handoff)
 
-### gh 認証 (CEO 指示 / 2026-05-31 完了)
-- **CEO 方針**: push 認証も commit 名義も **`nexus-ai-2045`** に統一する。個人アカウントの token は使わない。
-- 確認済 `[事実: gh api]`: 公開履歴に個人アカウント名は出ていない (commit author/committer.login=nexus-ai-2045 / contributors=nexus-ai-2045 のみ)。
-- **対応済**: `gh auth login --web` で nexus-ai-2045 を追加 → `gh auth switch --user nexus-ai-2045`。gh active=nexus-ai-2045。`df5afb7..8776033` を nexus-ai-2045 認証で push 成功 (個人 token 不使用)。以降の push もこの認証。
+### Current git state
 
-### 未 push のローカル変更
-- **未 commit (working tree)**:
-  - `README.md` — 課金境界の明示追記 (デフォルト無料 / Vertex・Maps・Places は自分で env 設定したときのみ自分の GCP に課金 / opt-in 三重ゲート)。**staged 済み・commit 未実行**。
-  - `tools/urban_viewer/colors.js` (未使用 ROLE_COLORS export = dead code) + `tools/urban_viewer/styles.css` (再生ボタン装飾) — 前回 viewer 作業の残骸。CEO 指示で保留中。
-- **ローカル commit 済み / origin に push 済み (df5afb7 時点)**: WO-011/012/013 + 前回 viewer 装飾。origin/main=df5afb7 で local と一致 (push 完了確認済)。
-  - ※ README 課金追記 commit を入れると origin より 1 commit 先行になる → 次の push 対象。
+- `origin/main` / `origin/HEAD`: `3cf0319` (`Merge pull request #3 from nexus-ai-2045/codex/code-review-fixes`)。
+- local `main`: `df5afb7` で `origin/main` より 11 commits behind。新規作業は `origin/main` 起点にするか、先に local `main` を更新する。
+- working tree: UE-TECH-008 更新前は tracked change なし。
+- push / PR / Cloud Run 再デプロイは Type1。CEO 明示 GO なしに実行しない。
 
-### 残論点 batch (WO-011..013) — 完了済み (398 passed)
-- **WO-011 (#1 roadnet)** `a86780c`: `_build_roads` を Prim法MST化。道路追従で interactions 0→976。rng消費位置保存で agent_profiles byte 不変。review: approve。
-- **WO-012 (#3 contract v0.4.0)** `1cddf6d`: `relationship_reason` を optional 正式化 + `enable_summaries=False` 空文字バグを `if reason:` ガードで根本修正 + 回帰テスト。
-- **WO-013 (#5 highlight)** `16758fe`: highlight解除で role別色復元。review: approve。既知 park-LOW: 既存マーカー更新パスは role色再保存しない (role不変前提で実害なし)。
+### Local branch inventory
 
-### 課金安全性 (CEO 確認済 / 2026-05-31)
-- **デフォルト = 完全無料 / Google Cloud 課金ゼロ**。第三者が clone しても opt-in しない限り課金経路に入らない。
-  - Vertex: `--llm rule` 既定 (API 呼ばない)。`--llm vertex` + `GOOGLE_CLOUD_PROJECT` + `google-genai` の三重ゲート。
-  - Maps: `hasApiKey=false` → FallbackMapAdapter (canvas/課金ゼロ)。Maps script 自体出力されない。
-  - `.env` gitignore 済 (`git check-ignore .env`=0) / 追跡ファイルに env系なし。
-- README に課金境界セクションを追記 (上記 未commit)。
+| Branch | Head | Base / stack | State |
+| --- | --- | --- | --- |
+| `codex/ue-tech-002-run-id-consistency` | `26ef55f` | `origin/main` + 1 | pushed to fork; draft PR #4: https://github.com/nexus-ai-2045/urban-ecosystem/pull/4 |
+| `codex/ue-tech-004-doc-cli-alignment` | `525c3c3` | `origin/main` + 1 | pushed to fork; draft PR #5: https://github.com/nexus-ai-2045/urban-ecosystem/pull/5 |
+| `codex/ue-tech-005-ci-e2e` | `1c5e5a1` | `origin/main` + 1 | pushed to fork; draft PR #7: https://github.com/nexus-ai-2045/urban-ecosystem/pull/7 |
+| `codex/ue-tech-006-sample-pois-validation` | `199e4cc` | `origin/main` + 1 | pushed to fork; draft PR #6: https://github.com/nexus-ai-2045/urban-ecosystem/pull/6 |
+| `codex/ue-tech-007-dependency-split` | `8d6ab5b` | `ue-tech-005` の上に 1 commit | pushed to fork; upstream PR は `UE-TECH-005` merge 後に作成する。 |
+| `codex/ue-tech-008-refresh-handoff` | current branch | `origin/main` + docs refresh | pushed to fork; draft PR #8: https://github.com/nexus-ai-2045/urban-ecosystem/pull/8 |
 
-### 実 Vertex run (#2) — 未実施 (課金/G2)
-- 私が試行した run は **CLI フラグ誤り (`--llm-summaries`/`--project`/`--model` は存在しない) で argparse 段階で失敗 → Gemini API 未到達 → 課金ゼロ**。
-- 正しいコマンド: `GOOGLE_CLOUD_PROJECT=<proj> /tmp/urban-venv/bin/python tools/urban_simulation_cli.py run --llm vertex --pois data/sample/pois.geojson --profiles data/sample/agent_profiles_N10.json --aois data/sample/aois.geojson --roadnet data/sample/roadnet.geojson --ticks 24 --seed 42 --out data/run_vertex_check`
-- ADC quota project = `windws-497319` (`~/.config/gcloud/application_default_credentials.json`)。実行は課金イベントなので CEO 明示 GO 後に。
+Older local branches `codex/ue-tech-001-disable-gcs` and `codex/ue-tech-003-data-contract-validation` も残っているが、どちらも `origin/main` に merge 済み。`UE-TECH-002` は未mergeのため、fresh `origin/main` 起点に rebase 済み。
 
-### その他残
-- #4 N100 再生成 = コード不要 (data は gitignore で都度生成)。
-- WO-013 medium (将来 role 可変化時に既存パス同期追加)。
+### Recommended integration order
+
+1. Review/merge independent draft PRs: `UE-TECH-002` #4, `UE-TECH-004` #5, `UE-TECH-006` #6.
+2. Review/merge `UE-TECH-005` #7 before `UE-TECH-007`, because `UE-TECH-007` updates the CI workflow introduced by `UE-TECH-005`.
+3. After #7 lands, rebase or refresh `codex/ue-tech-007-dependency-split` onto the updated `origin/main`, then create its upstream PR.
+4. `UE-TECH-008` #8 is docs-only and should be refreshed again if branch heads or PR URLs change before merge.
+
+### UE-TECH completed in this batch
+
+- **UE-TECH-002** `26ef55f`: `/api/runs` が返す run ID と `/api/data/{run_id}` で読める ID を揃える。
+- **UE-TECH-004** `525c3c3`: `docs/deploy.md` の Cloud Run Job command を current CLI (`run --sample ... --out`) に合わせ、GCS output は future scale work と明記。
+- **UE-TECH-005** `1c5e5a1`: `.github/workflows/ci.yml` 追加。Playwright Chromium + fallback E2E を API keys なしで CI 実行。E2E は一時 `DATA_DIR` に `urban_demo` を生成。
+- **UE-TECH-006** `199e4cc`: `pois >= 3` validation。`--sample-pois 1/2` は readable error + exit code 2、`3` は成功。
+- **UE-TECH-007** `8d6ab5b`: `requirements.txt` を runtime-only にし、`requirements-dev.txt` に pytest/playwright を分離。Dockerfile は runtime deps のみ。
+
+### Still gated / not run
+
+- 実 Vertex run は未実施。課金/G2 対象なので CEO 明示 GO 後のみ実行する。
+- Cloud Run 再デプロイ / 公開切替も Type1 のまま。
+- `data/` は gitignore で、N100/N10 などの run data は必要時に再生成する。
 
 ---
 
