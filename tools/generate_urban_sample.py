@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,7 @@ DEFAULT_AGENTS = 100
 DEFAULT_POIS = 300
 DEFAULT_TICKS = 24  # MVP 受け入れは 24 tick 以上 (= 2h@5min / contract §Time and Tick)
 DEFAULT_OUT_DIR = "data"
+MIN_POIS = 3  # home/work/school POI を各 1 件以上生成するための最小値
 
 # ── 合成都市 bbox (§19.2 / 渋谷駅周辺の合成 / 実在地物は再現しない) ──────────
 BBOX = {
@@ -504,8 +506,11 @@ def generate(
     """
     if agents < 1:
         raise ValueError("agents は 1 以上が必要")
-    if pois < 1:
-        raise ValueError("pois は 1 以上が必要")
+    if pois < MIN_POIS:
+        raise ValueError(
+            f"pois は {MIN_POIS} 以上が必要 "
+            "(home/work/school POI を各 1 件生成するため)"
+        )
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -552,20 +557,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, default=SEED, help=f"乱数 seed (既定 {SEED})")
     parser.add_argument("--agents", type=int, default=DEFAULT_AGENTS, help="エージェント数")
-    parser.add_argument("--pois", type=int, default=DEFAULT_POIS, help="POI 数")
+    parser.add_argument("--pois", type=int, default=DEFAULT_POIS, help=f"POI 数 (最小 {MIN_POIS})")
     parser.add_argument("--ticks", type=int, default=DEFAULT_TICKS, help="summary 記録用 tick 数")
     parser.add_argument("--run-id", default=RUN_ID, help="run 識別子")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help="出力ディレクトリ")
     args = parser.parse_args(argv)
 
-    summary = generate(
-        args.out_dir,
-        seed=args.seed,
-        agents=args.agents,
-        pois=args.pois,
-        ticks=args.ticks,
-        run_id=args.run_id,
-    )
+    try:
+        summary = generate(
+            args.out_dir,
+            seed=args.seed,
+            agents=args.agents,
+            pois=args.pois,
+            ticks=args.ticks,
+            run_id=args.run_id,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
