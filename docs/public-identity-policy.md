@@ -1,4 +1,4 @@
-# Public Identity Policy
+# 公開名義方針
 
 公開協業で外から見える主体は Nexus に統一します。
 
@@ -15,18 +15,18 @@
 - GitHub remote: `https://github.com/nexus-ai-2045/urban-ecosystem`
 - Git commit author: `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>`
 - GitHub CLI active account: `nexus-ai-2045`
-- Public collaboration docs and issues are on GitHub.
+- 公開協業 docs / issue は GitHub に置く。
 - Linear connector は再接続前なら個人側の可能性があるため、公開正本ではなく内部ミラーとして扱う。
 
 ## 使い分け
 
-| Surface | Public identity |
+| 公開面 | 公開名義 |
 |---|---|
 | GitHub repo | `nexus-ai-2045/urban-ecosystem` |
 | Git commit author | `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` |
 | GitHub issue / PR | `nexus-ai-2045` |
-| Discord notification | Nexus / urban-ecosystem bot name |
-| Linear | Nexus Linear account after reconnect |
+| Discord 通知 | Nexus / urban-ecosystem 名義の bot 名 |
+| Linear | 再接続後の Nexus Linear account |
 
 ## Linear 再接続後に確認すること
 
