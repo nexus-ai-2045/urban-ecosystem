@@ -7,17 +7,16 @@
 - GitHub repository / PR / issue / commit author は `nexus-ai-2045` を使う。
 - 公開 docs では、maintainer / project owner を Nexus として扱う。
 - Discord の公開通知 bot / webhook 名は Nexus または urban-ecosystem 名義にする。
-- Linear を使う場合は Nexus の Linear アカウント / workspace / project を使う。
+- Linear を使う場合は Nexus の Linear アカウント / workspace / project を使う。ただし Linear は内部管理に限定する。
 - 個人名義のアカウント、メールアドレス、workspace は公開協業の正本にしない。
+- 公開 issue / PR / docs は TYPE1 として扱い、外に出してよい情報だけを書く。
 
 ## 現在の状態
 
 - GitHub remote: `https://github.com/nexus-ai-2045/urban-ecosystem`
 - Git commit author: `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>`
 - GitHub CLI active account: `nexus-ai-2045`
-- Linear connector の現在ユーザー: `ai nexus <nexus_ai@nexusai2045.com>`
-- Linear team: `Nexus_ai_2045`
-- Linear project: `urban-ecosystem 公開協業`
+- Linear は Nexus 内部管理に限定する。
 - 公開協業 docs / issue は GitHub に置く。
 
 ## 使い分け
@@ -28,7 +27,7 @@
 | Git commit author | `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` |
 | GitHub issue / PR | `nexus-ai-2045` |
 | Discord 通知 | Nexus / urban-ecosystem 名義の bot 名 |
-| Linear | `ai nexus` / `Nexus_ai_2045` |
+| Linear | Nexus 内部管理。公開 issue / PR / docs には内部 URL を貼らない |
 
 ## 公開正本
 
@@ -42,17 +41,11 @@
 
 ## Linear 運用
 
-Nexus Linear project は内部管理に使います。
-
-- project: `urban-ecosystem 公開協業`
-- マイルストーン: `公開名義をNexusに統一`
-- マイルストーン: `Discord導線を有効化`
-- マイルストーン: `初回協力者を受け入れる`
-
-ただし、公開協業者に見せる URL は GitHub issue / PR / docs を優先します。
+Nexus Linear project は内部管理に使います。公開協業者に見せる URL は GitHub issue / PR / docs を使い、Linear の内部 URL は公開 issue / PR / docs に貼りません。
 
 ## 禁止
 
 - 公開協業者向けの正本を個人 Linear workspace だけに置く。
+- Linear の内部 URL や内部コメントを公開 issue / PR / docs に貼る。
 - Webhook URL、token、`.env`、個人メールを GitHub / Discord に貼る。
 - 個人アカウントで public repo へ commit / push / PR 作成する。
