@@ -1,0 +1,70 @@
+name: Discord PR notify
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    name: Post PR to Discord
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord webhook
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+          if not webhook_url:
+              print("DISCORD_WEBHOOK_URL is not set; skipping Discord notification.")
+              raise SystemExit(0)
+
+          title = os.environ["PR_TITLE"]
+          url = os.environ["PR_URL"]
+          author = os.environ["PR_AUTHOR"]
+          draft = os.environ["PR_DRAFT"] == "true"
+          body = (os.environ.get("PR_BODY") or "").strip()
+          summary = body.splitlines()[0] if body else "No PR description yet."
+          if len(summary) > 240:
+              summary = summary[:237] + "..."
+
+          payload = {
+              "username": "urban-ecosystem PR bot",
+              "allowed_mentions": {"parse": []},
+              "embeds": [
+                  {
+                      "title": title,
+                      "url": url,
+                      "description": summary,
+                      "color": 5793266 if not draft else 10066329,
+                      "fields": [
+                          {"name": "Author", "value": author, "inline": True},
+                          {"name": "Status", "value": "Draft" if draft else "Ready", "inline": True},
+                      ],
+                  }
+              ],
+          }
+
+          request = urllib.request.Request(
+              webhook_url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=10) as response:
+              if response.status >= 300:
+                  raise SystemExit(f"Discord webhook failed: HTTP {response.status}")
+          PY
