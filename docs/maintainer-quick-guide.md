@@ -22,14 +22,13 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 | GitHub PR | 実際の変更、review、merge 判断を残す |
 | Linear | maintainer 側の milestone と運用状態を残す |
 
-迷ったら、作業と判断の正本は GitHub / Linear に残します。Discord は流れてもよい入口です。
+迷ったら、公開協業者に見せる作業と判断の正本は GitHub に残します。Discord は流れてもよい入口です。Linear は Nexus 内部管理です。
 
 公開面の名義は Nexus に統一します。詳細は [`docs/public-identity-policy.md`](public-identity-policy.md) を見てください。
 
 ## いまの状態
 
 - 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
-- Linear project: <https://linear.app/nexus-ai-2045/project/urban-ecosystem-公開協業-e80014329275>
 - Starter issues:
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
@@ -70,6 +69,8 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 ## 注意する境界
 
+- 公開 issue / PR / docs は TYPE1 として扱い、外に出してよい情報だけを書く。
+- Linear の内部 URL、内部コメント、個人 account 情報は公開 issue / PR / docs に貼らない。
 - Webhook URL は秘密情報。Discord / GitHub issue / PR / commit に貼らない。
 - 公開面は Nexus 名義に統一する。個人 account / email / workspace を公開協業の正本にしない。
 - `.env`、API key、token は貼らない。
