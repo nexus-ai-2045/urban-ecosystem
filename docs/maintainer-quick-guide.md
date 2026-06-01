@@ -40,9 +40,12 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 ## 次にやること
 
 1. #13 に沿って Discord webhook を GitHub Actions secret に入れる。
-2. テスト PR で Discord 通知を確認する。
-3. Discord に `docs/discord-start-here.md` の案内文を貼る。
-4. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+2. Actions の手動 test で Discord 通知を確認する。
+3. 次の PR 作成時に自動投稿されることを確認する。
+4. Discord に `docs/discord-start-here.md` の案内文を貼る。
+5. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+
+Discord webhook の詳しい設定手順は [`docs/discord-pr-notifications.md`](discord-pr-notifications.md) を見てください。
 
 ## Discord に貼るときの言い方
 

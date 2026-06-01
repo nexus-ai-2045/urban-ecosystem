@@ -19,11 +19,13 @@ Discord は入口です。決定や採否は GitHub / Linear に残します。
 
 1. 公開協業 milestone を確認する。
 2. #13 に沿って GitHub Actions secret `DISCORD_WEBHOOK_URL` を設定する。
-3. テスト PR で Discord 通知を確認する。
-4. Discord に `docs/discord-start-here.md` の短文を貼る。
-5. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+3. Actions の手動 test で Discord 通知を確認する。
+4. 次の PR 作成時に自動投稿されることを確認する。
+5. Discord に `docs/discord-start-here.md` の短文を貼る。
+6. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
 
 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
+Discord 通知設定: [`docs/discord-pr-notifications.md`](discord-pr-notifications.md)
 
 ## Discord に貼る案内
 
@@ -63,7 +65,8 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 - 公開協業 milestone が GitHub にある。
 - `DISCORD_WEBHOOK_URL` secret が設定済み。
-- テスト PR が Discord に投稿済み。
+- Actions の手動 test が Discord に投稿済み。
+- 次の PR 作成時に自動投稿されることを確認済み。
 - Discord に案内文を投稿済み。
 - #10 / #11 / #12 のどれかに外部参加者が反応できる状態。
 
