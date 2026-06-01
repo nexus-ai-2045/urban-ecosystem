@@ -59,8 +59,7 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 
 ## まだ広く募集しないもの
 
-- 大きな機能実装
-- ライセンス方針が決まる前の大きな外部 PR
+- issue で目的と範囲を共有していない大きな機能実装
 - Google Cloud / Vertex AI / Google Maps / Google Places を実際に呼ぶ作業
 - Cloud Run deploy
 - シミュレーションモデルの前提変更

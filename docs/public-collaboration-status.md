@@ -38,12 +38,11 @@
 | issue | 内容 | 状態 |
 |---|---|---|
 | #13 | Discord PR 通知を有効化してテスト投稿する | GitHub Actions secret 設定と Discord 確認が必要 |
-| #21 | ライセンス方針を決めて LICENSE を追加する | 大きな外部実装 PR の前に決める |
+| #21 | ライセンス方針を決めて LICENSE を追加する | MIT License として解消済み。close 待ち |
 
 ## まだ広く募集しないもの
 
-- 大きな機能実装
-- ライセンス方針が決まる前の大きな外部 PR
+- issue で目的と範囲を共有していない大きな機能実装
 - Google Cloud / Vertex AI / Google Maps / Google Places を実際に呼ぶ作業
 - Cloud Run deploy
 - シミュレーションモデルの前提変更
@@ -118,5 +117,5 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 - 公開協業者が 1 分以内に「最初に読む場所」と「最初に触る issue」を見つけられる。
 - #10 / #11 / #12 のどれかに、コードを書かない人でも反応できる。
 - #13 の Discord 通知が動くか、手動で GitHub URL を案内できる。
-- #21 のライセンス未決が見える場所にあり、大きな外部実装 PR を止められる。
+- MIT License が README と `LICENSE` file から確認でき、#21 を close できる。
 - 公開面に内部語、秘密情報、個人情報、内部 URL が出ていない。
