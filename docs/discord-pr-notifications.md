@@ -5,16 +5,18 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 ## 仕組み
 
 - workflow: `.github/workflows/discord-pr-notify.yml`
-- trigger: PR の `opened`、`reopened`、`ready_for_review`
+- trigger: PR の `opened`、`reopened`、`ready_for_review`、または手動実行
 - secret: `DISCORD_WEBHOOK_URL`
 - 送信内容: PR title、URL、author、draft / ready 状態、本文 1 行目の要約
+- 手動テスト時の送信内容: test title、Actions run URL、実行者、test summary
 
 ## 設定手順
 
 1. Discord の対象 channel で webhook を作る。
 2. GitHub repository の `Settings` → `Secrets and variables` → `Actions` を開く。
 3. Repository secret として `DISCORD_WEBHOOK_URL` を追加する。
-4. PR を作成し、Actions の `Discord PR notify` が成功することを確認する。
+4. Actions の `Discord PR notify` を手動実行し、Discord に test 投稿されることを確認する。
+5. 次の PR 作成時に自動投稿されることを確認する。
 
 ## メンテナー checklist
 
@@ -30,14 +32,17 @@ Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 6. name に `DISCORD_WEBHOOK_URL` を入れる。
 7. secret に webhook URL を貼る。
 8. `Add secret` を押す。
-9. テスト用の小さな draft PR を作る、または既存 draft PR を ready にして、Discord に投稿されるか確認する。
-10. 投稿されたら Discord に `docs/discord-start-here.md` の短文を貼り、#10 / #11 / #12 のどれから始めるか案内する。
+9. GitHub repo の `Actions` → `Discord PR notify` → `Run workflow` から手動 test を実行する。
+10. Discord に test 投稿が出ることを確認する。
+11. 次の PR 作成時に自動投稿されることを確認する。
+12. 投稿されたら Discord に `docs/discord-start-here.md` の短文を貼り、#10 / #11 / #12 のどれから始めるか案内する。
 
-## Test PR で見ること
+## Test で見ること
 
-- Discord に PR title と URL が出る。
+- 手動 test では Actions run URL が出る。
+- PR test では PR title と URL が出る。
 - author が表示される。
-- Draft / Ready の状態が表示される。
+- Manual test / Draft / Ready の状態が表示される。
 - mention が飛びすぎない。
 - secret URL がログや投稿本文に出ていない。
 
