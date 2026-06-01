@@ -1,4 +1,4 @@
-# Maintainer Quick Guide
+# メンテナー quick guide
 
 このページは、公開協業を始める maintainer 向けの短い説明です。
 
@@ -28,8 +28,8 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 
 ## いまの状態
 
-- 公開協業入口 PR: <https://github.com/nexus-ai-2045/urban-ecosystem/pull/9>
-- Linear milestone: <https://linear.app/12adfaf/issue/1ST-13/urban-ecosystem-公開協業オンボーディングのマイルストーン>
+- 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
+- Linear project: <https://linear.app/nexus-ai-2045/project/urban-ecosystem-公開協業-e80014329275>
 - Starter issues:
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
@@ -39,12 +39,10 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 
 ## 次にやること
 
-1. PR #9 を review する。
-2. 問題なければ merge する。
-3. #13 に沿って Discord webhook を GitHub Actions secret に入れる。
-4. テスト PR で Discord 通知を確認する。
-5. Discord に `docs/discord-start-here.md` の案内文を貼る。
-6. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+1. #13 に沿って Discord webhook を GitHub Actions secret に入れる。
+2. テスト PR で Discord 通知を確認する。
+3. Discord に `docs/discord-start-here.md` の案内文を貼る。
+4. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
 
 ## Discord に貼るときの言い方
 
@@ -57,6 +55,9 @@ APIキーなしで動くので、Google Cloud課金は発生しません。
 
 はじめに読む:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
+
+公開協業 milestone:
+https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1
 
 最初のissue:
 https://github.com/nexus-ai-2045/urban-ecosystem/issues/10
@@ -75,7 +76,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 ## 完了したと言える状態
 
-- PR #9 が merge 済み。
+- 公開協業 milestone が GitHub にある。
 - #13 が完了して Discord 通知が動く。
 - Discord に案内文を投稿済み。
 - #10 / #11 / #12 のどれかに参加者が反応できる。
