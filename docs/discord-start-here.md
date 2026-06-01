@@ -8,6 +8,7 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 
 - GitHub repo: <https://github.com/nexus-ai-2045/urban-ecosystem>
 - 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
+- 公開協業の現在地: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 - 最初の issue:
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
@@ -54,8 +55,8 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 - typo 修正
 - README の分かりにくい説明の修正
 - fallback 地図ビューアの見た目レビュー
-- `docs/spec-open-points.md` へのコメント
-- テスト名や失敗メッセージの読みやすさ改善
+- 課金境界・秘密情報境界の説明レビュー
+- リンク切れや説明不足の修正
 
 ## やらないでほしいこと
 
@@ -74,6 +75,9 @@ APIキーなしで動くので、Google Cloud課金は発生しません。
 
 はじめに読む:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
+
+現在地:
+https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
 
 公開協業 milestone:
 https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1

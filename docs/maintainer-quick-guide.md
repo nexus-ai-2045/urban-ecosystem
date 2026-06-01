@@ -29,6 +29,8 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 ## いまの状態
 
 - 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
+- 現在地の棚卸し:
+  - <https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md>
 - Starter issues:
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
@@ -57,6 +59,9 @@ APIキーなしで動くので、Google Cloud課金は発生しません。
 
 はじめに読む:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
+
+現在地:
+https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
 
 公開協業 milestone:
 https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1

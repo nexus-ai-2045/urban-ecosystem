@@ -1,8 +1,10 @@
-# License Decision
+# ライセンス決定メモ
 
 status: pending
 
 このリポジトリは現在、README 上でライセンス未定です。公開協業で大きな外部貢献を受ける前に、ライセンス方針を決めます。
+
+Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/21>
 
 ## 決めること
 
@@ -24,3 +26,9 @@ status: pending
 - ライセンス決定までは、大きな外部実装 PR を受ける前に maintainer が個別確認する。
 - typo、ドキュメント、再現性レビューなど小さな協力から始める。
 - `LICENSE` file を追加するまでは、README の `未定（TBD）` 表記を残す。
+
+## 公開協業での扱い
+
+- 初回募集は README 再現性レビュー、fallback 地図 UI レビュー、課金境界レビューに限定する。
+- 外部 contributor に大きな実装を依頼する前に、ライセンスを決めて `LICENSE` file を追加する。
+- ライセンスが決まるまでは、参加者に「大きな実装 PR はまだ始めない」と伝える。

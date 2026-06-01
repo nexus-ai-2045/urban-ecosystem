@@ -1,6 +1,8 @@
-# Good First Issue Candidates
+# 初回協力候補
 
-公開協業の初回入口として扱いやすい候補です。実際に GitHub issue 化する前に、maintainer が範囲を確認してください。
+公開協業の初回入口として扱いやすい候補です。
+
+最初はコード実装を広く募集せず、レビュー・再現性確認・小さな文書修正から始めます。
 
 ## 1. ローカル起動手順の再現性レビュー
 
@@ -38,36 +40,7 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 - Google Maps API は使わない
 - シミュレーションモデルは変更しない
 
-## 3. 未決仕様へのコメント
-
-目的: `docs/spec-open-points.md` の未決事項を読み、優先順位や判断材料を整理する。
-
-成果物:
-
-- issue コメントまたは小さな docs PR
-- 「今決めるべきこと」と「後でよいこと」の分類
-- 不明点や追加調査が必要な点
-
-範囲:
-
-- 仕様の正式採用は maintainer 判断
-- コード変更は任意
-
-## 4. テスト名と失敗メッセージの読みやすさ改善
-
-目的: 初回 contributor がテスト失敗を理解しやすいように、テスト名、assert message、fixture 名を改善する。
-
-成果物:
-
-- 小さなテスト改善 PR
-- `pytest tests/ -q` の結果
-
-範囲:
-
-- 振る舞い変更なし
-- テスト対象コードの大きな変更なし
-
-## 5. 課金境界・秘密情報境界の説明レビュー
+## 3. 課金境界・秘密情報境界の説明レビュー
 
 GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 
@@ -83,3 +56,11 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 
 - 実 API 呼び出しはしない
 - 秘密情報の実例は貼らない
+
+## まだ広く募集しないもの
+
+- 大きな機能実装
+- ライセンス方針が決まる前の大きな外部 PR
+- Google Cloud / Vertex AI / Google Maps / Google Places を実際に呼ぶ作業
+- Cloud Run deploy
+- シミュレーションモデルの前提変更
