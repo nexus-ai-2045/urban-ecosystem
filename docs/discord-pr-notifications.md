@@ -18,6 +18,39 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 4. Actions の `Discord PR notify` を手動実行し、Discord に test 投稿されることを確認する。
 5. 次の PR 作成時に自動投稿されることを確認する。
 
+## 3 分 checklist
+
+この checklist は、実際に webhook を作る人向けです。
+
+### Discord 側
+
+1. 投稿したい channel を開く。
+2. channel の `Edit Channel` を開く。
+3. `Integrations` → `Webhooks` → `New Webhook` を押す。
+4. 名前を `urban-ecosystem PR bot` にする。
+5. 投稿先 channel が合っていることを確認する。
+6. `Copy Webhook URL` を押す。
+
+Webhook URL はコピーしたら、Discord や GitHub issue には貼らず、次の GitHub secret 入力欄にだけ貼ります。
+
+### GitHub 側
+
+1. `Settings` → `Secrets and variables` → `Actions` を開く。
+2. `New repository secret` を押す。
+3. Name に `DISCORD_WEBHOOK_URL` を入れる。
+4. Secret に Discord webhook URL を貼る。
+5. `Add secret` を押す。
+
+### Test
+
+1. `Actions` → `Discord PR notify` を開く。
+2. `Run workflow` を押す。
+3. title は `urban-ecosystem Discord notify test` にする。
+4. summary は `GitHub Actions からの手動テストです。` にする。
+5. Discord に test 投稿が出ることを確認する。
+
+Actions page: <https://github.com/nexus-ai-2045/urban-ecosystem/actions/workflows/discord-pr-notify.yml>
+
 ## メンテナー checklist
 
 maintainer は次の順に確認します。
@@ -45,6 +78,16 @@ Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 - Manual test / Draft / Ready の状態が表示される。
 - mention が飛びすぎない。
 - secret URL がログや投稿本文に出ていない。
+
+## 設定できたかの確認
+
+GitHub CLI を使える場合は、次で secret 名だけを確認できます。値は表示されません。
+
+```bash
+gh secret list --repo nexus-ai-2045/urban-ecosystem
+```
+
+`DISCORD_WEBHOOK_URL` が表示されれば secret は保存済みです。
 
 ## Rollback
 
