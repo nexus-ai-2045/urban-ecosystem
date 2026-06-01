@@ -53,7 +53,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 - Google Cloud / Vertex AI / Google Maps / Google Places を勝手に実行しない。
 - Cloud Run deploy をしない。
 - `data/` の生成物や大きな実験結果を commit しない。
-- ライセンス未定のまま大きな実装 PR を始めない。
+- 大きな実装 PR は、先に issue で目的と範囲を共有する。
 
 ## 初回 review 観点
 
@@ -76,6 +76,5 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 未完のままでも進めてよい条件:
 
-- ライセンスは未定でも、小さな docs / review 協力から始める。
 - Discord 通知が未設定でも、手動で PR URL と issue URL を貼って案内する。
 - 最初の参加者がコードを書かなくても、README の分かりやすさ feedback だけでよい。
