@@ -9,9 +9,9 @@
 | Discord | 人を呼ぶ、軽い質問、入口案内、通知 |
 | GitHub issue | 作業の正本、質問、done 条件 |
 | GitHub PR | 変更内容、review、merge 判断 |
-| Linear | maintainer 向けの milestone / 運用状態 |
+| Linear | Nexus maintainer 向けの内部 milestone / 運用状態 |
 
-Discord は入口です。決定や採否は GitHub / Linear に残します。
+Discord は入口です。公開協業者に見せる決定や採否は GitHub issue / PR に残します。Linear は Nexus maintainer 側の内部管理です。
 
 公開面の名義は Nexus に統一します。GitHub / Discord 通知 / Linear の扱いは [`docs/public-identity-policy.md`](public-identity-policy.md) に従います。
 
@@ -25,6 +25,7 @@ Discord は入口です。決定や採否は GitHub / Linear に残します。
 6. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
 
 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
+現在地の棚卸し: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 Discord 通知設定: [`docs/discord-pr-notifications.md`](discord-pr-notifications.md)
 
 ## Discord に貼る案内
@@ -36,6 +37,9 @@ APIキーなしで動くので、Google Cloud課金は発生しません。
 
 はじめに読む:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
+
+現在地:
+https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
 
 最初のissue:
 https://github.com/nexus-ai-2045/urban-ecosystem/issues/10

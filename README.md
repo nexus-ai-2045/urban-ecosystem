@@ -131,6 +131,7 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 - 協力ガイド: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Discord から来た人へ: [`docs/discord-start-here.md`](docs/discord-start-here.md)
 - Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
+- 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
 - 初回協力候補: [`docs/good-first-issues.md`](docs/good-first-issues.md)
 - 公開協業 runbook: [`docs/public-collaboration-runbook.md`](docs/public-collaboration-runbook.md)
 - 公開名義方針: [`docs/public-identity-policy.md`](docs/public-identity-policy.md)
