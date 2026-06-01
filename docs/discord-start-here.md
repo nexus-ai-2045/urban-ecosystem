@@ -8,6 +8,10 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 
 - GitHub repo: <https://github.com/nexus-ai-2045/urban-ecosystem>
 - いまの入口 PR: <https://github.com/nexus-ai-2045/urban-ecosystem/pull/9>
+- 最初の issue:
+  - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
+  - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
+  - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 - 初回協力候補: [`docs/good-first-issues.md`](good-first-issues.md)
 - 協力ガイド: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 
@@ -73,6 +77,11 @@ https://github.com/nexus-ai-2045/urban-ecosystem/pull/9
 
 初回協力候補:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/good-first-issues.md
+
+最初のissue:
+https://github.com/nexus-ai-2045/urban-ecosystem/issues/10
+https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
+https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 ```
 
 ## 迷ったら

@@ -4,6 +4,8 @@
 
 ## 1. ローカル起動手順の再現性レビュー
 
+GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
+
 目的: README のセットアップ、データ生成、シミュレーション、ビューア起動が初見で通るか確認する。
 
 成果物:
@@ -20,6 +22,8 @@
 - API キー、Google Cloud、Vertex AI は使わない
 
 ## 2. fallback 地図ビューアの UI レビュー
+
+GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 
 目的: API キーなしで表示される fallback 地図の見やすさ、ラベル、操作感をレビューする。
 
@@ -64,6 +68,8 @@
 - テスト対象コードの大きな変更なし
 
 ## 5. 課金境界・秘密情報境界の説明レビュー
+
+GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 
 目的: README と CONTRIBUTING の課金境界、API キー、`.env`、生成データの扱いが初見で伝わるか確認する。
 
