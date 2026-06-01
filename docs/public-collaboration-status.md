@@ -48,6 +48,22 @@
 - Cloud Run deploy
 - シミュレーションモデルの前提変更
 
+## 既存 PR から分かった実装境界
+
+PR #1〜#7 を古い順に見て、初回参加者に伝えるべき現在地だけを残します。
+
+| PR | 参加者向けに拾うこと |
+|---|---|
+| #1 | `DATA_SOURCE=gcs` は未対応です。local に黙って切り替わらず、未対応として分かるようにしています。 |
+| #2 | POI、profile、interaction などの入力データは検証が入ります。サンプルや修正 PR では、形式エラーを見落とさない前提です。 |
+| #3 | viewer と LLM 周辺の既知不具合を修正済みです。過去 PR 本文に残っている未対応メモは、必要なら別 issue に切り出して扱います。 |
+| #4 | viewer の run ID は API で読み込める ID に揃っています。起動確認では `/api/runs` から選べる run を使います。 |
+| #5 | Cloud Run Job 手順は現在の CLI に合わせています。ただし GCS replay 出力や GCS 読み込みはまだ通常の参加入口ではありません。 |
+| #6 | 小さすぎる POI 数は読みやすいエラーになります。サンプル生成は README の既定手順から始めます。 |
+| #7 | API キーなしで動く CI / fallback E2E があります。初回レビューはこの範囲を基準にします。 |
+
+このため、Discord から来た人にはまず API キーなしの local / fallback viewer / docs review を案内します。GCS、Cloud Run、Vertex AI、Google Maps、Google Places は maintainer が範囲を切ってから扱います。
+
 ## 公開面の安全境界
 
 - 公開 issue / PR / docs には、外に出してよい情報だけを書く。
