@@ -9,7 +9,7 @@
 - Discord の公開通知 bot / webhook 名は Nexus または urban-ecosystem 名義にする。
 - Linear を使う場合は Nexus の Linear アカウント / workspace / project を使う。ただし Linear は内部管理に限定する。
 - 個人名義のアカウント、メールアドレス、workspace は公開協業の正本にしない。
-- 公開 issue / PR / docs は TYPE1 として扱い、外に出してよい情報だけを書く。
+- 公開 issue / PR / docs には、外に出してよい情報だけを書く。
 
 ## 現在の状態
 
