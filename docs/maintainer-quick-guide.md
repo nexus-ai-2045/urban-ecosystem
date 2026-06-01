@@ -24,6 +24,8 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 
 迷ったら、作業と判断の正本は GitHub / Linear に残します。Discord は流れてもよい入口です。
 
+公開面の名義は Nexus に統一します。詳細は [`docs/public-identity-policy.md`](public-identity-policy.md) を見てください。
+
 ## いまの状態
 
 - 公開協業入口 PR: <https://github.com/nexus-ai-2045/urban-ecosystem/pull/9>
@@ -65,6 +67,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 ## 注意する境界
 
 - Webhook URL は秘密情報。Discord / GitHub issue / PR / commit に貼らない。
+- 公開面は Nexus 名義に統一する。個人 account / email / workspace を公開協業の正本にしない。
 - `.env`、API key、token は貼らない。
 - Google Cloud / Vertex AI / Google Maps / Google Places は opt-in。勝手に実行しない。
 - Cloud Run deploy は別判断。

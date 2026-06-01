@@ -13,6 +13,8 @@
 
 Discord は入口です。決定や採否は GitHub / Linear に残します。
 
+公開面の名義は Nexus に統一します。GitHub / Discord 通知 / Linear の扱いは [`docs/public-identity-policy.md`](public-identity-policy.md) に従います。
+
 ## 初回の流れ
 
 1. PR #9 を review する。
