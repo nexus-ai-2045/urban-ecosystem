@@ -54,8 +54,8 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 - typo 修正
 - README の分かりにくい説明の修正
 - fallback 地図ビューアの見た目レビュー
-- `docs/spec-open-points.md` へのコメント
-- テスト名や失敗メッセージの読みやすさ改善
+- 課金境界・秘密情報境界の説明レビュー
+- リンク切れや説明不足の修正
 
 ## やらないでほしいこと
 
