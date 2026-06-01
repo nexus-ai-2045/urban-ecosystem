@@ -64,6 +64,24 @@ PR #1〜#7 を古い順に見て、初回参加者に伝えるべき現在地だ
 
 このため、Discord から来た人にはまず API キーなしの local / fallback viewer / docs review を案内します。GCS、Cloud Run、Vertex AI、Google Maps、Google Places は maintainer が範囲を切ってから扱います。
 
+## 既存 PR から分かった協業導線
+
+PR #8〜#20 を見て、公開協業の進め方に関係する現在地だけを残します。
+
+| PR | 参加者向けに拾うこと |
+|---|---|
+| #8 | 次回作業用の handoff 更新で、公開協業の入口には載せません。 |
+| #9 | CONTRIBUTING、issue template、PR template、Discord 入口、good first issue 候補、runbook の土台です。 |
+| #14 | 取り下げ済みです。公開名義方針は #15 で扱います。 |
+| #15 | 公開面の名義は Nexus に統一します。公開協業者向けの正本は GitHub issue / PR / docs です。 |
+| #16 | Discord から来た人向けの案内は、milestone と #10 / #11 / #12 を中心に整理済みです。 |
+| #17 | Discord PR 通知は Actions から手動 test できます。Webhook secret がなければ安全に skip します。 |
+| #18 | Discord webhook 設定の checklist があります。ただし webhook URL は GitHub Actions secret にだけ保存します。 |
+| #19 | 公開 issue / PR / docs には、外に出してよい情報だけを書く方針に整理済みです。 |
+| #20 | 公開 docs から内部向けの言葉を外し、外から見ても自然な表現に直しています。 |
+
+Discord 通知は便利な補助です。通知が未設定でも、GitHub の現在地ページと #10 / #11 / #12 を手動で貼れば協業は始められます。
+
 ## 公開面の安全境界
 
 - 公開 issue / PR / docs には、外に出してよい情報だけを書く。
