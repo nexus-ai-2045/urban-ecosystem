@@ -123,6 +123,7 @@ pytest tests/ -q
 - Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
 - 初回協力候補: [`docs/good-first-issues.md`](docs/good-first-issues.md)
 - 公開協業 runbook: [`docs/public-collaboration-runbook.md`](docs/public-collaboration-runbook.md)
+- 公開名義方針: [`docs/public-identity-policy.md`](docs/public-identity-policy.md)
 - ライセンス決定メモ: [`docs/license-decision.md`](docs/license-decision.md)
 - Discord PR 通知: [`docs/discord-pr-notifications.md`](docs/discord-pr-notifications.md)
 
