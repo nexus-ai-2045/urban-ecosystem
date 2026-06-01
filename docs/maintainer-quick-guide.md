@@ -81,7 +81,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 - `.env`、API key、token は貼らない。
 - Google Cloud / Vertex AI / Google Maps / Google Places は opt-in。勝手に実行しない。
 - Cloud Run deploy は別判断。
-- ライセンス未定なので、大きな外部実装 PR はまだ始めない。
+- 大きな外部実装 PR は、先に issue で目的と範囲を共有してもらう。
 
 ## 完了したと言える状態
 

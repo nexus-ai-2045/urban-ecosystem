@@ -64,7 +64,7 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 - Google Cloud / Vertex AI / Google Maps / Google Places を勝手に実行しない
 - Cloud Run deploy をしない
 - `data/` の生成物や大きな実験結果を commit しない
-- ライセンス未定のまま大きな実装 PR を始めない
+- 大きな実装 PR は、先に issue で目的と範囲を共有する
 
 ## Discord に貼る短文
 

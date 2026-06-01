@@ -140,6 +140,6 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 
 ## ライセンス
 
-未定（TBD）。大きな外部実装 PR を受ける前に決めます。
+MIT License です。詳細は [`LICENSE`](LICENSE) を参照してください。
 
-Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/21>
+ライセンス決定の経緯: [`docs/license-decision.md`](docs/license-decision.md)
