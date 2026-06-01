@@ -1,5 +1,7 @@
 # Discord PR 通知
 
+> 現在、Discord PR 通知は一旦フリーズ中です。Discord webhook 作成、GitHub secret `DISCORD_WEBHOOK_URL` 設定、Actions 手動 test、Discord 投稿は行いません。再開する場合は issue #13 から続けます。
+
 GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitHub Actions secret として保存します。
 
 ## 仕組み
@@ -10,7 +12,9 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 - 送信内容: PR title、URL、author、draft / ready 状態、本文 1 行目の要約
 - 手動テスト時の送信内容: test title、Actions run URL、実行者、test summary
 
-## 設定手順
+## 再開時の設定手順
+
+この手順は再開時のために残しています。現時点では実行しません。
 
 1. Discord の対象 channel で webhook を作る。
 2. GitHub repository の `Settings` → `Secrets and variables` → `Actions` を開く。
@@ -20,7 +24,7 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 
 ## 3 分 checklist
 
-この checklist は、実際に webhook を作る人向けです。
+この checklist は、再開時に実際に webhook を作る人向けです。現時点では実行しません。
 
 ### Discord 側
 
@@ -53,7 +57,7 @@ Actions page: <https://github.com/nexus-ai-2045/urban-ecosystem/actions/workflow
 
 ## メンテナー checklist
 
-maintainer は次の順に確認します。
+maintainer は再開時に次の順に確認します。現時点では実行しません。
 
 Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 
@@ -72,6 +76,8 @@ Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 
 ## Test で見ること
 
+現時点では手動 test を行いません。再開時に見る観点は次の通りです。
+
 - 手動 test では Actions run URL が出る。
 - PR test では PR title と URL が出る。
 - author が表示される。
@@ -80,6 +86,8 @@ Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 - secret URL がログや投稿本文に出ていない。
 
 ## 設定できたかの確認
+
+現時点では secret を作らないため、この確認も行いません。
 
 GitHub CLI を使える場合は、次で secret 名だけを確認できます。値は表示されません。
 
