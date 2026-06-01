@@ -121,6 +121,7 @@ pytest tests/ -q
 - 協力ガイド: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Discord から来た人へ: [`docs/discord-start-here.md`](docs/discord-start-here.md)
 - 初回協力候補: [`docs/good-first-issues.md`](docs/good-first-issues.md)
+- 公開協業 runbook: [`docs/public-collaboration-runbook.md`](docs/public-collaboration-runbook.md)
 - ライセンス決定メモ: [`docs/license-decision.md`](docs/license-decision.md)
 - Discord PR 通知: [`docs/discord-pr-notifications.md`](docs/discord-pr-notifications.md)
 
