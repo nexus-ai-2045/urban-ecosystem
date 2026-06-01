@@ -19,7 +19,7 @@ tests/e2e/test_ui.py — フロントエンド E2E テスト (Playwright headles
     利用不可なら pytest.skip。
   - GOOGLE_MAPS_API_KEY は設定しない (fallback 地図 / §5.1.5 / §18.4)。
   - ローカルサーバー (uvicorn) をサブプロセスで起動し、テスト後に終了する。
-  - urban_demo run のデータ (100 体 / 24 tick) を使用する。
+  - urban_demo run のデータ (100 体 / 24 tick) を一時 DATA_DIR に生成して使用する。
 
 識別子は英語 / コメントは日本語。
 """
@@ -77,6 +77,44 @@ _EXPECTED_AGENTS = 100
 # サーバー起動ヘルパー
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _ensure_e2e_run(data_root: Path) -> None:
+    """E2E 用の deterministic run を一時 DATA_DIR に生成する。
+
+    `data/` は gitignore されているため、CI の fresh checkout では
+    `urban_demo` が存在しない。E2E は自前で入力と replay JSONL を用意する。
+    """
+    run_dir = data_root / _RUN_ID
+    summary_path = run_dir / "summary.json"
+    if summary_path.exists():
+        return
+
+    cmd = [
+        sys.executable,
+        str(_PROJECT_ROOT / "tools" / "urban_simulation_cli.py"),
+        "run",
+        "--sample",
+        "--agents", str(_EXPECTED_AGENTS),
+        "--sample-pois", "300",
+        "--ticks", "24",
+        "--seed", "42",
+        "--out", str(run_dir),
+    ]
+    result = subprocess.run(
+        cmd,
+        cwd=str(_PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "E2E 用 urban_demo run の生成に失敗しました\n"
+            f"command: {' '.join(cmd)}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+
+
 def _find_python_with_uvicorn() -> str:
     """uvicorn と fastapi が使える Python 実行パスを返す。
 
@@ -120,15 +158,19 @@ def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def live_server():
+def live_server(tmp_path_factory):
     """uvicorn でローカルサーバーを起動し、URL を返す fixture。
 
     GOOGLE_MAPS_API_KEY を除外して起動することで fallback 地図モードになる。
     """
     python = _find_python_with_uvicorn()
+    data_root = tmp_path_factory.mktemp("urban_e2e_data")
+    _ensure_e2e_run(data_root)
 
     # GOOGLE_MAPS_API_KEY を除外した環境変数
     env = {k: v for k, v in os.environ.items() if k != "GOOGLE_MAPS_API_KEY"}
+    env["DATA_DIR"] = str(data_root)
+    env["DATA_SOURCE"] = "local"
     env["PYTHONUNBUFFERED"] = "1"
 
     proc = subprocess.Popen(
