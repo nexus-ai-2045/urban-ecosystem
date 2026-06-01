@@ -249,7 +249,26 @@ gcloud run deploy urban-ecosystem \
 
 ### 5.3 パターン B: 認証必須 (IAP)
 
-#### ステップ 1: 認証ありでデプロイ
+#### ステップ 1: Secret なしで fallback viewer を確認する
+
+最初の実機 smoke では、Maps API キーや Map ID を注入せず、fallback viewer が Cloud Run 上で
+起動することだけを確認します。この段階では Secret Manager の secret 作成や Maps API キー登録は不要です。
+
+```bash
+gcloud run deploy urban-ecosystem \
+  --project nexus-ai-2045 \
+  --source . \
+  --region asia-northeast1 \
+  --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com \
+  --max-instances=1 \
+  --concurrency=80 \
+  --no-allow-unauthenticated
+```
+
+デプロイ後は §7 の `/api/health` と viewer 表示を確認します。Google Maps API キーを注入していないため、
+表示は fallback 地図になることが期待値です。
+
+#### ステップ 2: Maps API キーありでデプロイ
 
 ```bash
 gcloud run deploy urban-ecosystem \
@@ -264,7 +283,7 @@ gcloud run deploy urban-ecosystem \
   --no-allow-unauthenticated
 ```
 
-#### ステップ 2: アクセスを許可するユーザー / グループへの IAM 付与
+#### ステップ 3: アクセスを許可するユーザー / グループへの IAM 付与
 
 ```bash
 # 特定ユーザーにアクセスを許可する例

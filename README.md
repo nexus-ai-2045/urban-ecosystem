@@ -1,5 +1,7 @@
 # 都市 AI エージェント人工生態系 (urban-ecosystem)
 
+渋谷の街を舞台にした、決定論的な都市エージェント・シミュレーション。
+
 都市の地図上で、多数の AI エージェントが一日を過ごす「人工生態系」シミュレーションです。
 渋谷の実在スポットを舞台に、住人エージェントが通勤・昼食・買い物・交流・帰宅を行い、
 その 1 日を地図ビューアでリプレイできます。
@@ -122,6 +124,24 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 | `GOOGLE_CLOUD_PROJECT` | Vertex AI Gemini（`--llm vertex`） | あり（自分の GCP） |
 
 > API キー・トークンはコードや git にコミットしないでください（`.env` は gitignore 済み）。
+
+## 公開協業の入口
+
+公開協業で見せる作業・判断・採否の正本は GitHub の docs / issues / PR です。まずは [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md) と [`docs/good-first-issues.md`](docs/good-first-issues.md) を見てください。
+
+| 場所 | 役割 |
+|---|---|
+| GitHub PR #9 | 協業入口を repository に入れた土台 |
+| GitHub issue #10 / #11 / #12 | 初回協力者が選びやすい小さい作業 |
+| GitHub issue #13 | Discord PR 通知の再開入口。現在は一旦フリーズ |
+| Linear | Nexus maintainer 側の内部マイルストーン / 運用管理。公開正本ではない |
+| Discord | 呼び込みと軽い案内。決定や採否の正本ではない |
+
+## GCP / Cloud Run での実機確認
+
+Cloud Run での実機確認は、外部公開・課金・Secret Manager を伴う可能性があるため maintainer 承認後に行います。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。
+
+まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
 
 ## ドキュメント
 
