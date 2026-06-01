@@ -223,9 +223,10 @@ def _list_runs() -> list[dict]:
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
-        # summary.json の内容をそのまま返す (§21.2)
-        runs.append({
-            "run_id":      summary.get("run_id",      run_id),
+        # API の run_id は /api/data/{run_id}/... でロード可能なディレクトリ名に固定する。
+        summary_run_id = summary.get("run_id")
+        run = {
+            "run_id":      run_id,
             "seed":        summary.get("seed",         0),
             "ticks":       summary.get("ticks",        0),
             "agents":      summary.get("agents",       0),
@@ -234,7 +235,10 @@ def _list_runs() -> list[dict]:
             **({} if "aois"       not in summary else {"aois":       summary["aois"]}),
             **({} if "roads"      not in summary else {"roads":      summary["roads"]}),
             **({} if "started_at" not in summary else {"started_at": summary["started_at"]}),
-        })
+        }
+        if isinstance(summary_run_id, str) and summary_run_id and summary_run_id != run_id:
+            run["display_run_id"] = summary_run_id
+        runs.append(run)
 
     # started_at 降順 (§21.2)
     runs.sort(key=lambda r: r.get("started_at", ""), reverse=True)
