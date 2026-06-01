@@ -359,7 +359,7 @@ export function updateLoadStatus(statusEl, results) {
 /**
  * データ読込パネルに run 一覧を反映する。
  * @param {HTMLSelectElement} selectEl
- * @param {Array<{run_id:string, agents:number, ticks:number}>} runs
+ * @param {Array<{run_id:string, display_run_id?:string, agents:number, ticks:number}>} runs
  */
 export function updateRunSelector(selectEl, runs) {
     if (!selectEl) return;
@@ -376,7 +376,8 @@ export function updateRunSelector(selectEl, runs) {
     for (const run of runs) {
         const opt = document.createElement("option");
         opt.value = run.run_id;
-        opt.textContent = `${run.run_id} (agents:${run.agents} ticks:${run.ticks})`;
+        const label = run.display_run_id || run.run_id;
+        opt.textContent = `${label} (agents:${run.agents} ticks:${run.ticks})`;
         selectEl.appendChild(opt);
     }
 }
