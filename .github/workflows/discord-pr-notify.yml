@@ -3,6 +3,16 @@ name: Discord PR notify
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      title:
+        description: Test notification title
+        required: false
+        default: Discord PR notification test
+      summary:
+        description: Test notification summary
+        required: false
+        default: Manual test from GitHub Actions.
 
 permissions:
   contents: read
@@ -16,11 +26,7 @@ jobs:
       - name: Send Discord webhook
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python3 - <<'PY'
           import json
@@ -32,12 +38,27 @@ jobs:
               print("DISCORD_WEBHOOK_URL is not set; skipping Discord notification.")
               raise SystemExit(0)
 
-          title = os.environ["PR_TITLE"]
-          url = os.environ["PR_URL"]
-          author = os.environ["PR_AUTHOR"]
-          draft = os.environ["PR_DRAFT"] == "true"
-          body = (os.environ.get("PR_BODY") or "").strip()
-          summary = body.splitlines()[0] if body else "No PR description yet."
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event_file:
+              event = json.load(event_file)
+
+          if "pull_request" in event:
+              pr = event["pull_request"]
+              title = pr["title"]
+              url = pr["html_url"]
+              author = pr["user"]["login"]
+              draft = pr["draft"]
+              body = (pr.get("body") or "").strip()
+              summary = body.splitlines()[0] if body else "No PR description yet."
+              status = "Draft" if draft else "Ready"
+          else:
+              inputs = event.get("inputs", {})
+              title = inputs.get("title") or "Discord PR notification test"
+              url = os.environ["GITHUB_RUN_URL"]
+              author = os.environ["GITHUB_ACTOR"]
+              summary = inputs.get("summary") or "Manual test from GitHub Actions."
+              status = "Manual test"
+              draft = False
+
           if len(summary) > 240:
               summary = summary[:237] + "..."
 
@@ -52,7 +73,7 @@ jobs:
                       "color": 5793266 if not draft else 10066329,
                       "fields": [
                           {"name": "Author", "value": author, "inline": True},
-                          {"name": "Status", "value": "Draft" if draft else "Ready", "inline": True},
+                          {"name": "Status", "value": status, "inline": True},
                       ],
                   }
               ],
