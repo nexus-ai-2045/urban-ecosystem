@@ -42,8 +42,8 @@ updated: 2026-05-31
 (以下は 2026-05-30 までの記録 / 旧 Control Panel は git 履歴参照)
 
 ## 方針 (2026-05-29 CEO 確定)
-- ローカルオンリーで開発。Cloud Run 再デプロイ / 公開切替 = Type1 (保留)。
-- GitHub は PUBLIC 公開済み (`github.com/nexus-ai-2045/urban-ecosystem` / 著者 nexus-ai-2045)。push は都度 CEO 確認 (Type1)。
+- ローカルオンリーで開発。Cloud Run 再デプロイ / 公開切替 = 要承認 (保留)。
+- GitHub は PUBLIC 公開済み (`github.com/nexus-ai-2045/urban-ecosystem` / 著者 nexus-ai-2045)。push は都度 maintainer 確認。
 - commit 著者は `nexus-ai-2045 <nexus-ai-2045@users.noreply.github.com>` 固定。private-author で commit しない。
 - `data/*.db` 削除禁止 / API キーをコード・ログに出さない。
 - git 操作は `cd ~/Projects/urban-ecosystem` 後に実行。commit は inline `-c user.name=nexus-ai-2045 -c user.email=nexus-ai-2045@users.noreply.github.com`。新規ファイルは先に `git add`。
