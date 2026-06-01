@@ -4,6 +4,8 @@ status: pending
 
 このリポジトリは現在、README 上でライセンス未定です。公開協業で大きな外部貢献を受ける前に、ライセンス方針を決めます。
 
+Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/21>
+
 ## 決めること
 
 - 採用するライセンス
