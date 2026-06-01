@@ -123,6 +123,18 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 
 > API キー・トークンはコードや git にコミットしないでください（`.env` は gitignore 済み）。
 
+## 公開協業の入口
+
+公開協業で見せる作業・判断・採否の正本は GitHub の docs / issues / PR です。まずは [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md) と [`docs/good-first-issues.md`](docs/good-first-issues.md) を見てください。
+
+| 場所 | 役割 |
+|---|---|
+| GitHub PR #9 | 協業入口を repository に入れた土台 |
+| GitHub issue #10 / #11 / #12 | 初回協力者が選びやすい小さい作業 |
+| GitHub issue #13 | Discord PR 通知の再開入口。現在は一旦フリーズ |
+| Linear | Nexus maintainer 側の内部マイルストーン / 運用管理。公開正本ではない |
+| Discord | 呼び込みと軽い案内。決定や採否の正本ではない |
+
 ## ドキュメント
 
 - 仕様書: [`docs/ai-ecosystem-tool-spec.md`](docs/ai-ecosystem-tool-spec.md)
