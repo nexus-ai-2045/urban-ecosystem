@@ -1,4 +1,4 @@
-# Discord PR Notifications
+# Discord PR 通知
 
 GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitHub Actions secret として保存します。
 
@@ -16,9 +16,9 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 3. Repository secret として `DISCORD_WEBHOOK_URL` を追加する。
 4. PR を作成し、Actions の `Discord PR notify` が成功することを確認する。
 
-## Maintainer Checklist
+## メンテナー checklist
 
-PR #9 merge 後、maintainer は次の順に確認します。
+maintainer は次の順に確認します。
 
 Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 
