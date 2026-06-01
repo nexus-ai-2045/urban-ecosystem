@@ -36,6 +36,7 @@ from tools.generate_urban_sample import (
     BBOX,
     DEFAULT_AGENTS,
     DEFAULT_POIS,
+    MIN_POIS,
     generate,
     main,
 )
@@ -240,6 +241,36 @@ def test_cli_main(tmp_path: Path) -> None:
     rc = main(["--seed", "42", "--out-dir", str(tmp_path), "--agents", "100", "--pois", "300"])
     assert rc == 0
     assert (tmp_path / "agent_profiles_N100.json").is_file()
+
+
+@pytest.mark.parametrize("pois", [1, 2])
+def test_generate_rejects_too_few_pois(tmp_path: Path, pois: int) -> None:
+    """home/work/school を各 1 件生成するため、POI は最低 3 件必要。"""
+    with pytest.raises(ValueError, match=f"pois は {MIN_POIS} 以上"):
+        generate(tmp_path, seed=42, agents=2, pois=pois)
+
+
+@pytest.mark.parametrize("pois", [1, 2])
+def test_cli_rejects_too_few_pois_without_traceback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], pois: int
+) -> None:
+    """CLI は tiny POI 入力を内部 traceback ではなく readable error にする。"""
+    rc = main(["--seed", "42", "--out-dir", str(tmp_path), "--agents", "2", "--pois", str(pois)])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert f"pois は {MIN_POIS} 以上" in captured.err
+    assert "Traceback" not in captured.err
+    assert "IndexError" not in captured.err
+
+
+def test_generate_accepts_minimum_pois(tmp_path: Path) -> None:
+    """最小有効値 3 では home/work/school を 1 件ずつ持つ小サンプルが生成できる。"""
+    summary = generate(tmp_path, seed=42, agents=2, pois=MIN_POIS)
+    pois = load_pois(tmp_path / "pois.geojson")
+    categories = {p.category for p in pois}
+    assert summary["pois"] == MIN_POIS
+    assert len(pois) == MIN_POIS
+    assert {"home-residential", "office-building", "amenity-school"} <= categories
 
 
 def test_custom_agent_count_filename(tmp_path: Path) -> None:
