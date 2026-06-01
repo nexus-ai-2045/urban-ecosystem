@@ -137,6 +137,12 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 | Linear | Nexus maintainer 側の内部マイルストーン / 運用管理。公開正本ではない |
 | Discord | 呼び込みと軽い案内。決定や採否の正本ではない |
 
+## GCP / Cloud Run での実機確認
+
+Cloud Run での実機確認は、外部公開・課金・Secret Manager を伴う可能性があるため maintainer 承認後に行います。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。
+
+まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
+
 ## ドキュメント
 
 - 仕様書: [`docs/ai-ecosystem-tool-spec.md`](docs/ai-ecosystem-tool-spec.md)
