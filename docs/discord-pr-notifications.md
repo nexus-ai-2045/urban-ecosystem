@@ -20,6 +20,8 @@ GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitH
 
 PR #9 merge 後、maintainer は次の順に確認します。
 
+Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
+
 1. Discord の投稿先 channel を決める。
 2. channel settings から webhook を作成する。
 3. webhook name は `urban-ecosystem PR bot` など、通知元だと分かる名前にする。

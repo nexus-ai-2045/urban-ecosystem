@@ -120,6 +120,7 @@ pytest tests/ -q
 - 実装計画 / 作業指示: [`docs/ai-ecosystem-implementation-orchestration.md`](docs/ai-ecosystem-implementation-orchestration.md)
 - 協力ガイド: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Discord から来た人へ: [`docs/discord-start-here.md`](docs/discord-start-here.md)
+- Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
 - 初回協力候補: [`docs/good-first-issues.md`](docs/good-first-issues.md)
 - 公開協業 runbook: [`docs/public-collaboration-runbook.md`](docs/public-collaboration-runbook.md)
 - ライセンス決定メモ: [`docs/license-decision.md`](docs/license-decision.md)

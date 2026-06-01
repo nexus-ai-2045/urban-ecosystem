@@ -17,7 +17,7 @@ Discord は入口です。決定や採否は GitHub / Linear に残します。
 
 1. PR #9 を review する。
 2. 問題なければ PR #9 を merge する。
-3. GitHub Actions secret `DISCORD_WEBHOOK_URL` を設定する。
+3. #13 に沿って GitHub Actions secret `DISCORD_WEBHOOK_URL` を設定する。
 4. テスト PR で Discord 通知を確認する。
 5. Discord に `docs/discord-start-here.md` の短文を貼る。
 6. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
