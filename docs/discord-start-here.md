@@ -7,7 +7,7 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 ## 30 秒で見る
 
 - GitHub repo: <https://github.com/nexus-ai-2045/urban-ecosystem>
-- いまの入口 PR: <https://github.com/nexus-ai-2045/urban-ecosystem/pull/9>
+- 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
 - 最初の issue:
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
@@ -19,7 +19,7 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 
 ### 1. 見るだけ
 
-README を読んで、「何をするプロジェクトか分かるか」を Discord か GitHub issue / PR にコメントしてください。
+README を読んで、「何をするプロジェクトか分かるか」を Discord か GitHub issue にコメントしてください。
 
 書いてほしいこと:
 
@@ -72,8 +72,11 @@ urban-ecosystem の公開協業入口を作っています。
 まずは見るだけ・README再現性レビュー・fallback地図UIレビューから歓迎です。
 APIキーなしで動くので、Google Cloud課金は発生しません。
 
-入口PR:
-https://github.com/nexus-ai-2045/urban-ecosystem/pull/9
+はじめに読む:
+https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
+
+公開協業 milestone:
+https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1
 
 初回協力候補:
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/good-first-issues.md

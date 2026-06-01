@@ -1,4 +1,4 @@
-# Public Collaboration Runbook
+# 公開協業 runbook
 
 この runbook は、maintainer が Discord から人を案内し、GitHub で協業を進めるための最短手順です。
 
@@ -17,12 +17,13 @@ Discord は入口です。決定や採否は GitHub / Linear に残します。
 
 ## 初回の流れ
 
-1. PR #9 を review する。
-2. 問題なければ PR #9 を merge する。
-3. #13 に沿って GitHub Actions secret `DISCORD_WEBHOOK_URL` を設定する。
-4. テスト PR で Discord 通知を確認する。
-5. Discord に `docs/discord-start-here.md` の短文を貼る。
-6. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+1. 公開協業 milestone を確認する。
+2. #13 に沿って GitHub Actions secret `DISCORD_WEBHOOK_URL` を設定する。
+3. テスト PR で Discord 通知を確認する。
+4. Discord に `docs/discord-start-here.md` の短文を貼る。
+5. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+
+公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
 
 ## Discord に貼る案内
 
@@ -60,7 +61,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 初回公開協業の準備ができたと言える条件:
 
-- PR #9 が merge 済み。
+- 公開協業 milestone が GitHub にある。
 - `DISCORD_WEBHOOK_URL` secret が設定済み。
 - テスト PR が Discord に投稿済み。
 - Discord に案内文を投稿済み。
