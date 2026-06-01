@@ -69,7 +69,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 
 ## 注意する境界
 
-- 公開 issue / PR / docs は TYPE1 として扱い、外に出してよい情報だけを書く。
+- 公開 issue / PR / docs には、外に出してよい情報だけを書く。
 - Linear の内部 URL、内部コメント、個人 account 情報は公開 issue / PR / docs に貼らない。
 - Webhook URL は秘密情報。Discord / GitHub issue / PR / commit に貼らない。
 - 公開面は Nexus 名義に統一する。個人 account / email / workspace を公開協業の正本にしない。
