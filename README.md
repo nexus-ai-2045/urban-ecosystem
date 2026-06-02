@@ -104,6 +104,15 @@ python -m pytest tests/e2e -q
 
 GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fallback 地図経路を検証します。
 
+公開協業の入口だけを短く確認する場合:
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+この smoke は一時ディレクトリに sample run を作り、`/api/health` が `maps_key: absent`、`/api/runs` が `sample` を返すことを確認します。Google Cloud、Secret Manager、Discord は使いません。
+
 ## 課金について（重要）
 
 **このリポジトリはデフォルトで完全無料です。Google Cloud の課金は一切発生しません。**
