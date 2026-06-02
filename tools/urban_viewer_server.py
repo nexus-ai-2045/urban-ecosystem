@@ -120,6 +120,25 @@ def _ensure_data_source_supported() -> None:
     if data_source not in SUPPORTED_DATA_SOURCES:
         raise HTTPException(status_code=501, detail=_data_source_error(data_source))
 
+
+def _js_string_literal(value: str) -> str:
+    """環境変数値を JavaScript string literal として安全に埋め込む。"""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _replace_js_placeholder_literal(source: str, placeholder: str, value: str) -> str:
+    """`"%%PLACEHOLDER%%"` 形式を JSON-safe な JS literal に置き換える。"""
+    return source.replace(f'"{placeholder}"', _js_string_literal(value))
+
+
+def _path_is_within(path: Path, root: Path) -> bool:
+    """resolve 済み path が resolve 済み root 配下にあるかを返す。"""
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HTML 生成 (APIキー注入 / §5.1.1)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,14 +188,17 @@ def _build_viewer_html(api_key: str, map_id: str) -> str:
             'd[l]?console.warn(p+" only loads once. Ignoring:",g):'
             "(d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n)))})"
         )
-        js_config = "{key: \"" + api_key + "\"}"
+        js_config_parts = ["key: " + _js_string_literal(api_key)]
+        if map_id:
+            js_config_parts.append("mapIds: [" + _js_string_literal(map_id) + "]")
+        js_config = "{" + ", ".join(js_config_parts) + "}"
         script_tag = (
             "<script>\n"
             "  " + js_loader + "(" + js_config + ");\n"
             "</script>"
         )
         html = html.replace(_PLACEHOLDER_SCRIPT, script_tag)
-        html = html.replace(_PLACEHOLDER_KEY,    api_key)
+        html = _replace_js_placeholder_literal(html, _PLACEHOLDER_KEY, api_key)
         if not map_id:
             # API key 設定済みだが GOOGLE_MAPS_MAP_ID 未設定 → DEMO_MAP_ID が注入される。
             # DEMO_MAP_ID は Google 利用規約で本番禁止 (§16 #6) のため警告を出す。
@@ -184,7 +206,7 @@ def _build_viewer_html(api_key: str, map_id: str) -> str:
                 "GOOGLE_MAPS_MAP_ID 未設定: DEMO_MAP_ID を使用します (本番非推奨 / §16 #6)"
             )
         map_id_val = map_id if map_id else "DEMO_MAP_ID"
-        html = html.replace(_PLACEHOLDER_MAP_ID, map_id_val)
+        html = _replace_js_placeholder_literal(html, _PLACEHOLDER_MAP_ID, map_id_val)
     else:
         # キー未設定: Maps スクリプトを出力しない / プレースホルダをそのまま残す
         # app.js はプレースホルダ文字列を検出して fallback アダプタに切り替える
@@ -272,7 +294,7 @@ def _validate_run_and_file(run_id: str, file: str) -> Path:
         raise HTTPException(status_code=403, detail=f"file not allowed: {file}")
 
     # run ディレクトリ存在チェック
-    data_root = _get_data_root()
+    data_root = _get_data_root().resolve()
     run_dir   = data_root / run_id
     if not run_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"run not found: {run_id}")
@@ -281,8 +303,11 @@ def _validate_run_and_file(run_id: str, file: str) -> Path:
     file_path = run_dir / file
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"file not found: {file}")
+    resolved_file_path = file_path.resolve()
+    if not _path_is_within(resolved_file_path, data_root):
+        raise HTTPException(status_code=403, detail="invalid path")
 
-    return file_path
+    return resolved_file_path
 
 
 def _stream_jsonl(path: Path) -> Generator[str, None, None]:
@@ -325,8 +350,10 @@ async def _serve_app_js() -> Response:
     map_id  = _get_maps_map_id()
     js = _APP_JS_PATH.read_text(encoding="utf-8")
     if api_key:
-        js = js.replace(_PLACEHOLDER_KEY, api_key)
-        js = js.replace(_PLACEHOLDER_MAP_ID, map_id if map_id else "DEMO_MAP_ID")
+        js = _replace_js_placeholder_literal(js, _PLACEHOLDER_KEY, api_key)
+        js = _replace_js_placeholder_literal(
+            js, _PLACEHOLDER_MAP_ID, map_id if map_id else "DEMO_MAP_ID"
+        )
     return Response(content=js, media_type="application/javascript")
 
 

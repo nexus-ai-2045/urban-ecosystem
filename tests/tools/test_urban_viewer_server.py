@@ -499,6 +499,47 @@ class TestDataEndpoint:
         assert res.status_code == 501
         assert "not implemented" in res.json()["detail"]
 
+    def test_symlink_escape_is_blocked(self, tmp_path, monkeypatch):
+        """許可ファイル名でも symlink が DATA_DIR 外を指す場合は 403 にする。"""
+        data_root = tmp_path / "data"
+        run_dir = data_root / "test_run"
+        run_dir.mkdir(parents=True)
+        outside = tmp_path / "outside_summary.json"
+        outside.write_text('{"run_id":"outside"}', encoding="utf-8")
+        (run_dir / "summary.json").symlink_to(outside)
+
+        monkeypatch.setenv("DATA_DIR", str(data_root))
+        monkeypatch.delenv("DATA_SOURCE", raising=False)
+        res = TestClient(app).get("/api/data/test_run/summary.json")
+
+        assert res.status_code == 403
+        assert "invalid path" in res.json()["detail"]
+
+    def test_relative_data_dir_still_serves_contained_file(self, tmp_path, monkeypatch):
+        """relative DATA_DIR でも resolve 後に配下なら通常通り配信する。"""
+        data_root = tmp_path / "relative_data"
+        run_dir = data_root / "test_run"
+        run_dir.mkdir(parents=True)
+        (run_dir / "summary.json").write_text(
+            json.dumps({
+                "run_id": "test_run",
+                "seed": 42,
+                "ticks": 1,
+                "agents": 1,
+                "pois": 1,
+                "interactions": 0,
+            }),
+            encoding="utf-8",
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("DATA_DIR", "relative_data")
+        monkeypatch.delenv("DATA_SOURCE", raising=False)
+        res = TestClient(app).get("/api/data/test_run/summary.json")
+
+        assert res.status_code == 200
+        assert res.json()["run_id"] == "test_run"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GET / (ビューア HTML) テスト (§5.1.1 / §13.4)
@@ -559,6 +600,36 @@ class TestViewerHTML:
         """APIキー未設定でも 500 を返さない (§13.4 / §21.4)。"""
         res = client_no_key.get("/")
         assert res.status_code != 500
+
+    def test_maps_env_values_are_json_escaped_in_html(self, sample_run_dir, monkeypatch):
+        """quote / backslash を含む env 値でも HTML 内の JS literal を壊さない。"""
+        api_key = 'TEST_"KEY\\VALUE'
+        map_id = 'MAP_"ID\\VALUE'
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", api_key)
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", map_id)
+
+        res = TestClient(app).get("/")
+
+        assert res.status_code == 200
+        assert 'key: "TEST_"KEY\\VALUE"' not in res.text
+        assert json.dumps(api_key) in res.text
+        assert json.dumps(map_id) in res.text
+
+    def test_maps_env_values_are_json_escaped_in_app_js(self, sample_run_dir, monkeypatch):
+        """app.js placeholder replacement も JSON-safe な JS literal にする。"""
+        api_key = 'TEST_"KEY\\VALUE'
+        map_id = 'MAP_"ID\\VALUE'
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", api_key)
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", map_id)
+
+        res = TestClient(app).get("/static/app.js")
+
+        assert res.status_code == 200
+        assert json.dumps(api_key) in res.text
+        assert json.dumps(map_id) in res.text
+        assert 'const MAPS_API_KEY = "TEST_"KEY\\VALUE";' not in res.text
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1264,3 +1335,29 @@ class TestAgentStatesLoadCount:
         assert correct_count != wrong_count, (
             "record 数と tick 数が一致している: テストの前提が崩れた"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# viewer run load の壊れたデータ耐性
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestViewerAppRobustLoad:
+    """app.js の loadRun 周辺に parse fallback / profile fallback / clamp があることを確認する。"""
+
+    @pytest.fixture(scope="class")
+    def app_js(self) -> str:
+        path = _PROJECT_ROOT / "tools" / "urban_viewer" / "app.js"
+        return path.read_text(encoding="utf-8")
+
+    def test_fetch_run_file_catches_parse_errors(self, app_js):
+        assert "catch (error)" in app_js
+        assert "return null;" in app_js
+        assert "JSON.parse(l)" in app_js
+
+    def test_profile_file_falls_back_to_n100(self, app_js):
+        assert "agent_profiles_N100.json" in app_js
+        assert "profilesFileFallbackUsed" in app_js
+
+    def test_slider_index_is_clamped(self, app_js):
+        assert "_clampTickIndex" in app_js
+        assert "Math.max(0, Math.min(maxIndex, idx))" in app_js

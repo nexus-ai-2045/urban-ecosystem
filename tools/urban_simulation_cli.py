@@ -132,7 +132,11 @@ def _run(args: argparse.Namespace) -> int:
         pois_path = Path(args.pois)
         profiles_path = Path(args.profiles)
 
-    pois, profiles = load_inputs(pois_path, profiles_path)
+    try:
+        pois, profiles = load_inputs(pois_path, profiles_path)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     aoi_count = _count_features(aois_path)
     road_count = _count_features(roadnet_path)
 
@@ -170,19 +174,23 @@ def _run(args: argparse.Namespace) -> int:
     # --no-summaries で interaction summary 生成をスキップする (#1 会話オプション)
     enable_summaries: bool = not getattr(args, "no_summaries", False)
 
-    sim = Simulation(
-        pois,
-        profiles,
-        seed=args.seed,
-        ticks=args.ticks,
-        run_id=run_id,
-        aois=aoi_count,
-        roads=road_count,
-        road_graph=road_graph,
-        llm_provider=provider,
-        enable_summaries=enable_summaries,
-    )
-    summary = sim.run(out_dir)
+    try:
+        sim = Simulation(
+            pois,
+            profiles,
+            seed=args.seed,
+            ticks=args.ticks,
+            run_id=run_id,
+            aois=aoi_count,
+            roads=road_count,
+            road_graph=road_graph,
+            llm_provider=provider,
+            enable_summaries=enable_summaries,
+        )
+        summary = sim.run(out_dir)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
