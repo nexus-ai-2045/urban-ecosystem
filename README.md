@@ -32,6 +32,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+  --profiles data/sample/agent_profiles_N10.json
+```
 
 依存は最小構成（runtime = fastapi / uvicorn / httpx、dev = pytest）。
 Vertex AI Gemini を使う場合のみ `pip install google-genai`（遅延 import のため通常は不要）。
