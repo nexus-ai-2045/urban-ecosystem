@@ -73,7 +73,7 @@ PR #1〜#7 を古い順に見て、初回参加者に伝えるべき現在地だ
 | #6 | 小さすぎる POI 数は読みやすいエラーになります。サンプル生成は README の既定手順から始めます。 |
 | #7 | API キーなしで動く CI / fallback E2E があります。初回レビューはこの範囲を基準にします。 |
 
-このため、現在の公開案内ではまず API キーなしの fallback viewer レビューを案内します。README 再現性や課金境界の追加 feedback は、新しい小さい issue に分けます。GCS、Cloud Run、Vertex AI、Google Maps、Google Places は maintainer が範囲を切ってから扱います。Discord 導線は一旦フリーズ中です。
+このため、現在の公開案内ではまず API キーなしの fallback viewer レビューを案内します。README 再現性や課金境界の追加 feedback は、新しい小さい issue に分けます。各自の Google Cloud project で試す場合は各自の責任で行い、Nexus 管理 project の GCS、Cloud Run、Vertex AI、Google Maps、Google Places は maintainer が範囲を切ってから扱います。Discord 導線は一旦フリーズ中です。
 
 ## fallback viewer レビューの現在地
 
@@ -115,27 +115,6 @@ Discord 通知は便利な補助ですが、現在は一旦フリーズ中です
 - 個人メール、内部 URL、内部コメントを貼らない。
 - 公開面の名義は Nexus に統一する。
 - 迷ったら GitHub issue に「ここは公開してよい範囲か」を確認する。
-
-## Discord 再開時に貼る短文
-
-現在は Discord 導線を一旦フリーズしています。下記は再開時の文面候補であり、現時点では投稿しません。
-
-```text
-urban-ecosystem の公開協業入口を整理しました。
-最初はコードを書かなくてもOKです。
-
-まずは fallback 地図UIレビューから歓迎です。
-APIキーなしで動く範囲から始めるので、Google Cloud課金は発生しません。
-
-現在地:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
-
-はじめに読む:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
-
-最初のissue:
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
-```
 
 ## 完了の見方
 

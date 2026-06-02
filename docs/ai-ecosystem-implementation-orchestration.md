@@ -204,7 +204,7 @@ Human gate 要点:
 - WO-008: Vertex Gemini の利用 → G2 (利用量・実験範囲)。
 - WO-009: 移動モデル変更で決定論出力が変わる → G1。
 
-Phase 1 完了済み (本バッチ対象外): #7 viewer ラベル平易化 / #1 会話要約 LLM 化 / #2 実店名・擬似苗字 / #4 POI 実名 (詳細は docs/NEXT-SESSION.md)。
+Phase 1 完了済み (本バッチ対象外): viewer ラベル平易化 / 会話要約 LLM 化 / 実店名・擬似苗字 / POI 実名。
 
 ## Definition of Done
 
@@ -217,6 +217,6 @@ Phase 1 完了済み (本バッチ対象外): #7 viewer ラベル平易化 / #1 
 
 ## Current Recommendation
 
-第一成果物 (WO-URBAN-001〜005 を通した「100 体 1 日リプレイ」) は達成済み (local 完動 / Cloud Run 限定デプロイ済 / 詳細 docs/NEXT-SESSION.md)。
+第一成果物 (WO-URBAN-001〜005 を通した「100 体 1 日リプレイ」) は達成済み。
 
 次の着手は Urban Realism Batch の `WO-URBAN-006 Rich Profile` から始める。理由は、姓名分割と profile context が WO-007 (苗字表示) と WO-008 (行動決定 LLM 本体) の共通土台になるため。WO-009 (道路追従) と WO-010 (ラベル日本語化) は書き込みパスが重ならないので並列可。開発・検証は 10 体で回す (CEO 確定 2026-05-29)。

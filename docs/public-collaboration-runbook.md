@@ -42,31 +42,12 @@ python tools/smoke_fallback_viewer.py
 現在地の棚卸し: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 Discord 通知設定 (現在フリーズ): [`docs/discord-pr-notifications.md`](discord-pr-notifications.md)
 
-## Discord 再開時に貼る案内
-
-現在は Discord 導線を一旦フリーズしています。下記は再開時の文面候補であり、現時点では投稿しません。
-
-```text
-urban-ecosystem の公開協業入口を作りました。
-まずは「見るだけ」「README手順を試す」「fallback地図UIを見る」から歓迎です。
-APIキーなしで動くので、Google Cloud課金は発生しません。
-
-はじめに読む:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
-
-現在地:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
-
-最初のissue:
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
-```
-
 ## 参加者に伝える禁止事項
 
 - API キー、トークン、`.env` を貼らない。
 - public PR に出す前に、人間レビューを受ける。
-- Google Cloud / Vertex AI / Google Maps / Google Places を勝手に実行しない。
-- Cloud Run deploy をしない。
+- 各自の Google Cloud project で試す場合は、自分の課金・公開範囲・IAM 変更として扱う。
+- Nexus 管理 project の Google Cloud / Vertex AI / Google Maps / Google Places / Cloud Run は、maintainer 承認なしで実行しない。
 - `data/` の生成物や大きな実験結果を commit しない。
 - 大きな実装 PR は、先に issue で目的と範囲を共有する。
 
