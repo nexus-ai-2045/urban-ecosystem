@@ -1,6 +1,6 @@
 # Discord PR 通知
 
-> 現在、Discord PR 通知は一旦フリーズ中です。Discord webhook 作成、GitHub secret `DISCORD_WEBHOOK_URL` 設定、Actions 手動 test、Discord 投稿は行いません。再開する場合は issue #13 から続けます。
+> 現在、Discord PR 通知は一旦フリーズ中です。Discord webhook 作成、GitHub secret `DISCORD_WEBHOOK_URL` 設定、Actions 手動 test、Discord 投稿は行いません。旧 tracking issue #13 は close 済みです。
 
 GitHub PR を Discord に自動通知するには、Discord Webhook URL を GitHub Actions secret として保存します。
 
@@ -59,7 +59,7 @@ Actions page: <https://github.com/nexus-ai-2045/urban-ecosystem/actions/workflow
 
 maintainer は再開時に次の順に確認します。現時点では実行しません。
 
-Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
+旧 tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13> (close 済み)
 
 1. Discord の投稿先 channel を決める。
 2. channel settings から webhook を作成する。
@@ -72,7 +72,7 @@ Tracking issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/13>
 9. GitHub repo の `Actions` → `Discord PR notify` → `Run workflow` から手動 test を実行する。
 10. Discord に test 投稿が出ることを確認する。
 11. 次の PR 作成時に自動投稿されることを確認する。
-12. 投稿されたら Discord に `docs/discord-start-here.md` の短文を貼り、#10 / #11 / #12 のどれから始めるか案内する。
+12. 投稿されたら Discord に `docs/discord-start-here.md` の短文を貼り、現在 open の初回 issue から始めるよう案内する。
 
 ## Test で見ること
 
