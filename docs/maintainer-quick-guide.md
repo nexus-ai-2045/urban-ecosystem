@@ -17,12 +17,12 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 
 | 場所 | 使う目的 |
 |---|---|
-| Discord | 人を呼ぶ、軽く質問する、入口を案内する |
+| Discord | 人を呼ぶ、軽く質問する、入口を案内する。現在は一旦フリーズ |
 | GitHub issue | 作業内容、完了条件、質問を残す |
 | GitHub PR | 実際の変更、review、merge 判断を残す |
 | Linear | maintainer 側の milestone と運用状態を残す |
 
-迷ったら、公開協業者に見せる作業と判断の正本は GitHub に残します。Discord は流れてもよい入口です。Linear は Nexus 内部管理です。
+迷ったら、公開協業者に見せる作業と判断の正本は GitHub に残します。Discord は流れてもよい入口ですが、現在は一旦フリーズ中です。Linear は Nexus 内部管理です。
 
 公開面の名義は Nexus に統一します。詳細は [`docs/public-identity-policy.md`](public-identity-policy.md) を見てください。
 
@@ -46,9 +46,11 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 4. README 再現性や課金境界の追加 feedback は、新しい小さい issue に分ける。
 5. Discord 再開は別判断にし、webhook / secret / Actions test は今は行わない。
 
-Discord webhook の詳しい設定手順は [`docs/discord-pr-notifications.md`](discord-pr-notifications.md) を見てください。
+Discord webhook の詳しい設定手順は [`docs/discord-pr-notifications.md`](discord-pr-notifications.md) に残しています。現在は実行しません。
 
-## Discord に貼るときの言い方
+## Discord 再開時に貼る文面候補
+
+現在は Discord 導線を一旦フリーズしています。下記は再開時の候補であり、現時点では投稿しません。
 
 ```text
 urban-ecosystem の公開協業を始めます。

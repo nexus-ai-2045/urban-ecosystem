@@ -18,7 +18,7 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 
 ### 1. 見るだけ
 
-README を読んで、「何をするプロジェクトか分かるか」を Discord か GitHub issue にコメントしてください。
+README を読んで、「何をするプロジェクトか分かるか」を GitHub issue にコメントしてください。Discord 導線は現在一旦フリーズ中です。
 
 書いてほしいこと:
 
@@ -64,7 +64,9 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 - `data/` の生成物や大きな実験結果を commit しない
 - 大きな実装 PR は、先に issue で目的と範囲を共有する
 
-## Discord に貼る短文
+## Discord 再開時に貼る短文
+
+現在は Discord 導線を一旦フリーズしています。下記は再開時の候補であり、現時点では投稿しません。
 
 ```text
 urban-ecosystem の公開協業入口を作っています。
@@ -89,4 +91,4 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
 
 ## 迷ったら
 
-Discord では「見た」「動いた」「ここで詰まった」の一言だけでも助かります。正式な議論や採否は GitHub issue / PR に残します。
+迷ったら、GitHub issue に「見た」「動いた」「ここで詰まった」の一言だけでも残してください。正式な議論や採否は GitHub issue / PR に残します。
