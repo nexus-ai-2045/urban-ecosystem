@@ -11,6 +11,7 @@ updated: 2026-06-03
 - **現在の公開入口**: GitHub issue #11 の fallback viewer レビューのみ。#10 / #12 は baseline complete で close、#13 は Discord freeze 方針で close。
 - **#11 の入口**: issue 本文先頭と README に「1分で反応する場合」を追加済み。コードを書かなくても、smoke 結果・分かりにくい場所・環境だけコメントできる。
 - **fallback smoke 導線**: `README.md` / `docs/good-first-issues.md` / `docs/public-collaboration-status.md` / `docs/public-collaboration-runbook.md` / `docs/maintainer-quick-guide.md` に `python tools/smoke_fallback_viewer.py` を反映済み。
+- **fallback smoke 実測**: `main` `a596331` で API キーなし smoke 済み。`/api/health` は `status: ok` / `data_source: local` / `maps_key: absent`、`/api/runs` は `sample`。証跡は #11 コメント <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11#issuecomment-4604044929>。
 - **Discord**: 一旦フリーズ。webhook 作成、GitHub secret 設定、Actions 手動実行、Discord 投稿は行わない。
 - **Discord docs**: `docs/discord-pr-notifications.md` は再開時参照であり、現時点の作業指示ではないと明記済み。
 - **Repo subtitle**: GitHub repository description は「渋谷の街を舞台にした、決定論的な都市エージェント・シミュレーション。」に設定済み。
