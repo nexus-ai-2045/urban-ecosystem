@@ -5,15 +5,16 @@
 
 /* ─── CSS Variables (テーマ管理しやすく) ─────────────────────────────── */
 :root {
-    --bg-primary: #f8f9fa;
+    --bg-primary: #f6f7f8;
     --bg-panel: #ffffff;
-    --bg-header: #1a1f2e;
-    --bg-footer: #1a1f2e;
-    --text-primary: #2d3748;
-    --text-secondary: #718096;
-    --accent: #2ecc71;
-    --accent-hover: #27ae60;
-    --border-color: #e2e8f0;
+    --bg-header: #263238;
+    --bg-footer: #263238;
+    --text-primary: #243238;
+    --text-secondary: #66727a;
+    --accent: #1f9d68;
+    --accent-hover: #168556;
+    --border-color: #d9e0e3;
+    --warning: #b7791f;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --radius: 8px;
@@ -48,7 +49,7 @@ body {
     font-weight: 600;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm);
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
 }
 
 /* ─── メインレイアウト ─────────────────────────────────────────────── */
@@ -62,8 +63,8 @@ body {
 
 /* ─── 左パネル ─────────────────────────────────────────────────────── */
 .left-panel {
-    width: 220px;
-    min-width: 180px;
+    width: 248px;
+    min-width: 220px;
     background: var(--bg-panel);
     display: flex;
     flex-direction: column;
@@ -130,6 +131,53 @@ body {
     transform: translateY(0);
 }
 
+.load-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 8px 0 4px;
+    list-style: none;
+}
+
+.load-status-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 24px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: #f8faf9;
+}
+
+.load-status-file {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.load-status-result {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.load-status--ok {
+    color: #0f7a4f;
+}
+
+.load-status--warning {
+    color: var(--warning);
+}
+
+.load-status--error {
+    color: #b42318;
+}
+
 /* レイヤートグル (改善版) */
 .layer-toggle {
     display: flex;
@@ -161,6 +209,87 @@ body {
     padding-left: 30px;
 }
 
+.map-status-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: #f8faf9;
+}
+
+.status-row,
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 24px;
+}
+
+.status-label,
+.settings-row span:first-child {
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.status-value,
+.settings-row span:last-child {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status-pill--ok {
+    color: #0f5132;
+    background: #d7f5e5;
+}
+
+.status-pill--muted {
+    color: #4b5563;
+    background: #eef2f4;
+}
+
+.left-panel-spacer {
+    flex: 1;
+    min-height: 16px;
+}
+
+.settings-button {
+    margin-top: 12px;
+}
+
+.settings-panel {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: #fbfcfd;
+}
+
+.settings-note {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
 /* ─── 地図エリア ───────────────────────────────────────────────────── */
 .map-wrapper {
     flex: 1;
@@ -184,8 +313,8 @@ body {
 
 /* ─── 右パネル ─────────────────────────────────────────────────────── */
 .right-panel {
-    width: 260px;
-    min-width: 200px;
+    width: 300px;
+    min-width: 260px;
     background: var(--bg-panel);
     border-left: 1px solid var(--border-color);
     display: flex;
@@ -193,6 +322,56 @@ body {
     overflow-y: auto;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm);
+}
+
+.live-panel {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: #fbfcfd;
+}
+
+.live-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0;
+    margin-bottom: 12px;
+}
+
+.live-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.live-grid > div {
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #ffffff;
+}
+
+.live-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-bottom: 3px;
+}
+
+.live-value {
+    display: block;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 凡例 */
@@ -394,7 +573,8 @@ body {
 /* 小さな画面対応 */
 @media (max-width: 900px) {
     .left-panel, .right-panel {
-        width: 180px;
+        width: 220px;
+        min-width: 200px;
     }
     .time-controls {
         gap: 8px;

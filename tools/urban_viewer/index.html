@@ -27,7 +27,7 @@
   <header class="app-header">Urban Ecosystem Replay Viewer</header>
 
   <main class="app-body">
-    <!-- 左パネル: データ読込 / レイヤー (§5.2) -->
+    <!-- 左パネル: データ読込 / レイヤー / 設定 (§5.2) -->
     <aside class="left-panel">
       <div class="panel-title">データ読込</div>
       <select id="run-select" aria-label="run 選択">
@@ -55,6 +55,42 @@
         <input type="checkbox" id="layer-agent" checked>
         住人
       </label>
+
+      <div class="panel-title">マップ状態</div>
+      <div id="map-status-panel" class="map-status-panel" aria-live="polite">
+        <div class="status-row">
+          <span class="status-label">描画</span>
+          <span id="map-mode-value" class="status-pill status-pill--muted">確認中</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Maps API</span>
+          <span id="maps-key-value" class="status-value">確認中</span>
+        </div>
+      </div>
+
+      <div class="left-panel-spacer"></div>
+
+      <button
+        id="btn-settings"
+        class="settings-button"
+        type="button"
+        aria-expanded="false"
+        aria-controls="settings-panel"
+        title="設定"
+      >⚙ 設定</button>
+      <div id="settings-panel" class="settings-panel" hidden>
+        <div class="settings-row">
+          <span>データ</span>
+          <span id="data-source-value">local</span>
+        </div>
+        <div class="settings-row">
+          <span>Map ID</span>
+          <span id="map-id-value">未設定</span>
+        </div>
+        <div class="settings-note">
+          Google Maps はサーバー起動時の環境変数で有効化します。
+        </div>
+      </div>
     </aside>
 
     <!-- 地図エリア (§5.1) -->
@@ -68,6 +104,38 @@
 
     <!-- 右パネル: 凡例 / エージェント詳細 (§5.3) -->
     <aside class="right-panel">
+      <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
+        <div class="live-header">
+          <span>ライブ</span>
+          <span id="playback-state" class="status-pill status-pill--muted">停止中</span>
+        </div>
+        <div class="live-grid">
+          <div>
+            <span class="live-label">Run</span>
+            <span id="live-run-id" class="live-value">—</span>
+          </div>
+          <div>
+            <span class="live-label">Tick</span>
+            <span id="live-tick" class="live-value">0 / 0</span>
+          </div>
+          <div>
+            <span class="live-label">時刻</span>
+            <span id="live-time" class="live-value">Day 0 08:00:00</span>
+          </div>
+          <div>
+            <span class="live-label">住人</span>
+            <span id="live-agent-count" class="live-value">0</span>
+          </div>
+          <div>
+            <span class="live-label">移動中</span>
+            <span id="live-moving-count" class="live-value">0</span>
+          </div>
+          <div>
+            <span class="live-label">選択</span>
+            <span id="live-selected-agent" class="live-value">なし</span>
+          </div>
+        </div>
+      </div>
       <div id="legend-panel" aria-label="凡例">
         <div class="legend-header">凡例</div>
         <div class="legend-total">データ未ロード</div>
