@@ -31,6 +31,15 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 
 目的: API キーなしで表示される fallback 地図の見やすさ、ラベル、操作感をレビューする。
 
+短く確認する場合:
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+この smoke は sample run を作り、API キーなしで `/api/health` と `/api/runs` を確認します。Google Cloud、Secret Manager、Discord は使いません。
+
 現在の viewer は、左側にデータ読込・レイヤー・マップ状態・設定、中央に地図、右側にライブ概要・凡例・エージェント詳細、下部に再生コントロールを持ちます。Google Maps API キーがない場合は、左側のマップ状態が fallback / Maps API absent になることも確認対象です。
 
 成果物:
