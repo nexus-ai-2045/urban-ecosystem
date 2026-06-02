@@ -24,6 +24,70 @@ import {
 } from "./labels.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// マップ状態 / ライブパネル
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 左パネルの地図状態と設定表示を更新する。
+ * @param {Object} els
+ * @param {{ mode:string, mapsKey:string, dataSource:string, mapId:string }} info
+ */
+export function updateMapStatus(els, info) {
+    if (!els) return;
+
+    if (els.modeValue) {
+        els.modeValue.textContent = info.mode || "Fallback";
+        els.modeValue.classList.toggle("status-pill--ok", info.mode === "Google Maps");
+        els.modeValue.classList.toggle("status-pill--muted", info.mode !== "Google Maps");
+    }
+    if (els.mapsKeyValue) {
+        els.mapsKeyValue.textContent = info.mapsKey || "absent";
+    }
+    if (els.dataSourceValue) {
+        els.dataSourceValue.textContent = info.dataSource || "local";
+    }
+    if (els.mapIdValue) {
+        els.mapIdValue.textContent = info.mapId || "未設定";
+    }
+}
+
+/**
+ * 右パネルのリアルタイム概要を更新する。
+ * @param {Object} els
+ * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null }} snapshot
+ */
+export function updateLivePanel(els, snapshot) {
+    if (!els) return;
+
+    if (els.playbackState) {
+        els.playbackState.textContent = snapshot.playing ? "再生中" : "停止中";
+        els.playbackState.classList.toggle("status-pill--ok", snapshot.playing);
+        els.playbackState.classList.toggle("status-pill--muted", !snapshot.playing);
+    }
+    if (els.runId) {
+        els.runId.textContent = snapshot.runId || "—";
+    }
+    if (els.tick) {
+        els.tick.textContent = `${snapshot.tick || 0} / ${snapshot.tickTotal || 0}`;
+    }
+    if (els.time) {
+        const day = snapshot.day ?? 0;
+        els.time.textContent = `Day ${day} ${snapshot.time || "08:00:00"}`;
+    }
+    if (els.agentCount) {
+        els.agentCount.textContent = String(snapshot.agents || 0);
+    }
+    if (els.movingCount) {
+        els.movingCount.textContent = String(snapshot.moving || 0);
+    }
+    if (els.selectedAgent) {
+        els.selectedAgent.textContent = snapshot.selectedAgentId == null
+            ? "なし"
+            : `Agent ${snapshot.selectedAgentId}`;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 凡例パネル
 // ─────────────────────────────────────────────────────────────────────────────
 
