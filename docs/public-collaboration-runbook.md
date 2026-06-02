@@ -2,7 +2,7 @@
 
 この runbook は、maintainer が GitHub を正本として公開協業を進めるための最短手順です。
 
-> 現在、Discord 導線は一旦フリーズ中です。Webhook 作成、GitHub secret 設定、Actions 手動 test、Discord 投稿は行いません。再開する場合は issue #13 から続けます。
+> 現在、Discord 導線は一旦フリーズ中です。Webhook 作成、GitHub secret 設定、Actions 手動 test、Discord 投稿は行いません。旧 issue #13 は close 済みです。
 
 ## 役割分担
 
@@ -21,10 +21,10 @@ Discord は入口候補です。公開協業者に見せる決定や採否は Gi
 
 1. 公開協業 milestone を確認する。
 2. `docs/public-collaboration-status.md` の現在地を確認する。
-3. 参加者には #10 / #11 / #12 のどれかを選んでもらう。
+3. 参加者には #11 の fallback viewer レビューを案内する。
 4. コメントには実行環境、試したこと、分かりにくかった点を書いてもらう。
 5. 修正が必要なら、小さな docs / UI PR に分ける。
-6. Discord 再開が必要になった場合だけ、#13 から webhook / secret / Actions test を扱う。
+6. Discord 再開が必要になった場合だけ、新しい判断で webhook / secret / Actions test を扱う。
 
 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
 現在地の棚卸し: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
@@ -46,9 +46,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-he
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
 
 最初のissue:
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/10
 https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 ```
 
 ## 参加者に伝える禁止事項
@@ -72,8 +70,8 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 初回公開協業の準備ができたと言える条件:
 
 - 公開協業 milestone が GitHub にある。
-- #13 が Discord 再開入口として open のまま残っている。
-- #10 / #11 / #12 のどれかに外部参加者が反応できる状態。
+- #11 に外部参加者が反応できる状態。
+- #10 / #12 / #13 は完了または停止理由つきで close されている。
 
 未完のままでも進めてよい条件:
 

@@ -2,11 +2,13 @@
 
 公開協業の初回入口として扱いやすい候補です。
 
-最初はコード実装を広く募集せず、レビュー・再現性確認・小さな文書修正から始めます。
+最初はコード実装を広く募集せず、レビュー・再現性確認・小さな文書修正から始めます。現在 open の初回入口は #11 です。
 
 ## 1. ローカル起動手順の再現性レビュー
 
 GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
+
+状態: maintainer baseline 済みで close。追加 feedback は新しい小さい issue に分けます。
 
 目的: README のセットアップ、データ生成、シミュレーション、ビューア起動が初見で通るか確認する。
 
@@ -47,6 +49,8 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 ## 3. 課金境界・秘密情報境界の説明レビュー
 
 GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
+
+状態: maintainer baseline 済みで close。追加 feedback は新しい小さい docs issue に分けます。
 
 目的: README と CONTRIBUTING の課金境界、API キー、`.env`、生成データの扱いが初見で伝わるか確認する。
 

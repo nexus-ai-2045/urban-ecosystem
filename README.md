@@ -136,8 +136,9 @@ GitHub Actions の CI も同じく API キーなしで Chromium を入れ、fall
 | 場所 | 役割 |
 |---|---|
 | GitHub PR #9 | 協業入口を repository に入れた土台 |
-| GitHub issue #10 / #11 / #12 | 初回協力者が選びやすい小さい作業 |
-| GitHub issue #13 | Discord PR 通知の再開入口。現在は一旦フリーズ |
+| GitHub issue #11 | 現在 open の初回協力入口。fallback 地図ビューアの見やすさレビュー |
+| GitHub issue #10 / #12 | maintainer baseline 済みで close。再現性・課金境界の追加 feedback は新しい小さい issue に分ける |
+| GitHub issue #13 | Discord PR 通知はフリーズ方針により close。再開時は新しい判断で扱う |
 | Linear | Nexus maintainer 側の内部マイルストーン / 運用管理。公開正本ではない |
 | Discord | 呼び込みと軽い案内。決定や採否の正本ではない |
 
