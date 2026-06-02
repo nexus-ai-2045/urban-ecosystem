@@ -26,6 +26,15 @@ Discord は入口候補です。公開協業者に見せる決定や採否は Gi
 5. 修正が必要なら、小さな docs / UI PR に分ける。
 6. Discord 再開が必要になった場合だけ、新しい判断で webhook / secret / Actions test を扱う。
 
+参加者に短く試してもらう場合は、README と同じ smoke を案内します。
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+この smoke は #11 の入口確認用です。Google Cloud、Secret Manager、Discord は使いません。
+
 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
 現在地の棚卸し: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 Discord 通知設定 (現在フリーズ): [`docs/discord-pr-notifications.md`](discord-pr-notifications.md)
