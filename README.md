@@ -6,6 +6,33 @@
 渋谷の実在スポットを舞台に、住人エージェントが通勤・昼食・買い物・交流・帰宅を行い、
 その 1 日を地図ビューアでリプレイできます。
 
+## はじめて触る人へ
+
+最初から Google Cloud や API キーを用意する必要はありません。まずは API キーなしで動く fallback 地図ビューアを見て、「分かりにくいところ」「見やすくしたいところ」をコメントしてもらえるだけで助かります。
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+起動できたら、表示された URL を開いてください。
+
+見るポイント:
+
+- 左側の状態表示が分かりやすいか。
+- 地図上の POI / AOI / 住人の意味が伝わるか。
+- 右側のライブ概要で、いま何が起きているか追えるか。
+- 下部の再生、ステップ、速度操作が初見で使えるか。
+
+コードを書かなくても大丈夫です。「ここが分からない」「この文言が不親切」「このボタンが見つけにくい」みたいなコメントも歓迎です。
+
+現在の最初の入口:
+
+- GitHub issue #11: fallback 地図ビューアの見やすさレビュー
+- 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
+
+Google Maps、Google Places、Vertex AI、Cloud Run などを実際に使う作業は、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
+
 ## 特徴
 
 - 🗺️ **実 Google Maps + 実渋谷 POI**。API キーが無くても fallback 地図で動く（CI / テスト主経路）。
