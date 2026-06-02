@@ -31,6 +31,15 @@
 |---|---|---|
 | #11 | fallback 地図ビューアの見やすさをレビューする | API キーなしの画面を見て、左パネル・地図・右ライブ概要・下部操作で分かりにくい点を書く |
 
+短く確認する場合は、README と同じ smoke を使います。
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+この smoke は GitHub issue #11 の入口確認用です。Google Cloud、Secret Manager、Discord は使いません。
+
 ## 運用者側で進めるもの
 
 | issue | 内容 | 状態 |
