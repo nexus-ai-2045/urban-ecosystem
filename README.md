@@ -146,6 +146,14 @@ python tools/smoke_fallback_viewer.py
 
 公開協業で見せる作業・判断・採否の正本は GitHub の docs / issues / PR です。まずは [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md) と [`docs/good-first-issues.md`](docs/good-first-issues.md) を見てください。
 
+#11 はコードを書かなくても参加できます。1分で反応する場合は、次だけコメントしてください。
+
+1. `python tools/smoke_fallback_viewer.py` が通ったか。
+2. fallback 地図、左パネル、右ライブ概要、下部コントロールで分かりにくい場所。
+3. OS、ブラウザ、画面サイズ。
+
+API key、token、`.env`、個人情報、内部 URL は貼らないでください。
+
 | 場所 | 役割 |
 |---|---|
 | GitHub PR #9 | 協業入口を repository に入れた土台 |
