@@ -46,6 +46,8 @@ Vertex AI Gemini を使う場合のみ `pip install google-genai`（遅延 impor
 python tools/generate_urban_sample.py --agents 10 --seed 42 --out-dir data/sample
 ```
 
+このコマンドで、次のシミュレーション手順に使う `data/sample/agent_profiles_N10.json` も生成されます。`--agents` の値を変えた場合は、生成される profile file 名の `N10` 部分も変わります。
+
 実渋谷データ（Google Places API / `.env` にキーが必要）:
 
 ```bash
@@ -79,6 +81,7 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 
 `GOOGLE_MAPS_API_KEY` が未設定なら fallback 地図、設定済みなら実 Google Maps タイルで表示されます。
 リポジトリ直下の `.env` は既定では読み込みません。ローカル開発で `.env` を使う場合だけ、`URBAN_ECOSYSTEM_LOAD_DOTENV=1` を明示してください。
+API キーなしの再現性レビューでは、`GOOGLE_MAPS_API_KEY` / `GOOGLE_PLACES_API_KEY` / `GOOGLE_CLOUD_PROJECT` を未設定にした状態で起動してください。
 
 ## テスト
 
