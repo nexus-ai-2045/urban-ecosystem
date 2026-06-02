@@ -25,6 +25,7 @@ updated: 2026-06-03
 - **#45**: `docs/NEXT-SESSION.md` を 2026-06-03 の公開協業状態に更新。
 - **#46**: `docs/public-collaboration-status.md` の日付と完了条件を #11 1分版 / smoke 導線に合わせて更新。
 - **#47**: README の公開協業入口に #11 の 1分参加方法を追加。
+- **#48**: `docs/NEXT-SESSION.md` に README 入口更新と PR #45〜#47 を反映。
 
 ### 既存 batch (WO-011..013) — 完了済み (398 passed)
 - **WO-011 (#1 roadnet)** `a86780c`: `_build_roads` を Prim法MST化。道路追従で interactions 0→976。rng消費位置保存で agent_profiles byte 不変。review: approve。
