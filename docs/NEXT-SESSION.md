@@ -9,7 +9,7 @@ updated: 2026-06-03
 - **公開名義**: GitHub の公開面は `nexus-ai-2045` に統一する。個人アカウントの token / 名義を公開協業の正本にしない。
 - **公開正本**: GitHub docs / issues / PRs。Linear は Nexus maintainer 側の内部管理。
 - **現在の公開入口**: GitHub issue #11 の fallback viewer レビューのみ。#10 / #12 は baseline complete で close、#13 は Discord freeze 方針で close。
-- **#11 の入口**: issue 本文先頭に「1分で反応する場合」を追加済み。コードを書かなくても、smoke 結果・分かりにくい場所・環境だけコメントできる。
+- **#11 の入口**: issue 本文先頭と README に「1分で反応する場合」を追加済み。コードを書かなくても、smoke 結果・分かりにくい場所・環境だけコメントできる。
 - **fallback smoke 導線**: `README.md` / `docs/good-first-issues.md` / `docs/public-collaboration-status.md` / `docs/public-collaboration-runbook.md` / `docs/maintainer-quick-guide.md` に `python tools/smoke_fallback_viewer.py` を反映済み。
 - **Discord**: 一旦フリーズ。webhook 作成、GitHub secret 設定、Actions 手動実行、Discord 投稿は行わない。
 - **Discord docs**: `docs/discord-pr-notifications.md` は再開時参照であり、現時点の作業指示ではないと明記済み。
@@ -22,6 +22,9 @@ updated: 2026-06-03
 - **#42**: `docs/public-collaboration-status.md` に同じ smoke 導線を追加。
 - **#43**: maintainer quick guide / public collaboration runbook に参加者向け smoke 導線を追加。
 - **#44**: Discord 通知手順を、現在実行する手順ではなく再開時参照として明確化。
+- **#45**: `docs/NEXT-SESSION.md` を 2026-06-03 の公開協業状態に更新。
+- **#46**: `docs/public-collaboration-status.md` の日付と完了条件を #11 1分版 / smoke 導線に合わせて更新。
+- **#47**: README の公開協業入口に #11 の 1分参加方法を追加。
 
 ### 既存 batch (WO-011..013) — 完了済み (398 passed)
 - **WO-011 (#1 roadnet)** `a86780c`: `_build_roads` を Prim法MST化。道路追従で interactions 0→976。rng消費位置保存で agent_profiles byte 不変。review: approve。
