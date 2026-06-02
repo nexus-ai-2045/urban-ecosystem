@@ -19,6 +19,8 @@ import {
     updateLegend,
     updateAgentDetail,
     updateLoadStatus,
+    updateLivePanel,
+    updateMapStatus,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -37,6 +39,9 @@ const MAPS_MAP_ID  = "%%GOOGLE_MAPS_MAP_ID%%";
 
 /** API サーバー base URL (同一オリジン) */
 const API_BASE = "";
+
+/** Google Maps を使うかどうか */
+const hasApiKey = MAPS_API_KEY && !MAPS_API_KEY.startsWith("%%");
 
 /** requestAnimationFrame の実時間あたり tick 数: speed(1|2|5) x を何 ms で 1 tick 進めるか */
 const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
@@ -71,6 +76,13 @@ const state = {
         speed:       1,
         statesByTick: new Map(),
     },
+    runtime: {
+        runId:      "",
+        mapMode:    "Fallback",
+        mapsKey:    hasApiKey ? "present" : "absent",
+        dataSource: "local",
+        mapId:      MAPS_MAP_ID && !MAPS_MAP_ID.startsWith("%%") ? MAPS_MAP_ID : "",
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   true,
@@ -88,9 +100,6 @@ const state = {
 
 /** @type {FallbackMapAdapter|GoogleMapsAdapter} */
 let adapter = null;
-
-/** Google Maps を使うかどうか */
-const hasApiKey = MAPS_API_KEY && !MAPS_API_KEY.startsWith("%%");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DOM 要素
@@ -112,6 +121,25 @@ const layerPoi      = document.getElementById("layer-poi");
 const layerAoi      = document.getElementById("layer-aoi");
 const layerRoad     = document.getElementById("layer-road");
 const layerAgent    = document.getElementById("layer-agent");
+const settingsBtn   = document.getElementById("btn-settings");
+const settingsPanel = document.getElementById("settings-panel");
+
+const mapStatusEls = {
+    modeValue:      document.getElementById("map-mode-value"),
+    mapsKeyValue:   document.getElementById("maps-key-value"),
+    dataSourceValue: document.getElementById("data-source-value"),
+    mapIdValue:     document.getElementById("map-id-value"),
+};
+
+const liveEls = {
+    playbackState: document.getElementById("playback-state"),
+    runId:         document.getElementById("live-run-id"),
+    tick:          document.getElementById("live-tick"),
+    time:          document.getElementById("live-time"),
+    agentCount:    document.getElementById("live-agent-count"),
+    movingCount:   document.getElementById("live-moving-count"),
+    selectedAgent: document.getElementById("live-selected-agent"),
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
@@ -119,20 +147,34 @@ const layerAgent    = document.getElementById("layer-agent");
 
 async function initAdapter() {
     if (hasApiKey) {
-        adapter = new GoogleMapsAdapter(mapContainer, MAPS_API_KEY, MAPS_MAP_ID);
+        try {
+            adapter = new GoogleMapsAdapter(mapContainer, MAPS_API_KEY, MAPS_MAP_ID);
+            await adapter.init();
+            state.runtime.mapMode = "Google Maps";
+            updateMapRuntimeStatus();
+            adapter.onAgentClick(handleAgentClick);
+            return;
+        } catch (error) {
+            console.warn("Google Maps の初期化に失敗したため fallback 地図に切り替えます。", error);
+            state.runtime.mapMode = "Fallback";
+        }
     } else {
-        // fallback: canvas を使う
-        if (mapCanvas) mapCanvas.style.display = "block";
-        if (mapContainer) mapContainer.style.position = "relative";
-        adapter = new FallbackMapAdapter(mapCanvas);
+        state.runtime.mapMode = "Fallback";
     }
+
+    // fallback: canvas を使う
+    if (mapCanvas) mapCanvas.style.display = "block";
+    if (mapContainer) mapContainer.style.position = "relative";
+    adapter = new FallbackMapAdapter(mapCanvas);
     await adapter.init();
+    updateMapRuntimeStatus();
     adapter.onAgentClick(handleAgentClick);
 }
 
 async function main() {
     // アダプタ初期化
     await initAdapter();
+    await refreshHealthStatus();
 
     // run 一覧を取得して selector に反映
     const runs = await fetchRuns();
@@ -160,6 +202,20 @@ async function fetchRuns() {
         return json.runs || [];
     } catch {
         return [];
+    }
+}
+
+/** /api/health を取得し、公開可能な present/absent 状態だけ UI に反映する。 */
+async function refreshHealthStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        if (!res.ok) return;
+        const json = await res.json();
+        state.runtime.mapsKey = json.maps_key || state.runtime.mapsKey;
+        state.runtime.dataSource = json.data_source || state.runtime.dataSource;
+        updateMapRuntimeStatus();
+    } catch {
+        updateMapRuntimeStatus();
     }
 }
 
@@ -192,12 +248,20 @@ async function fetchRunFile(runId, file) {
 async function loadRun(runId) {
     if (!runId) return;
 
+    state.runtime.runId = runId;
+
+    const summaryData = await fetchRunFile(runId, "summary.json");
+    const profileCount = Number.isInteger(summaryData?.agents) && summaryData.agents > 0
+        ? summaryData.agents
+        : 100;
+    const profilesFile = `agent_profiles_N${profileCount}.json`;
+
     // 並列ロード (poi_visit_records.jsonl は任意 / §5.2)
     const [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw] = await Promise.all([
         fetchRunFile(runId, "pois.geojson"),
         fetchRunFile(runId, "aois.geojson"),
         fetchRunFile(runId, "roadnet.geojson"),
-        fetchRunFile(runId, "agent_profiles_N100.json"),
+        fetchRunFile(runId, profilesFile),
         fetchRunFile(runId, "agent_states.jsonl"),
         fetchRunFile(runId, "poi_visit_records.jsonl"),
     ]);
@@ -259,7 +323,7 @@ async function loadRun(runId) {
             errors: 0,
         },
         {
-            file:   "agent_profiles_N100.json",
+            file:   profilesFile,
             count:  profilesData ? state.data.profiles.length        : null,
             errors: 0,
         },
@@ -285,6 +349,7 @@ async function loadRun(runId) {
     await renderCurrentTick();
     updatePlayButton(playBtn, false);
     updateSlider(sliderEl, Math.max(0, ticks.length - 1), 0);
+    updateLiveRuntimePanel();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -356,6 +421,7 @@ async function renderCurrentTick() {
         poiMap,
         state.data.visitRecords,
     );
+    updateLiveRuntimePanel(agentStates);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -451,6 +517,7 @@ function startPlay() {
     _lastTickTime = performance.now();
     _rafHandle = requestAnimationFrame(playLoop);
     updatePlayButton(playBtn, true);
+    updateLiveRuntimePanel();
 }
 
 /** 再生停止 */
@@ -461,6 +528,7 @@ function stopPlay() {
         _rafHandle = null;
     }
     updatePlayButton(playBtn, false);
+    updateLiveRuntimePanel();
 }
 
 /**
@@ -506,6 +574,36 @@ function handleAgentClick(agentId) {
         poiMap,
         state.data.visitRecords,
     );
+    updateLiveRuntimePanel(agentStates);
+}
+
+function updateMapRuntimeStatus() {
+    updateMapStatus(mapStatusEls, {
+        mode:       state.runtime.mapMode,
+        mapsKey:    state.runtime.mapsKey,
+        dataSource: state.runtime.dataSource,
+        mapId:      state.runtime.mapId,
+    });
+}
+
+function updateLiveRuntimePanel(agentStates = null) {
+    const { ticks, tickIndex, statesByTick, playing } = state.replay;
+    const tick = ticks[tickIndex] ?? 0;
+    const currentAgentStates = agentStates || statesByTick.get(tick) || [];
+    const representative = currentAgentStates[0] || null;
+    const moving = currentAgentStates.filter(s => !s.current_poi_id).length;
+
+    updateLivePanel(liveEls, {
+        runId:           state.runtime.runId,
+        playing,
+        tick,
+        tickTotal:       ticks.length,
+        day:             representative?.day ?? 0,
+        time:            representative?.time || "08:00:00",
+        agents:          currentAgentStates.length,
+        moving,
+        selectedAgentId: state.selection.agentId,
+    });
 }
 
 /**
@@ -582,6 +680,14 @@ function _updateSocialLinks(agentStates) {
 
 /** イベント配線 */
 function wireEvents() {
+    if (settingsBtn && settingsPanel) {
+        settingsBtn.addEventListener("click", () => {
+            const isOpen = !settingsPanel.hidden;
+            settingsPanel.hidden = isOpen;
+            settingsBtn.setAttribute("aria-expanded", String(!isOpen));
+        });
+    }
+
     // 再生/停止
     if (playBtn) {
         playBtn.addEventListener("click", () => {
