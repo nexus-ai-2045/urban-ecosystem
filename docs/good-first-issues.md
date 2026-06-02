@@ -29,9 +29,12 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 
 目的: API キーなしで表示される fallback 地図の見やすさ、ラベル、操作感をレビューする。
 
+現在の viewer は、左側にデータ読込・レイヤー・マップ状態・設定、中央に地図、右側にライブ概要・凡例・エージェント詳細、下部に再生コントロールを持ちます。Google Maps API キーがない場合は、左側のマップ状態が fallback / Maps API absent になることも確認対象です。
+
 成果物:
 
 - スクリーンショットまたは短い観察メモ
+- 左側パネル、地図、右側ライブ概要、下部コントロールのうち見づらい箇所
 - 表示崩れ、読みにくい文言、改善案
 - 変更する場合は `tools/urban_viewer/` に限定した小さな PR
 
@@ -39,6 +42,7 @@ GitHub issue: <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
 
 - Google Maps API は使わない
 - シミュレーションモデルは変更しない
+- API キー、token、`.env`、個人情報は書かない
 
 ## 3. 課金境界・秘密情報境界の説明レビュー
 
