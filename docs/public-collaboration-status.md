@@ -30,7 +30,7 @@
 | issue | 内容 | 参加のしかた |
 |---|---|---|
 | #10 | README のローカル起動手順を再現性レビューする | 手元で試して、成功/失敗/詰まった点を書く |
-| #11 | fallback 地図ビューアの見やすさをレビューする | API キーなしの画面を見て、分かりにくい点を書く |
+| #11 | fallback 地図ビューアの見やすさをレビューする | API キーなしの画面を見て、左パネル・地図・右ライブ概要・下部操作で分かりにくい点を書く |
 | #12 | 課金境界と秘密情報境界の説明をレビューする | README / CONTRIBUTING の怖さや不足を指摘する |
 
 ## 運用者側で進めるもの
@@ -62,6 +62,20 @@ PR #1〜#7 を古い順に見て、初回参加者に伝えるべき現在地だ
 | #7 | API キーなしで動く CI / fallback E2E があります。初回レビューはこの範囲を基準にします。 |
 
 このため、Discord から来た人にはまず API キーなしの local / fallback viewer / docs review を案内します。GCS、Cloud Run、Vertex AI、Google Maps、Google Places は maintainer が範囲を切ってから扱います。
+
+## fallback viewer レビューの現在地
+
+PR #28 で、Google Maps が表示されない場合でも fallback 地図が使える状態を維持しつつ、左側にマップ状態と設定、右側にライブ概要を追加しました。
+
+API キーなしのレビューでは、次を見ます。
+
+- 左側のマップ状態が fallback / Maps API absent として分かりやすいか。
+- 設定ボタンからデータ source と Map ID の状態を確認しやすいか。
+- 中央の fallback 地図で、POI / AOI / 住人の意味が分かるか。
+- 右側のライブ概要で、run、tick、時刻、住人数、移動中人数、選択中 agent が追えるか。
+- 下部の再生、ステップ、速度、スライダーが初見で操作できるか。
+
+このレビューでは Google Maps API、Google Places、Vertex AI、Cloud Run deploy は使いません。
 
 ## 既存 PR から分かった協業導線
 
