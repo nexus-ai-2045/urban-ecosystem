@@ -127,8 +127,10 @@ const settingsPanel = document.getElementById("settings-panel");
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
     mapsKeyValue:   document.getElementById("maps-key-value"),
+    mapHealthValue: document.getElementById("map-health-value"),
     dataSourceValue: document.getElementById("data-source-value"),
     mapIdValue:     document.getElementById("map-id-value"),
+    googleMapsConfigValue: document.getElementById("google-maps-config-value"),
 };
 
 const liveEls = {
@@ -139,6 +141,7 @@ const liveEls = {
     agentCount:    document.getElementById("live-agent-count"),
     movingCount:   document.getElementById("live-moving-count"),
     selectedAgent: document.getElementById("live-selected-agent"),
+    activityList:  document.getElementById("live-activity-list"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -603,7 +606,38 @@ function updateLiveRuntimePanel(agentStates = null) {
         agents:          currentAgentStates.length,
         moving,
         selectedAgentId: state.selection.agentId,
+        recentVisits:    _getRecentVisits(representative?.day ?? 0, representative?.time || "08:00:00"),
     });
+}
+
+/**
+ * 現在時刻以前の POI 訪問から、ライブ表示用の直近リストを返す。
+ * @param {number} currentDay
+ * @param {string} currentTime
+ * @returns {Object[]}
+ */
+function _getRecentVisits(currentDay, currentTime) {
+    if (!Array.isArray(state.data.visitRecords) || state.data.visitRecords.length === 0) {
+        return [];
+    }
+
+    const poiMap = _buildPoiMap(state.data.pois);
+    return state.data.visitRecords
+        .filter((rec) => {
+            const day = rec.day ?? 0;
+            const time = rec.time ?? "";
+            return day < currentDay || (day === currentDay && time <= currentTime);
+        })
+        .sort((a, b) => {
+            const dayDiff = (b.day ?? 0) - (a.day ?? 0);
+            if (dayDiff !== 0) return dayDiff;
+            return String(b.time ?? "").localeCompare(String(a.time ?? ""));
+        })
+        .slice(0, 4)
+        .map((rec) => ({
+            ...rec,
+            poi_name: rec.poi_id ? (poiMap.get(rec.poi_id) || rec.poi_id) : "",
+        }));
 }
 
 /**
