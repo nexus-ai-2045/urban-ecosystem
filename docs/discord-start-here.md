@@ -10,9 +10,7 @@ urban-ecosystem に興味を持ってくれてありがとうございます。
 - 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
 - 公開協業の現在地: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 - 最初の issue:
-  - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/10>
   - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/11>
-  - <https://github.com/nexus-ai-2045/urban-ecosystem/issues/12>
 - 初回協力候補: [`docs/good-first-issues.md`](good-first-issues.md)
 - 協力ガイド: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 
@@ -55,7 +53,7 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 - typo 修正
 - README の分かりにくい説明の修正
 - fallback 地図ビューアの見た目レビュー
-- 課金境界・秘密情報境界の説明レビュー
+- 課金境界・秘密情報境界の分かりにくさが残っていれば、小さい docs issue で報告
 - リンク切れや説明不足の修正
 
 ## やらないでほしいこと
@@ -70,7 +68,7 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 
 ```text
 urban-ecosystem の公開協業入口を作っています。
-まずは見るだけ・README再現性レビュー・fallback地図UIレビューから歓迎です。
+まずは見るだけ・fallback地図UIレビューから歓迎です。
 APIキーなしで動くので、Google Cloud課金は発生しません。
 
 はじめに読む:
@@ -86,9 +84,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1
 https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/good-first-issues.md
 
 最初のissue:
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/10
 https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/12
 ```
 
 ## 迷ったら
