@@ -30,13 +30,16 @@ from tools.urban_viewer_server import app  # noqa: F401 (re-export)
 # ローカル起動 / 開発用エントリポイント
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _load_dotenv_local() -> None:
-    """ローカル開発時のみ、リポジトリ直下の .env を os.environ に load する。
+def _load_dotenv_local(env_path: str | None = None) -> None:
+    """明示 opt-in されたローカル開発時のみ .env を os.environ に load する。
 
     Cloud Run は Secret Manager / 環境変数で注入するため .env は存在せず no-op。
     既存の環境変数を上書きしない (setdefault)。値はログに出力しない。
     """
-    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+    if os.environ.get("URBAN_ECOSYSTEM_LOAD_DOTENV") != "1":
+        return
+    if env_path is None:
+        env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     if not os.path.exists(env_path):
         return
     with open(env_path, encoding="utf-8") as f:
@@ -52,7 +55,7 @@ def _load_dotenv_local() -> None:
 if __name__ == "__main__":
     import uvicorn
 
-    # ローカル開発: .env (GOOGLE_MAPS_API_KEY / GOOGLE_MAPS_MAP_ID / DATA_DIR 等) を読む。
+    # ローカル開発: 明示 opt-in 時だけ .env を読む。
     _load_dotenv_local()
 
     # Cloud Run は $PORT を注入する (WO-005 yaml notes)。

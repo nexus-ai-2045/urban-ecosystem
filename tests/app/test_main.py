@@ -38,7 +38,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # app.main から app を import する (Cloud Run entrypoint 経由で確認)。
-from app.main import app  # noqa: E402
+from app.main import app, _load_dotenv_local  # noqa: E402
 from app.config import DEFAULT_PORT, get_port  # noqa: E402
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -179,6 +179,32 @@ class TestConfig:
             assert get_port() == 8080
         finally:
             os.environ.pop("PORT", None)
+
+
+class TestDotenvLoading:
+    """ローカル .env 読込の opt-in 境界を固定する。"""
+
+    def test_dotenv_is_not_loaded_by_default(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """.env が存在しても、明示 opt-in なしでは読まない。"""
+        env_path = tmp_path / ".env"
+        env_path.write_text("GOOGLE_MAPS_API_KEY=TEST_DUMMY_KEY_NOT_REAL\n", encoding="utf-8")
+        monkeypatch.delenv("URBAN_ECOSYSTEM_LOAD_DOTENV", raising=False)
+        monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+
+        _load_dotenv_local(str(env_path))
+
+        assert "GOOGLE_MAPS_API_KEY" not in os.environ
+
+    def test_dotenv_loads_only_with_explicit_opt_in(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """URBAN_ECOSYSTEM_LOAD_DOTENV=1 の場合だけ .env を読む。"""
+        env_path = tmp_path / ".env"
+        env_path.write_text("GOOGLE_MAPS_API_KEY=TEST_DUMMY_KEY_NOT_REAL\n", encoding="utf-8")
+        monkeypatch.setenv("URBAN_ECOSYSTEM_LOAD_DOTENV", "1")
+        monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+
+        _load_dotenv_local(str(env_path))
+
+        assert os.environ["GOOGLE_MAPS_API_KEY"] == "TEST_DUMMY_KEY_NOT_REAL"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
