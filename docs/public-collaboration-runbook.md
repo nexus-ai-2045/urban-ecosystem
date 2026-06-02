@@ -17,6 +17,8 @@ Discord は入口候補です。公開協業者に見せる決定や採否は Gi
 
 公開面の名義は Nexus に統一します。GitHub / Discord 通知 / Linear の扱いは [`docs/public-identity-policy.md`](public-identity-policy.md) に従います。
 
+public PR を作る行為は TYPE1 です。PR 公開前に人間レビューを必須とし、[`docs/type1-public-pr-gate.md`](type1-public-pr-gate.md) の確認を通します。
+
 ## 初回の流れ
 
 1. 公開協業 milestone を確認する。
@@ -24,7 +26,8 @@ Discord は入口候補です。公開協業者に見せる決定や採否は Gi
 3. 参加者には #11 の fallback viewer レビューを案内する。
 4. コメントには実行環境、試したこと、分かりにくかった点を書いてもらう。
 5. 修正が必要なら、小さな docs / UI PR に分ける。
-6. Discord 再開が必要になった場合だけ、新しい判断で webhook / secret / Actions test を扱う。
+6. PR を public にする前に TYPE1 gate の人間レビューを通す。
+7. Discord 再開が必要になった場合だけ、新しい判断で webhook / secret / Actions test を扱う。
 
 参加者に短く試してもらう場合は、README と同じ smoke を案内します。
 
@@ -61,6 +64,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
 ## 参加者に伝える禁止事項
 
 - API キー、トークン、`.env` を貼らない。
+- public PR に出す前に、人間レビューを受ける。
 - Google Cloud / Vertex AI / Google Maps / Google Places を勝手に実行しない。
 - Cloud Run deploy をしない。
 - `data/` の生成物や大きな実験結果を commit しない。

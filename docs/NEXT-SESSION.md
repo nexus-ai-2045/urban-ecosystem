@@ -8,6 +8,7 @@ updated: 2026-06-03
 
 - **公開名義**: GitHub の公開面は `nexus-ai-2045` に統一する。個人アカウントの token / 名義を公開協業の正本にしない。
 - **公開正本**: GitHub docs / issues / PRs。Linear は Nexus maintainer 側の内部管理。
+- **TYPE1 public PR gate**: public PR 作成、public branch push、PR ready、merge は TYPE1。人間レビュー前には行わない。正本は `docs/type1-public-pr-gate.md`。
 - **現在の公開入口**: GitHub issue #11 の fallback viewer レビューのみ。#10 / #12 は baseline complete で close、#13 は Discord freeze 方針で close。
 - **#11 の入口**: issue 本文先頭と README に「1分で反応する場合」を追加済み。コードを書かなくても、smoke 結果・分かりにくい場所・環境だけコメントできる。
 - **fallback smoke 導線**: `README.md` / `docs/good-first-issues.md` / `docs/public-collaboration-status.md` / `docs/public-collaboration-runbook.md` / `docs/maintainer-quick-guide.md` に `python tools/smoke_fallback_viewer.py` を反映済み。
