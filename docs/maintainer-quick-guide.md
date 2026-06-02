@@ -46,6 +46,15 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 4. README 再現性や課金境界の追加 feedback は、新しい小さい issue に分ける。
 5. Discord 再開は別判断にし、webhook / secret / Actions test は今は行わない。
 
+参加者に短く試してもらう場合は、README と同じ smoke を案内します。
+
+```bash
+unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+python tools/smoke_fallback_viewer.py
+```
+
+この smoke は #11 の入口確認用です。Google Cloud、Secret Manager、Discord は使いません。
+
 Discord webhook の詳しい設定手順は [`docs/discord-pr-notifications.md`](discord-pr-notifications.md) に残しています。現在は実行しません。
 
 ## Discord 再開時に貼る文面候補
