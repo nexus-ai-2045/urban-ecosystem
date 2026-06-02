@@ -112,6 +112,7 @@ function updateLiveActivityList(listEl, visits) {
 
     if (!Array.isArray(visits) || visits.length === 0) {
         const item = document.createElement("li");
+        item.className = "live-activity-empty";
         const text = document.createElement("span");
         text.className = "live-activity-text";
         text.textContent = "直近の訪問はありません";
