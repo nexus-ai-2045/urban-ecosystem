@@ -11,6 +11,7 @@
 - Discord 再開時向け入口: [`docs/discord-start-here.md`](discord-start-here.md)
 - 初回協力候補: [`docs/good-first-issues.md`](good-first-issues.md)
 - 協力ガイド: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- TYPE1 public PR gate: [`docs/type1-public-pr-gate.md`](type1-public-pr-gate.md)
 
 ## 場所の使い分け
 
@@ -22,6 +23,8 @@
 | Linear | Nexus maintainer 側の内部管理 |
 
 公開協業者に見せる作業と判断は GitHub に残します。Discord は流れる入口で、現在は一旦フリーズ中です。Linear は内部管理です。
+
+public PR を作ること、public branch を push すること、PR を ready にすること、merge することは TYPE1 です。人間レビュー前には行いません。詳しい gate は [`docs/type1-public-pr-gate.md`](type1-public-pr-gate.md) を正本にします。
 
 ## いま参加してよいもの
 
@@ -107,6 +110,7 @@ Discord 通知は便利な補助ですが、現在は一旦フリーズ中です
 ## 公開面の安全境界
 
 - 公開 issue / PR / docs には、外に出してよい情報だけを書く。
+- public PR / public branch / PR ready / merge は TYPE1 として、人間レビュー後に行う。
 - API キー、token、`.env`、Webhook URL を貼らない。
 - 個人メール、内部 URL、内部コメントを貼らない。
 - 公開面の名義は Nexus に統一する。
@@ -143,3 +147,4 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
 - #10 / #12 / #13 は完了または停止理由つきで close されている。
 - MIT License が README と `LICENSE` file から確認できる。
 - 公開面に内部語、秘密情報、個人情報、内部 URL が出ていない。
+- public PR 作成前の TYPE1 人間レビュー gate が docs / CONTRIBUTING / PR template に残っている。
