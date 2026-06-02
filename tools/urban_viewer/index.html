@@ -24,71 +24,88 @@
   %%MAPS_SCRIPT_TAG%%
 </head>
 <body>
-  <header class="app-header">Urban Ecosystem Replay Viewer</header>
+  <header class="app-header">
+    <div class="app-title">Urban Ecosystem Replay Viewer</div>
+    <div class="app-subtitle">public TYPE1 / local replay</div>
+  </header>
 
   <main class="app-body">
     <!-- 左パネル: データ読込 / レイヤー / 設定 (§5.2) -->
-    <aside class="left-panel">
-      <div class="panel-title">データ読込</div>
-      <select id="run-select" aria-label="run 選択">
-        <option value="" disabled selected>読込中...</option>
-      </select>
-      <button id="btn-load" type="button">読み込む</button>
-      <!-- ロード結果: 件数 / 検証結果 / エラー件数 (§5.2) -->
-      <div id="load-status" aria-live="polite" aria-label="ロード結果"></div>
+    <aside class="left-panel" aria-label="操作メニュー">
+      <section class="nav-section" aria-labelledby="run-section-title">
+        <div id="run-section-title" class="panel-title">Run</div>
+        <select id="run-select" aria-label="run 選択">
+          <option value="" disabled selected>読込中...</option>
+        </select>
+        <button id="btn-load" type="button">読み込む</button>
+        <!-- ロード結果: 件数 / 検証結果 / エラー件数 (§5.2) -->
+        <div id="load-status" aria-live="polite" aria-label="ロード結果"></div>
+      </section>
 
-      <div class="panel-title">レイヤー</div>
-      <label class="layer-toggle">
-        <input type="checkbox" id="layer-poi" checked>
-        お店・施設
-      </label>
-      <label class="layer-toggle">
-        <input type="checkbox" id="layer-aoi" checked>
-        エリア
-      </label>
-      <label class="layer-toggle">
-        <input type="checkbox" id="layer-road">
-        道路
-      </label>
-      <div class="layer-toggle--road-hint">※表示専用の参考線</div>
-      <label class="layer-toggle">
-        <input type="checkbox" id="layer-agent" checked>
-        住人
-      </label>
+      <section class="nav-section" aria-labelledby="layer-section-title">
+        <div id="layer-section-title" class="panel-title">Layers</div>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layer-poi" checked>
+          お店・施設
+        </label>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layer-aoi" checked>
+          エリア
+        </label>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layer-road">
+          道路
+        </label>
+        <div class="layer-toggle--road-hint">表示専用の参考線</div>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layer-agent" checked>
+          住人
+        </label>
+      </section>
 
-      <div class="panel-title">マップ状態</div>
-      <div id="map-status-panel" class="map-status-panel" aria-live="polite">
-        <div class="status-row">
-          <span class="status-label">描画</span>
-          <span id="map-mode-value" class="status-pill status-pill--muted">確認中</span>
+      <section class="nav-section" aria-labelledby="map-section-title">
+        <div id="map-section-title" class="panel-title">Map</div>
+        <div id="map-status-panel" class="map-status-panel" aria-live="polite">
+          <div class="status-row">
+            <span class="status-label">描画</span>
+            <span id="map-mode-value" class="status-pill status-pill--muted">確認中</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Maps API</span>
+            <span id="maps-key-value" class="status-value">確認中</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">状態</span>
+            <span id="map-health-value" class="status-value">確認中</span>
+          </div>
         </div>
-        <div class="status-row">
-          <span class="status-label">Maps API</span>
-          <span id="maps-key-value" class="status-value">確認中</span>
-        </div>
-      </div>
+      </section>
 
       <div class="left-panel-spacer"></div>
 
-      <button
-        id="btn-settings"
-        class="settings-button"
-        type="button"
-        aria-expanded="false"
-        aria-controls="settings-panel"
-        title="設定"
-      >⚙ 設定</button>
-      <div id="settings-panel" class="settings-panel" hidden>
-        <div class="settings-row">
-          <span>データ</span>
-          <span id="data-source-value">local</span>
-        </div>
-        <div class="settings-row">
-          <span>Map ID</span>
-          <span id="map-id-value">未設定</span>
-        </div>
-        <div class="settings-note">
-          Google Maps はサーバー起動時の環境変数で有効化します。
+      <div class="settings-dock">
+        <button
+          id="btn-settings"
+          class="settings-button"
+          type="button"
+          aria-label="設定"
+          aria-expanded="false"
+          aria-controls="settings-panel"
+          title="設定"
+        >⚙</button>
+        <div id="settings-panel" class="settings-panel" hidden>
+          <div class="settings-row">
+            <span>データ</span>
+            <span id="data-source-value">local</span>
+          </div>
+          <div class="settings-row">
+            <span>Map ID</span>
+            <span id="map-id-value">未設定</span>
+          </div>
+          <div class="settings-row">
+            <span>Google Maps</span>
+            <span id="google-maps-config-value">未接続</span>
+          </div>
         </div>
       </div>
     </aside>
@@ -134,6 +151,12 @@
             <span class="live-label">選択</span>
             <span id="live-selected-agent" class="live-value">なし</span>
           </div>
+        </div>
+        <div class="live-activity" aria-label="直近の動き">
+          <div class="live-section-title">直近の動き</div>
+          <ul id="live-activity-list" class="live-activity-list">
+            <li>データ未ロード</li>
+          </ul>
         </div>
       </div>
       <div id="legend-panel" aria-label="凡例">

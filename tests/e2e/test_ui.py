@@ -344,6 +344,35 @@ class TestMapDisplay:
         }""")
         assert has_nonwhite, "canvas が背景色しか描画していない (未描画の可能性)"
 
+    def test_map_status_shows_fallback(self, loaded_page):
+        """Google Maps 未設定時に fallback 状態が左メニューで分かる。"""
+        page, _ = loaded_page
+        assert page.locator("#map-mode-value").inner_text() == "Fallback"
+        assert page.locator("#maps-key-value").inner_text() == "未設定"
+        assert page.locator("#map-health-value").inner_text() == "Fallback表示"
+
+    def test_settings_panel_opens_from_left_dock(self, loaded_page):
+        """左下の設定ボタンから設定パネルを開ける。"""
+        page, _ = loaded_page
+        panel = page.locator("#settings-panel")
+        assert panel.count() == 1, "#settings-panel が存在しない"
+        assert not panel.is_visible(), "#settings-panel は初期状態で閉じている想定"
+
+        page.click("#btn-settings")
+        assert panel.is_visible(), "#btn-settings クリック後に設定パネルが表示されない"
+        assert "未接続" in panel.inner_text()
+
+        page.click("#btn-settings")
+        assert not panel.is_visible(), "#btn-settings 2回目クリック後に設定パネルが閉じない"
+
+    def test_live_activity_panel_exists(self, loaded_page):
+        """右パネルにリアルタイムの直近欄が表示される。"""
+        page, _ = loaded_page
+        assert page.locator("#live-panel").count() == 1, "#live-panel が存在しない"
+        assert page.locator("#live-activity-list").count() == 1, "#live-activity-list が存在しない"
+        live_text = page.locator("#live-panel").inner_text()
+        assert "直近の動き" in live_text
+
 
 class TestLayerToggle:
     """§13.2 検証項目 2-4: レイヤー (POI / AOI / 道路) ON/OFF。"""
