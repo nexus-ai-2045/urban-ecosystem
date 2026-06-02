@@ -35,13 +35,22 @@ import {
 export function updateMapStatus(els, info) {
     if (!els) return;
 
+    const usingGoogleMaps = info.mode === "Google Maps";
+    const mapsKeyPresent = info.mapsKey === "present";
+
     if (els.modeValue) {
         els.modeValue.textContent = info.mode || "Fallback";
-        els.modeValue.classList.toggle("status-pill--ok", info.mode === "Google Maps");
-        els.modeValue.classList.toggle("status-pill--muted", info.mode !== "Google Maps");
+        els.modeValue.classList.toggle("status-pill--ok", usingGoogleMaps);
+        els.modeValue.classList.toggle("status-pill--warning", !usingGoogleMaps);
+        els.modeValue.classList.toggle("status-pill--muted", false);
     }
     if (els.mapsKeyValue) {
-        els.mapsKeyValue.textContent = info.mapsKey || "absent";
+        els.mapsKeyValue.textContent = mapsKeyPresent ? "設定済み" : "未設定";
+    }
+    if (els.mapHealthValue) {
+        els.mapHealthValue.textContent = usingGoogleMaps
+            ? "Google Maps"
+            : "Fallback表示";
     }
     if (els.dataSourceValue) {
         els.dataSourceValue.textContent = info.dataSource || "local";
@@ -49,12 +58,15 @@ export function updateMapStatus(els, info) {
     if (els.mapIdValue) {
         els.mapIdValue.textContent = info.mapId || "未設定";
     }
+    if (els.googleMapsConfigValue) {
+        els.googleMapsConfigValue.textContent = mapsKeyPresent ? "接続可能" : "未接続";
+    }
 }
 
 /**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
- * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null }} snapshot
+ * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot
  */
 export function updateLivePanel(els, snapshot) {
     if (!els) return;
@@ -84,6 +96,47 @@ export function updateLivePanel(els, snapshot) {
         els.selectedAgent.textContent = snapshot.selectedAgentId == null
             ? "なし"
             : `Agent ${snapshot.selectedAgentId}`;
+    }
+    if (els.activityList) {
+        updateLiveActivityList(els.activityList, snapshot.recentVisits || []);
+    }
+}
+
+/**
+ * ライブパネルの直近の動きを更新する。
+ * @param {HTMLElement} listEl
+ * @param {Object[]} visits
+ */
+function updateLiveActivityList(listEl, visits) {
+    while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+
+    if (!Array.isArray(visits) || visits.length === 0) {
+        const item = document.createElement("li");
+        const text = document.createElement("span");
+        text.className = "live-activity-text";
+        text.textContent = "直近の訪問はありません";
+        item.appendChild(text);
+        listEl.appendChild(item);
+        return;
+    }
+
+    for (const visit of visits.slice(0, 4)) {
+        const item = document.createElement("li");
+
+        const time = document.createElement("span");
+        time.className = "live-activity-time";
+        time.textContent = visit.time || "--:--";
+
+        const text = document.createElement("span");
+        text.className = "live-activity-text";
+        const agent = visit.agent_id != null ? `A${visit.agent_id}` : "Agent";
+        const poi = visit.poi_name || visit.poi_id || "POI";
+        const reason = visit.reason ? ` / ${visit.reason}` : "";
+        text.textContent = `${agent} ${poi}${reason}`;
+
+        item.appendChild(time);
+        item.appendChild(text);
+        listEl.appendChild(item);
     }
 }
 
