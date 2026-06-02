@@ -55,7 +55,7 @@ acceptance:
   - "マーカー glyph が surname を表示する (例: 井上)。"
   - "詳細パネルが surname + given + さん を表示する (例: 井上 翔さん)。"
   - "surname 欠落時は name 先頭にフォールバックする。"
-  - "google_maps_adapter.upsertAgents が tick 毎・run 跨ぎで glyph / title を更新する (NEXT-SESSION 既知 LOW の解消)。"
+  - "google_maps_adapter.upsertAgents が tick 毎・run 跨ぎで glyph / title を更新する。"
   - "fallback 地図で viewer サーバーテストが通る。"
 
 handoff:

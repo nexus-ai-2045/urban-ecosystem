@@ -66,7 +66,7 @@ commands:
     - "docker build -t urban-ecosystem:local ."
   optional:
     - "docker run --rm -p 8080:8080 urban-ecosystem:local"
-    - "gcloud run deploy urban-ecosystem --project nexus-ai-2045 --source . --region asia-northeast1 --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest --service-account=urban-run@nexus-ai-2045.iam.gserviceaccount.com  # 公開範囲フラグ(--allow-unauthenticated か IAP)はデプロイ時に確定 (spec §16 #4)"
+    - "gcloud run deploy urban-ecosystem --project ${DEPLOY_PROJECT} --source . --region ${DEPLOY_REGION} --set-secrets=GOOGLE_MAPS_API_KEY=urban-maps-key:latest --service-account=urban-run@${DEPLOY_PROJECT}.iam.gserviceaccount.com  # 公開範囲フラグ(--allow-unauthenticated か IAP)はデプロイ時に確定 (spec §16 #4)"
 
 acceptance:
   - "docker build succeeds locally and the image contains no GPU or media-processing dependencies."
@@ -77,7 +77,7 @@ acceptance:
   - "The runtime service account uses least privilege (Secret Accessor, plus Storage/Vertex only when required)."
   - "docs/deploy.md documents a reproducible gcloud run deploy --source . procedure."
   - "Cloud Run Service vs Job usage matches spec section 17.1."
-  - "urban-ecosystem is an independent git repository and deploy unit (GCP project nexus-ai-2045); it does not share infra with other projects."
+  - "urban-ecosystem is an independent git repository and deploy unit. Cloud resources are created in the project selected by the deployer."
 
 handoff:
   required_fields:
