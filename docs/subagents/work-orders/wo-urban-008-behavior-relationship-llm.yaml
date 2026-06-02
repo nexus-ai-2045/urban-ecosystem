@@ -55,7 +55,7 @@ commands:
   required:
     - "python -m pytest tests/app/test_llm_provider.py tests/environments/test_urban_simulation.py -v -p no:cacheprovider"
   optional:
-    - "GOOGLE_CLOUD_PROJECT=nexus-ai-2045 python tools/urban_simulation_cli.py run --llm vertex --agents 10 --pois data/urban_real/pois.geojson --out /tmp/urban_llm10"
+    - "GOOGLE_CLOUD_PROJECT=nexus-ai-2045 python tools/urban_simulation_cli.py run --llm vertex --pois data/sample/pois.geojson --profiles data/sample/agent_profiles_N10.json --aois data/sample/aois.geojson --roadnet data/sample/roadnet.geojson --ticks 24 --seed 42 --out /tmp/urban_llm10"
 
 acceptance:
   - "build_destination_prompt が occupation / personality / hobbies / day_pattern / current_time を context に含める。"

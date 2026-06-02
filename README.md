@@ -69,7 +69,11 @@ LLM（Vertex Gemini）を使う場合は opt-in で `--llm vertex` を付与:
 
 ```bash
 GOOGLE_CLOUD_PROJECT=<your-project> python tools/urban_simulation_cli.py run --llm vertex \
-  --pois data/sample/pois.geojson --out data/sample
+  --pois data/sample/pois.geojson \
+  --profiles data/sample/agent_profiles_N10.json \
+  --aois data/sample/aois.geojson \
+  --roadnet data/sample/roadnet.geojson \
+  --out data/sample
 ```
 
 ### 3. ビューア起動
