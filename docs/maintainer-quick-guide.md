@@ -26,6 +26,8 @@ urban-ecosystem は、都市の地図上で AI エージェントの 1 日を再
 
 公開面の名義は Nexus に統一します。詳細は [`docs/public-identity-policy.md`](public-identity-policy.md) を見てください。
 
+public PR を作る行為は TYPE1 です。PR を公開する前に、必ず人間レビューを通します。詳細は [`docs/type1-public-pr-gate.md`](type1-public-pr-gate.md) を見てください。
+
 ## いまの状態
 
 - 公開協業 milestone: <https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1>
@@ -84,6 +86,7 @@ https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
 ## 注意する境界
 
 - 公開 issue / PR / docs には、外に出してよい情報だけを書く。
+- public PR 作成、public branch push、PR ready / merge は TYPE1。人間レビュー前に行わない。
 - Linear の内部 URL、内部コメント、個人 account 情報は公開 issue / PR / docs に貼らない。
 - Webhook URL は秘密情報。Discord / GitHub issue / PR / commit に貼らない。
 - 公開面は Nexus 名義に統一する。個人 account / email / workspace を公開協業の正本にしない。

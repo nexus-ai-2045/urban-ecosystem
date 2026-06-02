@@ -13,6 +13,13 @@
 
 ```
 
+## TYPE1 public PR gate
+
+- [ ] public PR 作成前に人間レビューを受けました
+- [ ] 公開名義は `nexus-ai-2045` です
+- [ ] PR title / body / branch 名に内部情報、個人情報、secret がありません
+- [ ] Linear の内部 URL / 内部コメントを貼っていません
+
 ## 課金 / 外部サービス
 
 - [ ] Google Cloud / Vertex AI / Google Maps / Google Places を実行していません
