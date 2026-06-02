@@ -591,7 +591,7 @@ function updateLiveRuntimePanel(agentStates = null) {
     const tick = ticks[tickIndex] ?? 0;
     const currentAgentStates = agentStates || statesByTick.get(tick) || [];
     const representative = currentAgentStates[0] || null;
-    const moving = currentAgentStates.filter(s => !s.current_poi_id).length;
+    const moving = currentAgentStates.filter(s => s.status === "moving").length;
 
     updateLivePanel(liveEls, {
         runId:           state.runtime.runId,
