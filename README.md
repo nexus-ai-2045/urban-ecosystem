@@ -31,7 +31,7 @@ python tools/smoke_fallback_viewer.py
 - GitHub issue #11: fallback 地図ビューアの見やすさレビュー
 - 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
 
-Google Maps、Google Places、Vertex AI、Cloud Run などを実際に使う作業は、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
+Google Maps、Google Places、Vertex AI、Cloud Run などは、各自の Google Cloud project で試せます。その場合の課金と設定は、その project の所有者側で発生します。Nexus 管理の project を使う作業だけ、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
 
 ## 特徴
 
@@ -192,9 +192,9 @@ API key、token、`.env`、個人情報、内部 URL は貼らないでくださ
 
 ## GCP / Cloud Run での実機確認
 
-Cloud Run での実機確認は、外部公開・課金・Secret Manager を伴う可能性があるため maintainer 承認後に行います。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。
+Cloud Run での実機確認は、各自の Google Cloud project でも実行できます。その場合の課金、公開範囲、Secret Manager、IAM 変更は、その project の所有者側で管理してください。
 
-まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
+Nexus 管理の project を使う場合だけ、maintainer 承認後に実行します。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
 
 ## ドキュメント
 

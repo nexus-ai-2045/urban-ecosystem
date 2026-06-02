@@ -1,43 +1,72 @@
-# 改訂サマリ — urban-ecosystem 仕様統合
+# Changelog
 
-対象: 5観点の提案を統合し、3ファイルを全面改訂 (+ 旧 video WO を Cloud Run WO へ置換)。
-確定方針: 動画/音声/音声認識(STT)系を完全削除。実行基盤=Cloud Run / 地図=Google Maps JS API / 後段LLM=Vertex AI・Gemini (MVPはルールベース)。
+このファイルは `python tools/generate_changelog.py` で生成します。
+手で編集せず、Git履歴から更新してください。
 
-## 全体方針 (3ファイル共通)
+## Git history
 
-- 音声認識・動画取り込み・仕様自動生成に関する記述・出力ファイル・モジュール・CLI・検証・マイルストーン・WO・外部部品を全て除去した。将来機能としても残していない。
-- 音声認識ベンダー名・関連 API キー名・出力名・関連モジュール名などの禁止語を出力ファイルから完全排除した。参照資料は元動画の URL・投稿日のみ残し、取り込み機能には触れていない。
-- LLM プロバイダ列挙を Vertex AI / Gemini + ルールベースモックに統一。直接呼び出し禁止・Provider 抽象越し方針を明記した。
-
-## ai-ecosystem-tool-spec.md
-
-- 第一成果物を「Cloud Run 上の100体1日リプレイ」と明示。MVPスコープから動画系を削除し、合成データ生成・Cloud Run 配信・fallback 地図を追加。
-- §5: Google Maps ロードフロー (importLibrary / Map ID 必須)、tick 位置更新のパフォーマンス方針、fallback 地図 (CI主経路)、フロント状態管理 (ViewerState / 一方向データフロー) を新設。リプレイ一次ソースを `agent_states.jsonl` に確定。
-- §6: データモデルを GeoJSON Feature 構造に統一 (lat/lon は coordinates に一元化、座標2系統を明記)、必須/任意を data-contract と一致させ、正本を data-contract に降格。
-- §7: STT系3出力ファイルを削除し、`relationships.jsonl` (任意) を追加。
-- §9: 行動ルールを全面詳細化 (時間モデル / status 状態機械 / 時刻帯×role テーブル / 目的地選択 / 直線補間移動 / 滞在時間 / 近接判定 / interaction 発生確率 / relationship 遷移 / social_networks バイアス / 定数)。
-- §10: 旧プロバイダ列挙 (汎用 LLM ベンダー4種) を削除し Vertex AI/Gemini + ルールベースに。Provider シグネチャを補強。
-- §11/§12: 動画要件抽出モジュールとその CLI を削除。Cloud Run 向け構成 (app/ + environments/ + tools/ + Dockerfile) に再編。
-- §13: 動画要件抽出検証を削除し、データ検証強化版 + デプロイ検証 (Cloud Run) を追加。
-- §14/§15: 受け入れ基準から動画系2行を削除し Cloud Run 基準を追加。Milestone 4 を「Cloud Run デプロイ」に置換、旧M5/M6 を Vertex AI 前提でリナンバー。
-- §16: 動画未決を削除。基盤系を回答済みに整理し、Map ID 発行・fallback 投影の2論点を追加。
-- §17 デプロイ基盤 (Cloud Run Service/Job、データ経路、API、Secrets/IAM、Dockerfile)、§18 テスト戦略を新設。
-
-## ai-ecosystem-implementation-orchestration.md
-
-- 正本リストから音声認識出力・要件トレース系の参照を削除。
-- Workstreams: S5 を「Video Requirements CLI」から「Cloud Run Deploy」(devops + quality-gate / depends on S3,S4) へ置換。S6 を Vertex AI/Gemini 前提に修正。
-- 推奨実装順を S1-S5 に整理し、第一成果物を Cloud Run リプレイと定義。
-- Architecture Guardrails を Cloud Run 単独デプロイ前提に書き換え (app→environments 依存、Secret Manager/Workload Identity、GCS)。
-- Adopted Building Blocks の Speech-to-text 行を削除し、FastAPI / Cloud Run / Cloud Storage / Vertex AI 行を追加。
-- Parallelization Rules / Human Gates (G1 に contract MAJOR、G4 に本番デプロイ) を整合。
-- WO-URBAN-002/003/004 の acceptance を data-contract 参照で厳密化。WO-URBAN-005 を Cloud Run Deploy に全面置換。
-- Definition of Done に E2E (fallback) を追加。
-
-## wo-urban-005-cloud-run-deploy.yaml (旧 wo-urban-005-video-requirements-cli.yaml を置換)
-
-- id を `wo-urban-005-cloud-run-deploy` に変更。音声認識ベンダー名・関連 API キー名・出力名・動画系の語を一切含まない。
-- goal を「viewer+sim を Cloud Run Service にコンテナ化デプロイ、大規模 sim は同一イメージの Cloud Run Job」に再定義。
-- allowed_write_paths を Dockerfile / cloudbuild.yaml / requirements.txt / app/* / docs/deploy.md / tests/app/test_main.py に。
-- depends_on を WO-003 / WO-004 に設定。acceptance を health/fallback/secret/最小権限/デプロイ再現性/Service・Job 整合に。
-- out_of_scope に「APIキーをイメージ・git・ログに焼かない」「GPU/メディア依存を含めない」「fallback はキー無しで動く」を明記。
+- 2026-06-03 `1c6057c` READMEに#11の1分参加方法を追加する
+- 2026-06-03 `4eb1b75` 公開協業の現在地を最新の入口状態に更新する
+- 2026-06-03 `d4d2c72` Discordフリーズ中の通知手順を再開時参照に寄せる
+- 2026-06-03 `e4933fa` 運用者向けdocsにfallback smoke導線を追加する
+- 2026-06-02 `7768ede` 公開協業の現在地にfallback smoke導線を追加する
+- 2026-06-02 `2db0f1e` 初回協力候補にfallback smoke導線を追加する
+- 2026-06-02 `b885f3b` APIキーなしfallback smokeコマンドを追加する (#40)
+- 2026-06-02 `b509972` Vertex実行例のCLI引数を現行仕様に合わせる (#39)
+- 2026-06-02 `e9ec2f4` Discordフリーズ中の手動案内境界を明確化する (#37)
+- 2026-06-02 `3791dc7` Align collaboration docs with current issue state
+- 2026-06-02 `4570130` Add viewer operations panels
+- 2026-06-02 `6a2e538` CONTRIBUTING に API キーなし確認の境界を追記する
+- 2026-06-02 `e962044` fallback viewer レビュー導線を現在の UI に合わせる
+- 2026-06-02 `e9a53af` README のローカル起動手順に profile 生成補足を追加する
+- 2026-06-02 `1eca87c` fallback viewer の設定表示とライブ概要を追加する
+- 2026-06-02 `253b14c` ローカル .env 読込を明示 opt-in にする (#26)
+- 2026-06-02 `e76d0b1` Discord 導線のフリーズ状態を公開docsに反映する (#25)
+- 2026-06-02 `9ea6b4e` README に公開協業の入口を明記する (#24)
+- 2026-06-01 `ee84bfa` Adopt MIT license
+- 2026-06-01 `b996194` ライセンス決定issueを公開協業導線に追加する (#22)
+- 2026-06-01 `248ff0d` Merge pull request #7 from umisetokikaze/codex/ue-tech-005-ci-e2e
+- 2026-06-01 `f815b6a` Merge pull request #5 from umisetokikaze/codex/ue-tech-004-doc-cli-alignment
+- 2026-06-01 `6178ac0` Clarify public Type1 boundary (#19)
+- 2026-06-01 `d26354e` Merge pull request #6 from umisetokikaze/codex/ue-tech-006-sample-pois-validation
+- 2026-06-01 `9866f33` Document Discord webhook setup checklist (#18)
+- 2026-06-01 `c5f08dd` Add manual Discord notification test (#17)
+- 2026-06-01 `959aa27` Polish Discord onboarding docs (#16)
+- 2026-06-01 `b094af3` Merge pull request #4 from umisetokikaze/codex/ue-tech-002-run-id-consistency
+- 2026-06-01 `962e89c` 公開名義をNexusに統一する方針を追加
+- 2026-06-01 `57d85e6` Add public collaboration onboarding
+- 2026-05-31 `3cf0319` Merge pull request #3 from nexus-ai-2045/codex/code-review-fixes
+- 2026-05-31 `4c27591` Merge pull request #2 from umisetokikaze/codex/ue-tech-003-data-contract-validation
+- 2026-05-31 `5513ba1` Merge pull request #1 from umisetokikaze/codex/ue-tech-001-disable-gcs
+- 2026-05-31 `9face39` feat(urban): spec gap 実装 — viewer/LLM context/E2E/CI marker/profile 検証 + §20.2 tick=0 到達
+- 2026-05-31 `8776033` docs(readme): 課金境界を明示 — デフォルト無料 / Google Cloud は自分で env 設定時のみ自分のGCPに課金
+- 2026-05-31 `2ebb1b9` Enhance role visibility with colored badges in detail panel (tasks 4-5 foundation)
+- 2026-05-31 `570860c` Add role-based agent coloring for more character-like visualization (TDD foundation)
+- 2026-05-31 `16758fe` fix(urban): highlight 解除時に role 別色へ復元 (WO-013)
+- 2026-05-31 `1cddf6d` feat(urban): data-contract v0.4.0 relationship_reason 正式化 + 空文字ガード (WO-012)
+- 2026-05-31 `a86780c` feat(urban): roadnet を Prim 法 MST 化し道路追従で交流発生 (WO-011)
+- 2026-05-31 `5282402` Polish urban viewer design with modern CSS variables and improved visual hierarchy
+- 2026-05-30 `640d07d` docs: add Japanese README
+- 2026-05-30 `cfc15d2` feat(urban): realism batch WO-006..010 + 10-agent viewer fix
+- 2026-05-29 `59c9370` Ignore reference exports
+- 2026-05-29 `5dcf674` test(llm): update summary-match test for name-bearing template
+- 2026-05-29 `64e382e` feat(viewer,sim): display names + real store names in summaries & viewer; optional conversation (#1/#2/#4)
+- 2026-05-29 `c6f8e79` fix(viewer): clearer layer labels (POI->お店・施設 / AOI->エリア / Agents->住人)
+- 2026-05-29 `8cab6e7` feat(llm): LLM-driven destination category choice (RuleBased no-op / VertexGemini opt-in + fallback)
+- 2026-05-29 `0ec70dc` fix(llm): disable thinking (thinking_budget=0) for gemini-2.5-flash summaries
+- 2026-05-29 `a9f2ef2` fix(llm): default model gemini-2.5-flash (2.0-flash returns 404 on Vertex) + robust SDK-missing test
+- 2026-05-29 `92aed19` feat(llm): LLMProvider abstraction (RuleBased default / VertexGemini opt-in) for interaction summaries
+- 2026-05-29 `76deba1` chore(app): auto-load .env in local __main__ run (Cloud Run no-op)
+- 2026-05-29 `87d4b6f` feat(viewer): real Shibuya POIs via Places API + wire Maps key into served app.js
+- 2026-05-29 `2dd43e3` chore(deps): drop unused deps + add pyproject.toml for pytest rootdir
+- 2026-05-29 `9c88fba` refactor(viewer): dedupe CATEGORY_COLORS + harden google maps adapter
+- 2026-05-29 `4e42115` docs(deploy): add max-instances/concurrency guidance + SA hardening notes
+- 2026-05-29 `35e83cc` feat(viewer): social links on map, roads off-by-default, friend names
+- 2026-05-29 `884abed` feat(wo-005): add Cloud Run deploy artifacts (container + entrypoint + docs)
+- 2026-05-29 `23f2de4` fix(wo-004): make --sample produce a self-contained replayable run
+- 2026-05-29 `9027660` feat(wo-003): add FastAPI replay viewer with Maps + fallback
+- 2026-05-29 `ae6a4d6` feat(wo-004): add no-LLM rule-based simulation engine
+- 2026-05-29 `edc04cd` docs: resolve spec assumptions (37 [事実] via research/decision, 2 [実装時確定] runtime-only)
+- 2026-05-29 `3ee9964` feat(data-loader): implement WO-URBAN-001 (models + GeoJSON/JSONL loader + validation, 78 tests pass)
+- 2026-05-29 `4330c80` docs: refine spec P1 (synthetic data gen, behavior edge cases, API schema)
+- 2026-05-29 `43c9b67` chore: scaffold urban-ecosystem (spec, data-contract v0.2, work orders, subagent framework)

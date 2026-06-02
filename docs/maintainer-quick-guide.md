@@ -59,30 +59,6 @@ python tools/smoke_fallback_viewer.py
 
 Discord webhook の詳しい設定手順は [`docs/discord-pr-notifications.md`](discord-pr-notifications.md) に残しています。現在は実行しません。
 
-## Discord 再開時に貼る文面候補
-
-現在は Discord 導線を一旦フリーズしています。下記は再開時の候補であり、現時点では投稿しません。
-
-```text
-urban-ecosystem の公開協業を始めます。
-最初はコードを書かなくてもOKです。
-
-見るだけ、fallback地図UIレビューから歓迎です。
-APIキーなしで動くので、Google Cloud課金は発生しません。
-
-はじめに読む:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/discord-start-here.md
-
-現在地:
-https://github.com/nexus-ai-2045/urban-ecosystem/blob/main/docs/public-collaboration-status.md
-
-公開協業 milestone:
-https://github.com/nexus-ai-2045/urban-ecosystem/milestone/1
-
-最初のissue:
-https://github.com/nexus-ai-2045/urban-ecosystem/issues/11
-```
-
 ## 注意する境界
 
 - 公開 issue / PR / docs には、外に出してよい情報だけを書く。

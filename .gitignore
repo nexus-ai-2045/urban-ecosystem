@@ -23,6 +23,12 @@ output/
 # Reference transcripts and handoff exports
 docs/reference/
 
+# Local-only drafts and operator notes (do not publish)
+docs/drafts/
+docs/local/
+docs/private/
+docs/NEXT-SESSION.md
+
 # Generated sample data (WO-URBAN-002 既定 --out-dir / コミット対象外)
 data/
 
@@ -73,3 +79,6 @@ scripts/poll.log
 
 # 個人識別子 blocklist (公開しない)
 .pii-blocklist
+
+# Local git hooks (operator-only)
+.githooks/
