@@ -78,6 +78,7 @@ DATA_DIR="$PWD/data" PORT=8080 python -m app.main
 ```
 
 `GOOGLE_MAPS_API_KEY` が未設定なら fallback 地図、設定済みなら実 Google Maps タイルで表示されます。
+リポジトリ直下の `.env` は既定では読み込みません。ローカル開発で `.env` を使う場合だけ、`URBAN_ECOSYSTEM_LOAD_DOTENV=1` を明示してください。
 
 ## テスト
 
