@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -152,6 +153,20 @@ def _python_dependency_checks(env: dict[str, str]) -> list[dict[str, Any]]:
     return checks
 
 
+def _tooling_boundary_checks() -> list[dict[str, Any]]:
+    docker_path = shutil.which("docker")
+    return [
+        {
+            "name": "local Docker is optional for this preflight",
+            "status": "ok",
+            "required": False,
+            "available": bool(docker_path),
+            "path": docker_path,
+            "reason": "local-only preflight uses Python smoke; Cloud Run --source builds remotely with Cloud Build.",
+        }
+    ]
+
+
 def _run_fallback_smoke(options: PreflightOptions, env: dict[str, str]) -> dict[str, Any]:
     cmd = [
         sys.executable,
@@ -188,6 +203,7 @@ def run_preflight(options: PreflightOptions) -> dict[str, Any]:
     checks.extend(_deploy_doc_checks())
     checks.extend(_environment_checks(child_env))
     checks.extend(_python_dependency_checks(child_env))
+    checks.extend(_tooling_boundary_checks())
     if options.run_smoke:
         checks.append(_run_fallback_smoke(options, child_env))
     else:
@@ -207,6 +223,7 @@ def run_preflight(options: PreflightOptions) -> dict[str, Any]:
             "secret_manager_accessed": False,
             "public_access_changed": False,
             "billing_scope_changed": False,
+            "local_docker_required": False,
         },
         "commands_not_executed": list(FORBIDDEN_REMOTE_COMMANDS),
         "checks": checks,
@@ -225,6 +242,7 @@ def to_markdown(report: dict[str, Any]) -> str:
         f"- Secret Manager accessed: `{report['scope']['secret_manager_accessed']}`",
         f"- public access changed: `{report['scope']['public_access_changed']}`",
         f"- billing scope changed: `{report['scope']['billing_scope_changed']}`",
+        f"- local Docker required: `{report['scope']['local_docker_required']}`",
         "",
         "## checks",
     ]
