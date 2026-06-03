@@ -229,15 +229,20 @@ async function refreshHealthStatus() {
  * @returns {Promise<Object|string|null>}
  */
 async function fetchRunFile(runId, file) {
-    const res = await fetch(`${API_BASE}/api/data/${encodeURIComponent(runId)}/${file}`);
-    if (!res.ok) return null;
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("x-ndjson") || ct.includes("jsonl")) {
-        // JSONL: テキストを行分割して JSON パース
-        const text = await res.text();
-        return text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
+    try {
+        const res = await fetch(`${API_BASE}/api/data/${encodeURIComponent(runId)}/${file}`);
+        if (!res.ok) return null;
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("x-ndjson") || ct.includes("jsonl")) {
+            // JSONL: テキストを行分割して JSON パース
+            const text = await res.text();
+            return text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
+        }
+        return res.json();
+    } catch (error) {
+        console.warn(`run file の読み込みに失敗しました: ${file}`, error);
+        return null;
     }
-    return res.json();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,9 +263,11 @@ async function loadRun(runId) {
         ? summaryData.agents
         : 100;
     const profilesFile = `agent_profiles_N${profileCount}.json`;
+    let profilesFileLoaded = profilesFile;
+    let profilesFileFallbackUsed = false;
 
     // 並列ロード (poi_visit_records.jsonl は任意 / §5.2)
-    const [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw] = await Promise.all([
+    let [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw] = await Promise.all([
         fetchRunFile(runId, "pois.geojson"),
         fetchRunFile(runId, "aois.geojson"),
         fetchRunFile(runId, "roadnet.geojson"),
@@ -268,6 +275,14 @@ async function loadRun(runId) {
         fetchRunFile(runId, "agent_states.jsonl"),
         fetchRunFile(runId, "poi_visit_records.jsonl"),
     ]);
+    if (!Array.isArray(profilesData) && profilesFile !== "agent_profiles_N100.json") {
+        const fallbackProfilesData = await fetchRunFile(runId, "agent_profiles_N100.json");
+        if (Array.isArray(fallbackProfilesData)) {
+            profilesData = fallbackProfilesData;
+            profilesFileLoaded = "agent_profiles_N100.json";
+            profilesFileFallbackUsed = true;
+        }
+    }
 
     // data を正規化してセット
     state.data.pois     = poisData?.features?.map(f => ({
@@ -326,7 +341,7 @@ async function loadRun(runId) {
             errors: 0,
         },
         {
-            file:   profilesFile,
+            file:   profilesFileFallbackUsed ? `${profilesFileLoaded} (fallback)` : profilesFileLoaded,
             count:  profilesData ? state.data.profiles.length        : null,
             errors: 0,
         },
@@ -641,6 +656,16 @@ function _getRecentVisits(currentDay, currentTime) {
 }
 
 /**
+ * slider から来た tickIndex を現在の replay 範囲内に丸める。
+ * @param {number} idx
+ * @returns {number}
+ */
+function _clampTickIndex(idx) {
+    const maxIndex = Math.max(0, state.replay.ticks.length - 1);
+    return Math.max(0, Math.min(maxIndex, idx));
+}
+
+/**
  * profiles 配列から id -> profile オブジェクトのマップを生成する (WO-007)。
  * 旧: id -> name 文字列。新: id -> profile (name / surname / given / role 等を含む)。
  * ui_panels.js の updateAgentDetail は profileMap.get(id) で profile を取得して
@@ -754,7 +779,7 @@ function wireEvents() {
             const idx = parseInt(sliderEl.value, 10);
             if (!isNaN(idx)) {
                 stopPlay();
-                state.replay.tickIndex = idx;
+                state.replay.tickIndex = _clampTickIndex(idx);
                 await renderCurrentTick();
             }
         });
