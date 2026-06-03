@@ -93,7 +93,7 @@
 - APIキーは Cloud Run 本番では Secret Manager 経由でサーバーに注入し、サーバーが生成するHTMLに埋め込む (フロントへは referrer 制限済みキーのみ露出)。
 - ローカル開発では `.env` の `GOOGLE_MAPS_API_KEY` を使う。未設定時は fallback 地図に自動切替する。
 - フロント露出キーは Google Cloud Console で HTTP referrer 制限 (本番カスタムドメイン + Cloud Run の `*.run.app`) と Maps JavaScript API のみへの API 制限をかける。
-- `AdvancedMarkerElement` は Map ID 必須のため、`Map` 生成時に `mapId` を渡す。`GOOGLE_MAPS_MAP_ID` から読み、未設定時はフォールバック Map ID を使う (本番用 Map ID 自前発行は §16 未決)。
+- `AdvancedMarkerElement` は Map ID 必須のため、`GOOGLE_MAPS_MAP_ID` が有効な場合だけ `mapId` を渡す。Map ID 未設定または `DEMO_MAP_ID` の場合は通常の Google Maps marker へ落とし、無効な Map ID を Google Maps API へ渡さない。
 - Google Maps表示では、Googleの帰属表示や利用条件を壊さない。
 - POIやagentなど独自データはGoogle Maps上のOverlay/Marker/Data layerとして重ねる。
 
@@ -115,14 +115,14 @@ MVPではフロントエンドのビルド工程を増やさず、素のHTML/CSS
    app.js で `const { Map } = await google.maps.importLibrary("maps");`
    `const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");`
    の順に await 取得する。MVP ではバンドラを使わず ES module で読む。
-2. Map 生成: `new Map(el, { center, zoom, mapId })`。
-   - mapId は AdvancedMarkerElement の必須要件。`GOOGLE_MAPS_MAP_ID` 未設定時はフォールバック Map ID を使うが、本番は自前発行 (§16 未決)。
+2. Map 生成: `GOOGLE_MAPS_MAP_ID` が有効な場合だけ `new Map(el, { center, zoom, mapId })` とする。
+   - mapId は AdvancedMarkerElement の必須要件。`GOOGLE_MAPS_MAP_ID` 未設定または `DEMO_MAP_ID` の時は mapId を渡さず、agent は通常 Marker で表示する。
 3. POI/AOI/Road: 各 GeoJSON を別々の `google.maps.Data` インスタンスに `data.addGeoJson(geojson)` で投入し、レイヤーごとに `setStyle()`。
    - POI: Point。category で色分け (style 関数で `properties.category` 参照)。
    - AOI: Polygon/MultiPolygon。fillOpacity 0.2 程度の半透明。
    - Road: LineString/MultiLineString。strokeWeight 1-2。
    - レイヤー ON/OFF は各 Data インスタンスに `setMap(map | null)`。
-4. Agent: AdvancedMarkerElement で生成。PinElement で番号付きピン (`glyphText = String(agent_id)`、role で色分け)。click で選択イベント発火。
+4. Agent: 有効な Map ID がある場合は AdvancedMarkerElement + PinElement で生成。Map ID 未設定または `DEMO_MAP_ID` の場合は通常 Marker で番号付きピン相当を表示する。click で選択イベント発火。
 5. 帰属表示: Google の attribution / ロゴ DOM を隠さない・重ねない。
 
 ### 5.1.4 位置更新とパフォーマンス方針
