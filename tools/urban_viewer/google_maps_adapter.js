@@ -6,7 +6,7 @@
  *
  * - Maps JavaScript API を importLibrary() で動的ロードする (§5.1.3)
  * - POI/AOI/Road は google.maps.Data layer で管理する (§5.1.2)
- * - Agent は AdvancedMarkerElement + PinElement で管理する (Map ID 必須)
+ * - Agent は Map ID が有効なら AdvancedMarkerElement + PinElement、未設定なら通常 Marker で管理する
  * - marker manager は後から @googlemaps/markerclusterer を差し込める構造にする
  *
  * 識別子は英語 / コメントは日本語。
@@ -16,7 +16,7 @@
 
 import { CATEGORY_COLORS } from "./colors.js";
 
-/** フォールバック Map ID (開発/テスト専用。本番は GOOGLE_MAPS_MAP_ID を使う) */
+/** 無効な Map ID (開発メモ用。本番は GOOGLE_MAPS_MAP_ID を使う) */
 const FALLBACK_MAP_ID = "DEMO_MAP_ID";
 
 /** role -> ピン背景色 (AdvancedMarkerElement) */
@@ -38,6 +38,30 @@ const SOCIAL_LINK_WEIGHT = 2;
 const DEFAULT_CENTER = { lat: 35.6628, lng: 139.7025 };
 const DEFAULT_ZOOM   = 14;
 
+function isUsableMapId(mapId) {
+    return Boolean(mapId && mapId !== FALLBACK_MAP_ID && !String(mapId).startsWith("%%"));
+}
+
+function buildMarkerLabel(text) {
+    return {
+        text,
+        color: "#ffffff",
+        fontSize: "11px",
+        fontWeight: "700",
+    };
+}
+
+function buildClassicMarkerIcon(color) {
+    return {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: color,
+        fillOpacity: 0.95,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+    };
+}
+
 export class GoogleMapsAdapter {
     /**
      * @param {HTMLElement} container - 地図を描画する DOM 要素
@@ -47,7 +71,8 @@ export class GoogleMapsAdapter {
     constructor(container, apiKey, mapId) {
         this._container = container;
         this._apiKey    = apiKey;
-        this._mapId     = mapId || FALLBACK_MAP_ID;
+        this._mapId     = isUsableMapId(mapId) ? mapId : "";
+        this._useAdvancedMarkers = Boolean(this._mapId);
 
         this._map   = null;
         this._ready = false;
@@ -55,10 +80,10 @@ export class GoogleMapsAdapter {
         // レイヤー: Data インスタンスを name -> Data のマップで管理
         this._dataLayers = { poi: null, aoi: null, road: null };
 
-        // agent: id -> AdvancedMarkerElement のマップ
+        // agent: id -> AdvancedMarkerElement または google.maps.Marker のマップ
         this._agentMarkers = new Map();
 
-        // agent: id -> PinElement のマップ (highlight で背景色を差し替えるために保持)
+        // agent: id -> PinElement のマップ (Advanced Marker の highlight で背景色を差し替えるために保持)
         this._agentPins = new Map();
 
         // agent: id -> role 別色 のマップ (highlight 解除時に正しい色に戻すために保持)
@@ -96,11 +121,14 @@ export class GoogleMapsAdapter {
         const center = options.center || DEFAULT_CENTER;
         const zoom   = options.zoom   || DEFAULT_ZOOM;
 
-        this._map = new Map(this._container, {
+        const mapOptions = {
             center,
             zoom,
-            mapId: this._mapId,
-        });
+        };
+        if (this._useAdvancedMarkers) {
+            mapOptions.mapId = this._mapId;
+        }
+        this._map = new Map(this._container, mapOptions);
 
         // Data レイヤーを3枚作成
         for (const name of ["poi", "aoi", "road"]) {
@@ -121,7 +149,7 @@ export class GoogleMapsAdapter {
     setLayer(name, visible, geojson = null) {
         if (name === "agent") {
             for (const marker of this._agentMarkers.values()) {
-                marker.map = visible ? this._map : null;
+                this._setMarkerMap(marker, visible ? this._map : null);
             }
             return;
         }
@@ -145,8 +173,10 @@ export class GoogleMapsAdapter {
     async upsertAgents(agents) {
         if (!this._ready) return;
 
-        const { AdvancedMarkerElement, PinElement } =
-            await google.maps.importLibrary("marker");
+        const markerLib = this._useAdvancedMarkers
+            ? await google.maps.importLibrary("marker")
+            : {};
+        const { AdvancedMarkerElement, PinElement } = markerLib;
 
         const seenIds = new Set();
         for (const agent of agents) {
@@ -157,18 +187,14 @@ export class GoogleMapsAdapter {
                 // 位置・glyphText・title を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4 / WO-007)
                 // WO-007 acceptance: tick 毎・run 跨ぎで glyphText / title を更新する。
                 const marker = this._agentMarkers.get(agent.id);
-                marker.position = latLng;
-                marker.map = this._map;
-                // glyphText / title を最新の label で更新する (profile ロード後の run 跨ぎ対応)
-                const pin = this._agentPins.get(agent.id);
-                if (pin) {
-                    const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
-                    pin.glyphText = glyphText;
-                }
+                this._setMarkerPosition(marker, latLng);
+                this._setMarkerMap(marker, this._map);
+                const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
+                this._setMarkerLabel(agent.id, marker, glyphText);
                 const titleText = agent.label != null
                     ? `${agent.label} (id:${agent.id})`
                     : `Agent ${agent.id}`;
-                marker.title = titleText;
+                this._setMarkerTitle(marker, titleText);
             } else {
                 // 新規作成
                 const role  = agent.role || "other";
@@ -178,28 +204,17 @@ export class GoogleMapsAdapter {
                     : (ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
                 // glyphText: label フィールドがあれば名前の短縮形を表示、なければ id
                 const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
-                const pin   = new PinElement({
-                    glyphText:       glyphText,
-                    background:      color,
-                    borderColor:     "#ffffff",
-                    glyphColor:      "#ffffff",
-                });
                 // title: ツールチップに短縮ラベルを表示
                 const titleText = agent.label != null
                     ? `${agent.label} (id:${agent.id})`
                     : `Agent ${agent.id}`;
-                const marker = new AdvancedMarkerElement({
-                    map:      this._map,
-                    position: latLng,
-                    title:    titleText,
-                    gmpClickable: true,
-                });
-                marker.replaceChildren(pin);
-                marker.addEventListener("gmp-click", () => {
+                const marker = this._useAdvancedMarkers
+                    ? this._createAdvancedMarker(agent.id, AdvancedMarkerElement, PinElement, latLng, glyphText, color, titleText)
+                    : this._createClassicMarker(latLng, glyphText, color, titleText);
+                this._addMarkerClickListener(marker, () => {
                     if (this._agentClickCb) this._agentClickCb(agent.id);
                 });
                 this._agentMarkers.set(agent.id, marker);
-                this._agentPins.set(agent.id, pin);
                 // role 別色を保存。highlight 解除時に正しい色に戻すために参照する
                 this._agentRoleColors.set(agent.id, ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
             }
@@ -210,7 +225,7 @@ export class GoogleMapsAdapter {
         // marker.map を復元する (delete すると再表示・highlight が壊れる)。
         for (const [id, marker] of this._agentMarkers) {
             if (!seenIds.has(id)) {
-                marker.map = null;
+                this._setMarkerMap(marker, null);
             }
         }
 
@@ -233,20 +248,14 @@ export class GoogleMapsAdapter {
 
         // 前回選択マーカーを role 別色に戻す
         if (prevId !== null && prevId !== undefined && prevId !== agentId) {
-            const prevPin = this._agentPins.get(prevId);
-            if (prevPin) {
-                // _agentRoleColors に upsertAgents 時の role 別色が保存されているため、
-                // DEFAULT_ROLE_COLOR 固定ではなく正しい role 色 (office_worker=青 / student=黄 など) に戻す
-                prevPin.background = this._agentRoleColors.get(prevId) || DEFAULT_ROLE_COLOR;
-            }
+            // _agentRoleColors に upsertAgents 時の role 別色が保存されているため、
+            // DEFAULT_ROLE_COLOR 固定ではなく正しい role 色 (office_worker=青 / student=黄 など) に戻す
+            this._setAgentMarkerColor(prevId, this._agentRoleColors.get(prevId) || DEFAULT_ROLE_COLOR);
         }
 
         // 新規選択マーカーを強調色にする
         if (agentId !== null && agentId !== undefined) {
-            const pin = this._agentPins.get(agentId);
-            if (pin) {
-                pin.background = HIGHLIGHT_COLOR;
-            }
+            this._setAgentMarkerColor(agentId, HIGHLIGHT_COLOR);
         }
     }
 
@@ -309,6 +318,89 @@ export class GoogleMapsAdapter {
     // ─────────────────────────────────────────────────────────────────────────
     // 内部
     // ─────────────────────────────────────────────────────────────────────────
+
+    _createAdvancedMarker(agentId, AdvancedMarkerElement, PinElement, latLng, glyphText, color, titleText) {
+        const pin = new PinElement({
+            glyphText,
+            background:      color,
+            borderColor:     "#ffffff",
+            glyphColor:      "#ffffff",
+        });
+        const marker = new AdvancedMarkerElement({
+            map:      this._map,
+            position: latLng,
+            title:    titleText,
+            gmpClickable: true,
+        });
+        marker.replaceChildren(pin);
+        this._agentPins.set(agentId, pin);
+        return marker;
+    }
+
+    _createClassicMarker(latLng, glyphText, color, titleText) {
+        return new google.maps.Marker({
+            map:      this._map,
+            position: latLng,
+            title:    titleText,
+            label:    buildMarkerLabel(glyphText),
+            icon:     buildClassicMarkerIcon(color),
+        });
+    }
+
+    _setMarkerMap(marker, map) {
+        if (typeof marker.setMap === "function") {
+            marker.setMap(map);
+        } else {
+            marker.map = map;
+        }
+    }
+
+    _setMarkerPosition(marker, latLng) {
+        if (typeof marker.setPosition === "function") {
+            marker.setPosition(latLng);
+        } else {
+            marker.position = latLng;
+        }
+    }
+
+    _setMarkerTitle(marker, titleText) {
+        if (typeof marker.setTitle === "function") {
+            marker.setTitle(titleText);
+        } else {
+            marker.title = titleText;
+        }
+    }
+
+    _setMarkerLabel(agentId, marker, glyphText) {
+        const pin = this._agentPins.get(agentId);
+        if (pin) {
+            pin.glyphText = glyphText;
+            return;
+        }
+        if (typeof marker.setLabel === "function") {
+            marker.setLabel(buildMarkerLabel(glyphText));
+        }
+    }
+
+    _setAgentMarkerColor(agentId, color) {
+        const pin = this._agentPins.get(agentId);
+        if (pin) {
+            pin.background = color;
+            return;
+        }
+        const marker = this._agentMarkers.get(agentId);
+        if (marker && typeof marker.setIcon === "function") {
+            marker.setIcon(buildClassicMarkerIcon(color));
+        }
+    }
+
+    _addMarkerClickListener(marker, cb) {
+        if (this._useAdvancedMarkers) {
+            marker.addEventListener("gmp-click", cb);
+        } else {
+            marker.addListener("click", cb);
+        }
+    }
 
     /**
      * google.maps が利用可能になるまで待機する (bootstrap loader がコールバックを呼ぶまで)。

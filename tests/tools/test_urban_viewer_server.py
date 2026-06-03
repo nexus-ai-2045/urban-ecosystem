@@ -631,6 +631,31 @@ class TestViewerHTML:
         assert json.dumps(map_id) in res.text
         assert 'const MAPS_API_KEY = "TEST_"KEY\\VALUE";' not in res.text
 
+    def test_demo_map_id_is_not_injected_into_html(self, sample_run_dir, monkeypatch):
+        """DEMO_MAP_ID は無効な Map ID なので Maps bootstrap loader へ渡さない。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "dummy-key")
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", "DEMO_MAP_ID")
+
+        res = TestClient(app).get("/")
+
+        assert res.status_code == 200
+        assert "maps.googleapis.com" in res.text
+        assert "mapIds" not in res.text
+        assert "DEMO_MAP_ID" not in res.text
+
+    def test_demo_map_id_is_not_injected_into_app_js(self, sample_run_dir, monkeypatch):
+        """app.js 側も DEMO_MAP_ID を空文字扱いにし、通常 Marker へ落とせるようにする。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "dummy-key")
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", "DEMO_MAP_ID")
+
+        res = TestClient(app).get("/static/app.js")
+
+        assert res.status_code == 200
+        assert 'const MAPS_MAP_ID  = "";' in res.text
+        assert "DEMO_MAP_ID" not in res.text
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 許可リスト自体の完全性確認

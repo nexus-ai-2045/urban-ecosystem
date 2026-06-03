@@ -188,8 +188,9 @@ def _build_viewer_html(api_key: str, map_id: str) -> str:
             'd[l]?console.warn(p+" only loads once. Ignoring:",g):'
             "(d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n)))})"
         )
+        usable_map_id = bool(map_id and map_id != "DEMO_MAP_ID")
         js_config_parts = ["key: " + _js_string_literal(api_key)]
-        if map_id:
+        if usable_map_id:
             js_config_parts.append("mapIds: [" + _js_string_literal(map_id) + "]")
         js_config = "{" + ", ".join(js_config_parts) + "}"
         script_tag = (
@@ -199,13 +200,13 @@ def _build_viewer_html(api_key: str, map_id: str) -> str:
         )
         html = html.replace(_PLACEHOLDER_SCRIPT, script_tag)
         html = _replace_js_placeholder_literal(html, _PLACEHOLDER_KEY, api_key)
-        if not map_id:
-            # API key 設定済みだが GOOGLE_MAPS_MAP_ID 未設定 → DEMO_MAP_ID が注入される。
-            # DEMO_MAP_ID は Google 利用規約で本番禁止 (§16 #6) のため警告を出す。
+        if not usable_map_id:
+            # API key 設定済みだが GOOGLE_MAPS_MAP_ID 未設定/DEMO_MAP_ID → Map ID は注入しない。
+            # Advanced Marker は使わず、クライアント側で通常 Marker に落とす。
             logging.getLogger(__name__).warning(
-                "GOOGLE_MAPS_MAP_ID 未設定: DEMO_MAP_ID を使用します (本番非推奨 / §16 #6)"
+                "GOOGLE_MAPS_MAP_ID 未設定または DEMO_MAP_ID: 通常 Marker で Google Maps を表示します"
             )
-        map_id_val = map_id if map_id else "DEMO_MAP_ID"
+        map_id_val = map_id if usable_map_id else ""
         html = _replace_js_placeholder_literal(html, _PLACEHOLDER_MAP_ID, map_id_val)
     else:
         # キー未設定: Maps スクリプトを出力しない / プレースホルダをそのまま残す
@@ -350,9 +351,10 @@ async def _serve_app_js() -> Response:
     map_id  = _get_maps_map_id()
     js = _APP_JS_PATH.read_text(encoding="utf-8")
     if api_key:
+        usable_map_id = bool(map_id and map_id != "DEMO_MAP_ID")
         js = _replace_js_placeholder_literal(js, _PLACEHOLDER_KEY, api_key)
         js = _replace_js_placeholder_literal(
-            js, _PLACEHOLDER_MAP_ID, map_id if map_id else "DEMO_MAP_ID"
+            js, _PLACEHOLDER_MAP_ID, map_id if usable_map_id else ""
         )
     return Response(content=js, media_type="application/javascript")
 
