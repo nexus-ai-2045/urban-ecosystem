@@ -7,7 +7,7 @@
 
 scope:
   profiles + POI から §9 のルールで agent_states.jsonl / poi_visit_records.jsonl /
-  interaction_events.jsonl / summary.json を生成する。LLM は呼ばない。
+  interaction_events.jsonl / summary.json / metrics.json を生成する。LLM は呼ばない。
 
 使い方:
   # 静的データを内部生成してから simulate (--sample)
@@ -26,7 +26,8 @@ scope:
 
 決定論:
   --seed で random.Random(seed) を初期化する。同一 seed・同一入力で 3 jsonl が
-  byte 一致する (§13.3.2)。summary.json は started_at を含むため対象外。
+  byte 一致する (§13.3.2)。metrics.json も replay-derived のため byte 一致対象。
+  summary.json は started_at を含むため対象外。
 """
 
 from __future__ import annotations
