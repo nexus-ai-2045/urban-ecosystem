@@ -9,6 +9,8 @@
 
 この手順は、実行者が指定した Google Cloud project に Cloud Run / Secret Manager / Maps / Vertex AI などのリソースを作ります。
 
+この手順は maintainer demo / 実機 smoke / advanced setup 用です。通常のリポジトリ参加者は、この手順を実行しなくても README の fallback viewer でレビューできます。
+
 課金は `DEPLOY_PROJECT` に設定した project の請求先に発生します。Nexus の project を使う場合は Nexus に、各自の project を使う場合は各自の Google Cloud アカウント / 組織に課金されます。
 
 ```bash
@@ -164,6 +166,8 @@ gcloud secrets versions list urban-maps-key --project "${DEPLOY_PROJECT}"
 
 `AdvancedMarkerElement` は Map ID が必須です。`DEMO_MAP_ID` は**開発・テスト専用**であり、
 本番環境での使用は Google の利用規約で禁止されています。
+
+Map ID は、通常の参加者レビューには不要です。Map ID が未設定の場合、viewer は通常 Marker で Google Maps を表示します。この場合、Google Maps 側から Marker 非推奨の warning が出ることがありますが、表示停止エラーではありません。warning zero / Advanced Marker 運用にしたい場合だけ、本節で本番用 Map ID を発行します。
 
 ### 3.1 発行手順
 
@@ -335,6 +339,8 @@ gcloud run deploy urban-ecosystem \
 
 デプロイ後は §7 の `/api/health` と viewer 表示を確認します。Google Maps API キーを注入していないため、
 表示は fallback 地図になることが期待値です。
+
+`--no-allow-unauthenticated` の service は、ブラウザで URL を直接開くと 403 になります。これは故障ではなく、認証必須にしているためです。実機 smoke は identity token 付きの request で確認します。参加者に見せる公開 demo にする場合は、課金・公開範囲・API key 制限を確認してから `--allow-unauthenticated` または IAP 構成を選びます。
 
 #### ステップ 2: Maps API キーありでデプロイ
 

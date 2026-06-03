@@ -43,6 +43,19 @@ python tools/smoke_fallback_viewer.py
 
 この smoke は GitHub issue #11 の入口確認用です。Google Cloud、Secret Manager、Discord は使いません。
 
+## 参加者と maintainer demo の切り分け
+
+公開協業の正規入口は、API キーなしの fallback viewer です。参加者が最初から Google Cloud project、Maps API key、Cloud Run deploy、Map ID を用意する必要はありません。
+
+| 区分 | 使うもの | 参加者に求めるか | 備考 |
+|---|---|---|---|
+| 初回レビュー | fallback viewer / smoke | はい | issue #11 の既定ルート。課金・外部 API 呼び出しなし |
+| 各自の実 Google Maps 確認 | 各自の Google Cloud project / API key | 任意 | 課金、公開範囲、IAM、Secret は各自の責任 |
+| Nexus 管理 Cloud Run | Nexus maintainer が管理する project | いいえ | demo / smoke / 運用確認用。実行範囲は maintainer が切る |
+| 公開 URL 化 | `allow-unauthenticated` / IAP など | いいえ | 課金・公開範囲の判断なので、PR や issue で明示してから扱う |
+
+非公開 Cloud Run Service は、ブラウザで URL を直接開くと 403 になります。これは参加者側の失敗ではなく、公開範囲を閉じている状態です。参加者に見せる場合は、fallback viewer を案内するか、maintainer が公開 demo として別途用意します。
+
 ## 運用者側で進めるもの
 
 | issue | 内容 | 状態 |

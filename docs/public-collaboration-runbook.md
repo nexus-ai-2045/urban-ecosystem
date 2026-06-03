@@ -42,6 +42,20 @@ python tools/smoke_fallback_viewer.py
 現在地の棚卸し: [`docs/public-collaboration-status.md`](public-collaboration-status.md)
 Discord 通知設定 (現在フリーズ): [`docs/discord-pr-notifications.md`](discord-pr-notifications.md)
 
+## 参加者への案内文
+
+参加者には、次の切り分けで案内します。
+
+| 伝えること | 言い方 |
+|---|---|
+| 最初の入口 | 「API キーなしで動く fallback viewer を見て、分かりにくい点を教えてください」 |
+| Google Cloud | 「最初から不要です。試す場合は自分の project と課金範囲で opt-in してください」 |
+| Nexus 管理 project | 「maintainer が demo / smoke 用に管理します。参加者の通常ルートでは使いません」 |
+| Cloud Run URL | 「非公開 service は直アクセスで 403 になります。公開 demo にするかは maintainer が別判断します」 |
+| Map ID | 「警告ゼロや Advanced Marker 用の任意設定です。参加の前提ではありません」 |
+
+この案内により、参加者の作業は README / issue #11 / fallback smoke に寄せます。Cloud Run、Secret Manager、実 Maps API、公開 URL 化は maintainer 側の運用作業として分けます。
+
 ## 参加者に伝える禁止事項
 
 - API キー、トークン、`.env` を貼らない。
