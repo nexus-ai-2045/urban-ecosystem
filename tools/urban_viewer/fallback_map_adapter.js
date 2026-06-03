@@ -319,6 +319,8 @@ export class FallbackMapAdapter {
         if (this._layers.agent.visible) {
             this._drawAgents(this._layers.agent.markers);
         }
+
+        this._drawLayerStateIndicator();
     }
 
     /** グリッドライン付きの fallback 背景 */
@@ -344,6 +346,28 @@ export class FallbackMapAdapter {
         ctx.fillStyle = "#aaaaaa";
         ctx.font = "12px sans-serif";
         ctx.fillText("Fallback Map (no API key)", 8, h - 6);
+    }
+
+    /** fallback canvas 上に POI / AOI / road の表示状態を小さく反映する */
+    _drawLayerStateIndicator() {
+        const ctx = this._ctx;
+        const entries = [
+            ["poi", "#2f80ed"],
+            ["aoi", "#27ae60"],
+            ["road", "#7f8c8d"],
+        ];
+        const size = 8;
+        const gap = 4;
+        const x0 = Math.max(8, this._canvas.width - entries.length * (size + gap) - 8);
+        const y = Math.max(8, this._canvas.height - size - 8);
+
+        entries.forEach(([name, color], index) => {
+            const x = x0 + index * (size + gap);
+            ctx.fillStyle = this._layers[name].visible ? color : "#ffffff";
+            ctx.fillRect(x, y, size, size);
+            ctx.strokeStyle = "#222222";
+            ctx.strokeRect(x, y, size, size);
+        });
     }
 
     /** AOI を半透明ポリゴンで描画する */
