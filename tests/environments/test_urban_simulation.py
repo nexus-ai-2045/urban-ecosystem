@@ -6,7 +6,7 @@ test_urban_simulation.py — §13.3 シミュレーション検証の機械化�
   - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
 
 カバレッジ:
-  - §13.3.1 完走・出力: 100 体 × 24 tick / 3 jsonl + summary
+  - §13.3.1 完走・出力: 100 体 × 24 tick / 3 jsonl + summary + metrics
   - §13.3.2 決定論: 同一 seed → 3 jsonl byte 一致 / seed 変化で interaction 件数変化
   - §13.3.3 invariant: bbox+500m / 連続 tick 移動 STEP_M*1.1 以下 /
                        visit poi 存在 / interaction agent_ids 存在・重複なし /
@@ -101,8 +101,8 @@ def test_completes_100_agents_24_ticks(sample_inputs):
     assert len(sim.agent_states) == 100 * 24
 
 
-def test_emits_four_files(sample_inputs, tmp_path):
-    """3 jsonl + summary.json が出力される (§13.3.1)。"""
+def test_emits_replay_summary_and_metrics(sample_inputs, tmp_path):
+    """3 jsonl + summary.json + metrics.json が出力される (§13.3.1)。"""
     pois, profiles, _ = sample_inputs
     out = tmp_path / "urban_demo"
     summary = Simulation(pois, profiles, seed=42, ticks=24, run_id="urban_demo").run(out)
@@ -112,6 +112,7 @@ def test_emits_four_files(sample_inputs, tmp_path):
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
         "summary.json",
+        "metrics.json",
     ):
         assert (out / name).exists(), f"{name} が出力されていない"
 
@@ -125,6 +126,21 @@ def test_emits_four_files(sample_inputs, tmp_path):
     with (out / "interaction_events.jsonl").open(encoding="utf-8") as f:
         event_lines = [line for line in f if line.strip()]
     assert summary["interactions"] == len(event_lines)
+
+    metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["schema_version"] == "social-simulation-metrics-v0.1"
+    assert metrics["run_id"] == "urban_demo"
+    assert metrics["individual_simulation"]["agents_with_state_history"] == 100
+    assert (
+        sum(metrics["individual_simulation"]["action_count_by_type"].values())
+        == 100 * 24
+    )
+    assert (
+        sum(metrics["scenario_simulation"]["interaction_count_by_type"].values())
+        == len(event_lines)
+    )
+    for key in ("arrival_status_rate", "no_target_rate", "unique_poi_visit_rate"):
+        assert 0.0 <= metrics["society_simulation"][key] <= 1.0
 
 
 def test_simulation_rejects_empty_pois(sample_inputs):
@@ -156,20 +172,21 @@ def test_completes_without_llm_keys(sample_inputs, monkeypatch):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def test_determinism_byte_identical(sample_inputs, tmp_path):
-    """同一 seed・同一入力で 3 jsonl が byte 一致する (§13.3.2)。"""
+    """同一 seed・同一入力で 3 jsonl と metrics.json が byte 一致する (§13.3.2)。"""
     pois, profiles, _ = sample_inputs
     out_a = tmp_path / "run_a"
     out_b = tmp_path / "run_b"
-    Simulation(pois, profiles, seed=42, ticks=24, run_id="run_a").run(out_a)
-    Simulation(pois, profiles, seed=42, ticks=24, run_id="run_b").run(out_b)
+    Simulation(pois, profiles, seed=42, ticks=24, run_id="same_run").run(out_a)
+    Simulation(pois, profiles, seed=42, ticks=24, run_id="same_run").run(out_b)
 
     for name in (
         "agent_states.jsonl",
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
+        "metrics.json",
     ):
         assert filecmp.cmp(out_a / name, out_b / name, shallow=False), (
-            f"{name} が byte 一致しない (run_id 差分は jsonl に影響しないはず)"
+            f"{name} が byte 一致しない (同一 seed・同一入力なら一致するはず)"
         )
 
 
@@ -430,6 +447,7 @@ def test_cli_sample_path(tmp_path):
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
         "summary.json",
+        "metrics.json",
     ):
         assert (out / name).exists(), f"{name} が run dir に無い"
 

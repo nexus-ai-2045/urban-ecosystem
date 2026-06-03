@@ -1,0 +1,93 @@
+id: wo-urban-017-social-simulation-evaluation
+title: "LLM社会シミュレーション評価レイヤー"
+status: draft
+owner_role: developer
+support_roles:
+  - test-agent
+  - quality-gate
+
+goal: >
+  arXiv 2412.03563 の Individual / Scenario / Society Simulation 分類を、
+  Urban Ecosystem の replay 出力から再計算できる metrics.json として取り込む。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/subagents/internal/llm-social-simulation-adoption.md
+  references:
+    - docs/regional-simulation-adoption-research.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+
+scope:
+  allowed_write_paths:
+    - docs/subagents/internal/llm-social-simulation-adoption.md
+    - docs/subagents/work-orders/wo-urban-017-social-simulation-evaluation.yaml
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/ai-ecosystem-tool-spec.md
+    - environments/urban_2d/simulation.py
+    - tools/urban_simulation_cli.py
+    - tools/urban_viewer_server.py
+    - tests/environments/test_urban_simulation.py
+    - tests/tools/test_urban_viewer_server.py
+  read_only_paths:
+    - docs/reference/
+    - data/
+  out_of_scope:
+    - "LLM に tick ごとの行動決定を任せない。"
+    - "実在人物の再現や現実世界の行動予測を追加しない。"
+    - "外部 API 呼び出し、Vertex AI 実行、Google Maps 実測は行わない。"
+    - "experiments/results/ を commit しない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.4.0
+  produces:
+    - id: urban-ecosystem-data-contract
+      version: 0.4.1
+
+depends_on:
+  work_orders:
+    - wo-urban-004-rule-simulation
+    - wo-urban-008-behavior-relationship-llm
+    - wo-urban-012-contract-relationship-reason
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python3 -m pytest tests/environments/test_urban_simulation.py tests/tools/test_urban_viewer_server.py -q"
+  optional:
+    - "python3 tools/urban_simulation_cli.py run --sample --ticks 24 --seed 42 --out /tmp/urban_social_metrics_smoke"
+
+acceptance:
+  - "`Simulation.run()` が `metrics.json` を `summary.json` と並べて出力する。"
+  - "`metrics.json` は Individual / Scenario / Society Simulation の三層を持つ。"
+  - "`metrics.json` は replay-derived で、RuleBasedProvider 経路では同一 seed・同一入力で byte 一致する。"
+  - "data contract と viewer allowlist が `metrics.json` を許可する。"
+  - "既存の `summary.json` stdout 契約は壊さない。"
+  - "LLM 行動決定、外部 API 呼び出し、実在人物再現は追加しない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この work order は WO-URBAN-016 Simulation Metrics の概念を、LLM社会シミュレーション分類に合わせて実装する。"
