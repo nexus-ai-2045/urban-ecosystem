@@ -31,7 +31,7 @@ arXiv 2412.03563「From Individual to Society: A Survey on Social Simulation Dri
 - LLM に tick ごとの状態遷移を直接決めさせない。
 - 実在人物の再現や現実世界の行動予測には使わない。
 - MATSim / SUMO / ActivitySim のような重い外部シミュレータを直接組み込まない。
-- public contract を story / lore / internal codename 由来の内部 claim 管理に寄せない。
+- public contract を story / lore 由来の内部 claim 管理に寄せない。
 
 ## 指標の初期形
 
