@@ -18,6 +18,7 @@ owner: nexus_ai
 | 1d | status/action/type/reason の enum 未定義 | ✅ | contract §Enumerations に固定。 |
 | 1e | `relationships.jsonl` が contract File Names に無い | ✅ | 追加 (任意出力)。 |
 | 1f | 座標2系統 (GeoJSON `[lon,lat]` vs flat `lat/lon`) 未明記 | ✅ | contract §Coordinate Systems に明記。 |
+| 1g | API / CLI / data allowlist / runtime settings の docs drift | ✅ | `tools/docs_sync_check.py` と `docs/generated/current-capabilities.md` を追加。CI で `python tools/docs_sync_check.py --check` を実行し、実装と generated docs の不一致を PR 時点で検出する。 |
 | 2 | status 写像で `idle` の出力先が未定義 | ✅ | spec §9.2 に写像表追加 (`idle`→`staying`)。 |
 | 3 | summary.json `started_at` が再現性テストと衝突 | ✅ | contract で「再現性は 3 JSONL の byte 一致のみ対象、summary は対象外」を明記。`seed` を summary に追加。 |
 
