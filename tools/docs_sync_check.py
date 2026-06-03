@@ -15,11 +15,15 @@ from pathlib import Path
 
 from fastapi.routing import APIRoute
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from tools.urban_simulation_cli import build_parser
 from tools.urban_viewer_server import ALLOWED_FILES, AGENT_PROFILES_RE, SUPPORTED_DATA_SOURCES, app
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_DOC = PROJECT_ROOT / "docs" / "generated" / "current-capabilities.md"
 
 
