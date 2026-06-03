@@ -201,6 +201,8 @@ Nexus 管理の project を使う場合だけ、maintainer 承認後に実行し
 - 仕様書: [`docs/ai-ecosystem-tool-spec.md`](docs/ai-ecosystem-tool-spec.md)
 - データ契約: [`docs/subagents/contracts/urban-ecosystem-data-contract.md`](docs/subagents/contracts/urban-ecosystem-data-contract.md)
 - 実装計画 / 作業指示: [`docs/ai-ecosystem-implementation-orchestration.md`](docs/ai-ecosystem-implementation-orchestration.md)
+- リリース方針: [`docs/release-policy.md`](docs/release-policy.md)
+- 変更履歴: [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
 - 協力ガイド: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Discord 再開時向け guide: [`docs/discord-start-here.md`](docs/discord-start-here.md)
 - Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
