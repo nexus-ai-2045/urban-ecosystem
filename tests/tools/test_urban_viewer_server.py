@@ -7,7 +7,7 @@ test_urban_viewer_server.py — urban_viewer_server のサーバーエンドポ�
 テスト対象:
   - GET /api/health : ステータス・maps_key フィールド・キー平文非公開
   - GET /api/runs   : ゼロ件 / 1 件
-  - GET /api/data/{run_id}/{file}: 許可リスト 10 ファイル通過 / 未許可ファイル 403 / 不在 run 404 / ファイル未存在 404
+  - GET /api/data/{run_id}/{file}: 許可リスト 11 ファイル通過 / 未許可ファイル 403 / 不在 run 404 / ファイル未存在 404
   - GET /           : APIキー未設定時 fallback HTML / キー平文非公開
   - パストラバーサル 403
 
@@ -43,7 +43,13 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # サーバーモジュールを import
-from tools.urban_viewer_server import app, ALLOWED_FILES, AGENT_PROFILES_RE
+from tools.urban_viewer_server import (
+    app,
+    ALLOWED_FILES,
+    AGENT_PROFILES_RE,
+    _RUNTIME_CONFIG,
+    _make_configured_llm_provider,
+)
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
     ROLE_LABELS,
@@ -146,6 +152,8 @@ def sample_run_dir(tmp_path_factory):
         for ev in _MIN_INTERACTION_EVENTS:
             fh.write(json.dumps(ev, ensure_ascii=False) + "\n")
 
+    _write_minimal_activity_plan(run_dir)
+
     # summary.json を上書き (generate が出力するものと件数を合わせる)
     summary = {
         "run_id":       "test_run",
@@ -172,6 +180,26 @@ def _count_pois(run_dir: Path) -> int:
         return len(data.get("features", []))
     except Exception:
         return 0
+
+
+def _write_minimal_activity_plan(run_dir: Path) -> None:
+    """activity_plans.jsonl の optional input fixture を 1 行だけ書く。"""
+    activity_plan = {
+        "agent_id": 0,
+        "day": 0,
+        "activities": [
+            {
+                "kind": "lunch",
+                "start": "08:00:00",
+                "end": "08:30:00",
+                "poi_id": "poi_001",
+            }
+        ],
+    }
+    (run_dir / "activity_plans.jsonl").write_text(
+        json.dumps(activity_plan, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _create_minimal_static_files(run_dir: Path) -> None:
@@ -238,6 +266,8 @@ def _create_minimal_static_files(run_dir: Path) -> None:
         encoding="utf-8",
     )
 
+    _write_minimal_activity_plan(run_dir)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TestClient fixture
@@ -246,6 +276,7 @@ def _create_minimal_static_files(run_dir: Path) -> None:
 @pytest.fixture()
 def client_no_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY 未設定のクライアント。"""
+    _RUNTIME_CONFIG.clear()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -255,6 +286,7 @@ def client_no_key(sample_run_dir, monkeypatch):
 @pytest.fixture()
 def client_with_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY が設定されたクライアント (テスト用ダミーキー)。"""
+    _RUNTIME_CONFIG.clear()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -309,6 +341,145 @@ class TestHealth:
         assert body["data_source"] == "gcs"
         assert body["data_source_supported"] is False
         assert "not implemented" in body["data_source_error"]
+
+
+class TestSettings:
+    def test_get_settings_does_not_expose_maps_key(self, client_with_key):
+        """設定 API はキーの有無だけ返し、キー値は返さない。"""
+        res = client_with_key.get("/api/settings")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["maps"]["api_key"] == "present"
+        assert "TEST_DUMMY_KEY_NOT_REAL" not in res.text
+
+    def test_post_settings_updates_data_dir_for_runs(self, sample_run_dir, tmp_path, monkeypatch):
+        """UI から DATA_DIR を変えると /api/runs の参照先が変わる。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "empty"))
+        new_root = sample_run_dir
+        client = TestClient(app)
+
+        res = client.post("/api/settings", json={"data": {"source": "local", "root": str(new_root)}})
+        runs = client.get("/api/runs").json()["runs"]
+
+        assert res.status_code == 200
+        assert res.json()["data"]["root"] == str(new_root)
+        assert [run["run_id"] for run in runs] == ["test_run"]
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_settings_rejects_missing_data_dir(self, client_no_key, tmp_path):
+        """存在しない DATA_DIR は 400 にする。"""
+        missing = tmp_path / "missing"
+
+        res = client_no_key.post("/api/settings", json={"data": {"root": str(missing)}})
+
+        assert res.status_code == 400
+        assert "DATA_DIR not found" in res.text
+
+    def test_post_settings_accepts_local_llm_model_dir(self, client_no_key, tmp_path):
+        """ローカル LLM の model path fallback を UI から設定できる。"""
+        model_dir = tmp_path / "models"
+        model_dir.mkdir()
+
+        res = client_no_key.post(
+            "/api/settings",
+            json={
+                "llm": {
+                    "provider": "local",
+                    "model": "local-demo",
+                    "base_url": "http://127.0.0.1:11434/v1",
+                    "model_dir": str(model_dir),
+                }
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["llm"]["provider"] == "local"
+        assert body["llm"]["model_dir_exists"] is True
+
+    def test_local_llm_uses_model_dir_when_model_is_empty(self, client_no_key, tmp_path):
+        """model 名が空なら LLM_MODEL_DIR を local provider の model として使う。"""
+        model_dir = tmp_path / "models"
+        model_dir.mkdir()
+        client_no_key.post(
+            "/api/settings",
+            json={"llm": {"provider": "local", "model": "", "model_dir": str(model_dir)}},
+        )
+
+        provider = _make_configured_llm_provider()
+
+        assert provider.model == str(model_dir)
+
+    def test_post_settings_rejects_missing_llm_model_dir(self, client_no_key, tmp_path):
+        """存在しない LLM_MODEL_DIR は 400 にする。"""
+        res = client_no_key.post(
+            "/api/settings",
+            json={"llm": {"provider": "local", "model_dir": str(tmp_path / "missing")}},
+        )
+
+        assert res.status_code == 400
+        assert "LLM_MODEL_DIR not found" in res.text
+
+
+class TestCreateRun:
+    def test_post_runs_creates_sample_run(self, tmp_path, monkeypatch):
+        """UI から sample run を生成し、/api/runs で列挙できる。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+        client = TestClient(app)
+
+        res = client.post(
+            "/api/runs",
+            json={
+                "mode": "sample",
+                "run_id": "ui_test_run",
+                "seed": 42,
+                "agents": 2,
+                "pois": 10,
+                "ticks": 2,
+            },
+        )
+        runs = client.get("/api/runs").json()["runs"]
+
+        assert res.status_code == 200
+        assert res.json()["run"]["run_id"] == "ui_test_run"
+        assert [run["run_id"] for run in runs] == ["ui_test_run"]
+        assert (tmp_path / "ui_test_run" / "agent_states.jsonl").exists()
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_runs_rejects_duplicate_run_id(self, tmp_path, monkeypatch):
+        """既存 run_id は上書きせず 409 にする。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        client = TestClient(app)
+        payload = {"mode": "sample", "run_id": "dupe_run", "agents": 2, "pois": 10, "ticks": 2}
+
+        first = client.post("/api/runs", json=payload)
+        second = client.post("/api/runs", json=payload)
+
+        assert first.status_code == 200
+        assert second.status_code == 409
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_runs_requires_google_project_for_vertex(self, tmp_path, monkeypatch):
+        """Vertex AI provider は GOOGLE_CLOUD_PROJECT 未設定なら実行前に 400。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        client = TestClient(app)
+        client.post("/api/settings", json={"llm": {"provider": "vertex"}})
+
+        res = client.post(
+            "/api/runs",
+            json={"mode": "sample", "run_id": "vertex_no_project", "agents": 2, "pois": 10, "ticks": 2},
+        )
+
+        assert res.status_code == 400
+        assert "GOOGLE_CLOUD_PROJECT" in res.text
+        assert not (tmp_path / "vertex_no_project").exists()
+        _RUNTIME_CONFIG.clear()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -397,6 +568,7 @@ class TestDataEndpoint:
         "aois.geojson",
         "roadnet.geojson",
         "agent_profiles_N100.json",
+        "activity_plans.jsonl",
         "agent_states.jsonl",
         "interaction_events.jsonl",
         "summary.json",
@@ -690,15 +862,16 @@ class TestViewerHTML:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestAllowedFiles:
-    def test_allowed_files_count_is_10(self):
-        """許可ファイルは contract §21.3.1 の 10 件であること。"""
-        assert len(ALLOWED_FILES) == 10
+    def test_allowed_files_count_is_11(self):
+        """許可ファイルは contract §21.3.1 の 11 件であること。"""
+        assert len(ALLOWED_FILES) == 11
 
     @pytest.mark.parametrize("filename", [
         "pois.geojson",
         "aois.geojson",
         "roadnet.geojson",
         "agent_profiles_N100.json",
+        "activity_plans.jsonl",
         "agent_states.jsonl",
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
@@ -707,7 +880,7 @@ class TestAllowedFiles:
         "metrics.json",
     ])
     def test_expected_files_in_allowlist(self, filename):
-        """contract で定義された 10 ファイルがすべて許可リストにある。"""
+        """contract で定義された 11 ファイルがすべて許可リストにある。"""
         assert filename in ALLOWED_FILES, f"{filename!r} が許可リストにない"
 
     @pytest.mark.parametrize("filename", [

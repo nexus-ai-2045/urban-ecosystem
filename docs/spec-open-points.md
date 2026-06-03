@@ -18,6 +18,7 @@ owner: nexus_ai
 | 1d | status/action/type/reason の enum 未定義 | ✅ | contract §Enumerations に固定。 |
 | 1e | `relationships.jsonl` が contract File Names に無い | ✅ | 追加 (任意出力)。 |
 | 1f | 座標2系統 (GeoJSON `[lon,lat]` vs flat `lat/lon`) 未明記 | ✅ | contract §Coordinate Systems に明記。 |
+| 1g | API / CLI / data allowlist / runtime settings の docs drift | ✅ | `tools/docs_sync_check.py` と `docs/generated/current-capabilities.md` を追加。CI で `python tools/docs_sync_check.py --check` を実行し、実装と generated docs の不一致を PR 時点で検出する。 |
 | 2 | status 写像で `idle` の出力先が未定義 | ✅ | spec §9.2 に写像表追加 (`idle`→`staying`)。 |
 | 3 | summary.json `started_at` が再現性テストと衝突 | ✅ | contract で「再現性は 3 JSONL の byte 一致のみ対象、summary は対象外」を明記。`seed` を summary に追加。 |
 
@@ -27,7 +28,7 @@ owner: nexus_ai
 | --- | --- | --- | --- |
 | 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | ✅ | spec **§19** で確定。渋谷 bbox 固定 / POI 300 件カテゴリ分布 / home(75)・work(25)・school(5) POI 割当 / social_networks (Erdős-Rényi 平均次数5) / rng 消費順序固定。残だった [推測] (road 本数 ~299 / home 共有設計 / 氏名パターン / bbox 実座標) は全て `[事実: 設計決定/research]` に解決済。 |
 | 5 | 行動ルールの境界ケース | ✅ | spec **§20** で確定。(a) §20.1 遠距離 commute 継続優先 (b) §20.2 初日 tick=0 初期 status (c) §20.3 MAX_INTERACTIONS_PER_TICK=50 超過時ペア優先順位 (social→距離→seeded_rand)。加えて §20.4 no_target 連続 / §20.5 滞在中の時刻帯境界跨ぎ再評価。§20 の [推測] 18 件は全て §9 由来の `[事実: 設計決定]` に解決済。 |
-| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.3 GET /api/data/{run_id}/{file} (許可リスト9ファイル・JSONL raw stream・403/404) / §21.4 health / §21.5 simulate(任意) / §21.6 CORS 同一オリジン。§21 の [推測] は設計決定 + FastAPI 公式 docs research で全て `[事実]` に解決済。 |
+| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.2.1 POST /api/runs / §21.2.2 GET/POST /api/settings / §21.3 GET /api/data/{run_id}/{file} (許可リスト11ファイル・JSONL raw stream・403/404) / §21.4 health / §21.6 CORS 同一オリジン。§21 の [推測] は設計決定 + FastAPI 公式 docs research で全て `[事実]` に解決済。 |
 
 ## P2 — CEO 判断 / 保留
 

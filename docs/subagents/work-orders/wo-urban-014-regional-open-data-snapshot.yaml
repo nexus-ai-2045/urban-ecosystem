@@ -1,0 +1,121 @@
+id: wo-urban-014-regional-open-data-snapshot
+title: "Regional open data snapshot"
+status: draft
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - test-agent
+  - quality-gate
+
+goal: >
+  指定した地域 bbox / place name から、OSMnx または Overture Maps 由来の
+  POI / AOI / roadnet を既存 urban-ecosystem data contract へ変換する
+  offline snapshot 生成器を作る。live download と再現可能 fixture を分離し、
+  Google Places live 取得を標準経路にしない。first slice では live downloader
+  本体を実装せず、fixture converter と manifest/readback 境界を固定する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/regional-simulation-adoption-research.md
+  references:
+    - tools/fetch_places_sample.py
+    - tools/generate_urban_sample.py
+    - environments/urban_2d/data_loader.py
+    - environments/urban_2d/road_graph.py
+
+scope:
+  allowed_write_paths:
+    - tools/fetch_open_region_snapshot.py
+    - tests/tools/test_fetch_open_region_snapshot.py
+    - docs/subagents/work-orders/wo-urban-014-regional-open-data-snapshot.yaml
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+  read_only_paths:
+    - data/
+    - docs/reference/
+  out_of_scope:
+    - "Google Places live 取得を標準経路にしない。"
+    - "外部 API キー、token、.env、課金 API を要求しない。"
+    - "live download 結果をそのまま大容量 commit しない。"
+    - "Cloud Run deploy、GCS upload、GitHub push はしない。"
+    - "シミュレーション行動ルールや LLM 行動決定を変更しない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+
+depends_on:
+  work_orders:
+    - wo-urban-009-road-following-movement
+    - wo-urban-017-social-simulation-evaluation
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python3 -m pytest tests/tools/test_fetch_open_region_snapshot.py tests/environments/test_urban_data_loader.py tests/environments/test_urban_simulation.py -q -p no:cacheprovider"
+    - "python3 -m pytest tests -q -p no:cacheprovider"
+  optional:
+    - "python3 tools/fetch_open_region_snapshot.py --fixture <fixture-dir> --out /tmp/urban_open_region_snapshot"
+    - "python3 tools/urban_simulation_cli.py run --pois /tmp/urban_open_region_snapshot/pois.geojson --profiles /tmp/urban_open_region_snapshot/agent_profiles_N10.json --aois /tmp/urban_open_region_snapshot/aois.geojson --roadnet /tmp/urban_open_region_snapshot/roadnet.geojson --ticks 24 --seed 42 --out /tmp/urban_open_region_run"
+
+acceptance:
+  - "API キーなし・課金なしで実行できる fixture 経路を持つ。"
+  - "fixture/readback 経路は live network に依存しない。live downloader は別 slice とし、この first slice では実装しない。"
+  - "出力は pois.geojson / aois.geojson / roadnet.geojson / snapshot_manifest.json を含む。必要なら小規模 profile fixture も生成する。"
+  - "出力 GeoJSON は data loader の POI/AOI/Road 検証を通る。"
+  - "snapshot_manifest.json に source / license / retrieval mode / bbox or place query / generated_at / tool version を記録する。"
+  - "roadnet が空・非連結・孤立 POI を含む場合でも、Simulation は route_mode / route_fallback_rate で品質を観測できる。"
+  - "同一 fixture 入力では snapshot 出力が byte 一致する。既定 generated_at は fixture 用の deterministic timestamp とする。"
+  - "Google Places live 取得、外部 API 課金、Cloud Run deploy、GitHub push は行わない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - smoke_commands
+    - results_summary
+    - risks
+    - human_decisions_needed
+  current:
+    changed_files:
+      - docs/ai-ecosystem-implementation-orchestration.md
+      - docs/ai-ecosystem-tool-spec.md
+      - docs/subagents/work-orders/wo-urban-014-regional-open-data-snapshot.yaml
+      - tools/fetch_open_region_snapshot.py
+      - tests/tools/test_fetch_open_region_snapshot.py
+    tests_run:
+      - "python3 -m pytest tests/tools/test_fetch_open_region_snapshot.py -q -p no:cacheprovider -> 6 passed"
+      - "python3 -m pytest tests/tools/test_fetch_open_region_snapshot.py tests/environments/test_urban_data_loader.py tests/environments/test_urban_simulation.py -q -p no:cacheprovider -> 166 passed"
+      - "python3 -m compileall app environments tools tests -q -> passed"
+      - "python3 -m pytest tests -q -p no:cacheprovider -> 356 passed, 2 skipped"
+    smoke_commands:
+      - "python3 tools/fetch_open_region_snapshot.py --fixture <tmp fixture> --out /tmp/urban_open_region_snapshot -> manifest retrieval_mode=fixture, network_accessed=false"
+      - "python3 tools/urban_simulation_cli.py run --pois <snapshot>/pois.geojson --profiles <snapshot>/agent_profiles_N2.json --aois <snapshot>/aois.geojson --roadnet <snapshot>/roadnet.geojson --ticks 6 --seed 42 --out <tmp run> -> passed"
+    results_summary: "Offline regional fixture converter validates POI/AOI/Road/Profile inputs, writes deterministic snapshot_manifest.json, and feeds the simulation CLI without live network/API/billing."
+    risks:
+      - "Live OSMnx/Overture downloader remains a later slice."
+      - "No large real-world fixture is committed; tests synthesize tiny fixtures under tmp_path."
+    human_decisions_needed:
+      - "Decide PR split: WO-014 snapshot and WO-015 activity plan can be separate PRs, or one regional simulation adoption batch."
+
+notes:
+  - "最初の実装では OSMnx / Overture の本体依存を必須にしない。既存依存だけで fixture converter を先に固定し、live downloader は optional import / explicit flag にする。"
+  - "地域 realism の成否は WO-017 の metrics.json (route_fallback_rate / trip_count_by_action 等) で比較する。"

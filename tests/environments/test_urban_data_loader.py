@@ -2,7 +2,7 @@
 test_urban_data_loader.py — §13.1 データ検証の機械化テスト。
 
 正本:
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
   - docs/ai-ecosystem-tool-spec.md §13.1
 
 カバレッジ:
@@ -30,6 +30,7 @@ from environments.urban_2d.data_loader import (
     ValidationWarning,
     load_agent_profiles,
     load_agent_states,
+    load_activity_plans,
     load_aois,
     load_interaction_events,
     load_pois,
@@ -40,6 +41,7 @@ from environments.urban_2d.models import (
     ACTION_VALUES,
     AGENT_STATUS_VALUES,
     INTERACTION_TYPE_VALUES,
+    ROUTE_MODE_VALUES,
 )
 
 
@@ -351,6 +353,33 @@ class TestIDIntegrity:
         with pytest.raises(ValidationError, match="road_"):
             load_roads(p)
 
+    def test_activity_plan_agent_id_reference(self, tmp_path):
+        """異常系: ActivityPlan.agent_id が profiles に存在しない。"""
+        rows = [{
+            "agent_id": 99,
+            "day": 0,
+            "activities": [{"kind": "work", "start": "08:00:00", "end": "09:00:00"}],
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        with pytest.raises(ValidationError, match="agent_id"):
+            load_activity_plans(p, agent_ids=frozenset({0}))
+
+    def test_activity_plan_poi_id_reference(self, tmp_path):
+        """異常系: Activity.poi_id が POI 集合に存在しない。"""
+        rows = [{
+            "agent_id": 0,
+            "day": 0,
+            "activities": [{
+                "kind": "work",
+                "start": "08:00:00",
+                "end": "09:00:00",
+                "poi_id": "poi_missing",
+            }],
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        with pytest.raises(ValidationError, match="poi_missing"):
+            load_activity_plans(p, agent_ids=frozenset({0}), poi_ids=frozenset({"poi_001"}))
+
     def test_agent_id_must_be_integer(self, tmp_path):
         """異常系: Agent ID が文字列。"""
         profiles = [{"id": "agent_0", "name": "Test", "initial_position": {"lat": 35.0, "lon": 139.0}}]
@@ -486,6 +515,42 @@ class TestValueRange:
         states = load_agent_states(p)
         assert states[0].time == "09:00:00"
 
+    def test_activity_plan_rejects_unknown_kind(self, tmp_path):
+        """異常系: 未知 activity kind は契約違反。"""
+        rows = [{
+            "agent_id": 0,
+            "day": 0,
+            "activities": [{"kind": "teleport", "start": "08:00:00", "end": "09:00:00"}],
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        with pytest.raises(ValidationError, match="teleport"):
+            load_activity_plans(p)
+
+    def test_activity_plan_rejects_overlap(self, tmp_path):
+        """異常系: 同一 agent/day の activity overlap は拒否する。"""
+        rows = [{
+            "agent_id": 0,
+            "day": 0,
+            "activities": [
+                {"kind": "work", "start": "08:00:00", "end": "10:00:00"},
+                {"kind": "lunch", "start": "09:30:00", "end": "11:00:00"},
+            ],
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        with pytest.raises(ValidationError, match="overlaps|non-overlapping"):
+            load_activity_plans(p)
+
+    def test_activity_plan_rejects_non_increasing_time(self, tmp_path):
+        """異常系: activity end は start より後である必要がある。"""
+        rows = [{
+            "agent_id": 0,
+            "day": 0,
+            "activities": [{"kind": "work", "start": "09:00:00", "end": "09:00:00"}],
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        with pytest.raises(ValidationError, match="start"):
+            load_activity_plans(p)
+
     def test_agent_age_negative(self, tmp_path):
         """異常系: age が負数。"""
         profiles = [_agent_profile(0, age=-1)]
@@ -546,6 +611,14 @@ class TestEnumValidation:
         with pytest.warns(ValidationWarning, match="flying"):
             load_agent_states(p)
 
+    def test_unknown_route_mode_emits_warning(self, tmp_path):
+        """異常系: 未知 route_mode 値は ValidationWarning (reader は保持)。"""
+        rows = [_agent_state(route_mode="teleport")]
+        p = _write_jsonl(tmp_path, "states.jsonl", rows)
+        with pytest.warns(ValidationWarning, match="teleport"):
+            states = load_agent_states(p)
+        assert states[0].route_mode == "teleport"
+
     def test_unknown_interaction_type_emits_warning(self, tmp_path):
         """異常系: 未知 interaction type は ValidationWarning。"""
         rows = [_interaction_event(ev_type="dance")]
@@ -582,6 +655,15 @@ class TestEnumValidation:
         """正常系: 全ての既知 status 値で warning が出ない。"""
         for status in AGENT_STATUS_VALUES:
             rows = [_agent_state(status=status, tick=0, time="08:00:00")]
+            p = _write_jsonl(tmp_path, "states.jsonl", rows)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", ValidationWarning)
+                load_agent_states(p)
+
+    def test_all_known_route_modes_accepted(self, tmp_path):
+        """正常系: 全ての既知 route_mode 値で warning が出ない。"""
+        for route_mode in ROUTE_MODE_VALUES:
+            rows = [_agent_state(route_mode=route_mode, tick=0, time="08:00:00")]
             p = _write_jsonl(tmp_path, "states.jsonl", rows)
             with warnings.catch_warnings():
                 warnings.simplefilter("error", ValidationWarning)
@@ -644,6 +726,47 @@ class TestNormalCases:
         states = load_agent_states(p, poi_ids=poi_ids)
         assert states[0].current_poi_id == "poi_001"
         assert states[0].target_poi_id == "poi_work_001"
+
+    def test_agent_state_with_route_mode(self, tmp_path):
+        """正常系: AgentState.route_mode は既知 optional field として読む。"""
+        rows = [_agent_state(route_mode="linear_fallback")]
+        p = _write_jsonl(tmp_path, "states.jsonl", rows)
+        states = load_agent_states(p)
+        assert states[0].route_mode == "linear_fallback"
+        assert "route_mode" not in states[0].extra
+
+    def test_activity_plan_valid_with_extra_fields(self, tmp_path):
+        """正常系: activity_plans.jsonl は予定と unknown field を保持する。"""
+        rows = [{
+            "agent_id": 0,
+            "day": 0,
+            "activities": [
+                {
+                    "kind": "work",
+                    "start": "08:00:00",
+                    "end": "09:00:00",
+                    "poi_id": "poi_work_001",
+                    "note": "morning plan",
+                },
+                {
+                    "kind": "lunch",
+                    "start": "12:00:00",
+                    "end": "13:00:00",
+                    "category": "amenity-cafe",
+                },
+            ],
+            "source": "unit-test",
+        }]
+        p = _write_jsonl(tmp_path, "activity_plans.jsonl", rows)
+        plans = load_activity_plans(
+            p,
+            agent_ids=frozenset({0}),
+            poi_ids=frozenset({"poi_work_001"}),
+        )
+        assert plans[0].agent_id == 0
+        assert plans[0].activities[0].poi_id == "poi_work_001"
+        assert plans[0].activities[0].extra["note"] == "morning plan"
+        assert plans[0].extra["source"] == "unit-test"
 
     def test_visit_record_with_initial_position(self, tmp_path):
         """正常系: VisitRecord.poi_id = 予約値 "initial_position"。"""

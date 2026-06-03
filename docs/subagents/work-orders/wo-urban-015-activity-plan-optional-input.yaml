@@ -1,0 +1,139 @@
+id: wo-urban-015-activity-plan-optional-input
+title: "Activity plan optional input"
+status: draft
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - test-agent
+  - quality-gate
+
+goal: >
+  ActivitySim / MATSim 系の activity chain の考え方を、既存 MVP を壊さない
+  optional input として取り込む。activity_plans.jsonl がある場合は
+  schedule-driven に寄せ、無い場合は既存 rule-driven simulation を完全に維持する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/regional-simulation-adoption-research.md
+  references:
+    - environments/urban_2d/models.py
+    - environments/urban_2d/data_loader.py
+    - environments/urban_2d/rules.py
+    - environments/urban_2d/simulation.py
+    - tests/environments/test_urban_data_loader.py
+    - tests/environments/test_urban_simulation.py
+
+scope:
+  allowed_write_paths:
+    - docs/subagents/work-orders/wo-urban-015-activity-plan-optional-input.yaml
+    - docs/subagents/contracts/urban-ecosystem-data-contract.md
+    - docs/ai-ecosystem-tool-spec.md
+    - environments/urban_2d/models.py
+    - environments/urban_2d/data_loader.py
+    - environments/urban_2d/rules.py
+    - environments/urban_2d/simulation.py
+    - tools/urban_viewer_server.py
+    - tools/urban_simulation_cli.py
+    - tests/environments/test_urban_data_loader.py
+    - tests/environments/test_urban_simulation.py
+    - tests/tools/test_urban_viewer_server.py
+    - tests/fixtures/activity_plans/
+  read_only_paths:
+    - tools/urban_viewer/
+    - data/
+  out_of_scope:
+    - "activity_plans.jsonl を MVP 必須入力にしない。"
+    - "既存 sample generation / rule-driven simulation の byte 再現性を壊さない。"
+    - "ActivitySim / MATSim 本体を依存に追加しない。"
+    - "LLM に予定生成や状態遷移を直接任せない。"
+    - "外部 API 呼び出し、課金 API、Cloud Run deploy はしない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.4.2
+  produces:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+
+depends_on:
+  work_orders:
+    - wo-urban-004-rule-simulation
+    - wo-urban-017-social-simulation-evaluation
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run: []
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python3 -m pytest tests/environments/test_urban_data_loader.py::TestNormalCases::test_activity_plan_valid_with_extra_fields tests/environments/test_urban_data_loader.py::TestIDIntegrity::test_activity_plan_agent_id_reference tests/environments/test_urban_data_loader.py::TestIDIntegrity::test_activity_plan_poi_id_reference tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_unknown_kind tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_overlap tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_non_increasing_time tests/environments/test_urban_simulation.py::TestActivityPlans tests/environments/test_urban_simulation.py::test_activity_plans_none_preserves_rule_driven_bytes tests/environments/test_urban_simulation.py::test_cli_accepts_activity_plans_optional_input -q -p no:cacheprovider"
+    - "python3 -m pytest tests/environments/test_urban_data_loader.py tests/environments/test_urban_simulation.py -q -p no:cacheprovider"
+    - "python3 -m pytest tests -q -p no:cacheprovider"
+  optional:
+    - "python3 tools/urban_simulation_cli.py run --sample --ticks 24 --seed 42 --out /tmp/urban_rule_baseline"
+    - "python3 tools/urban_simulation_cli.py run --sample --activity-plans tests/fixtures/activity_plans/minimal.jsonl --ticks 24 --seed 42 --out /tmp/urban_activity_plan_smoke"
+    - "python3 -m compileall app environments tools tests -q"
+
+acceptance:
+  - "activity_plans.jsonl を optional input として data contract に追加する。"
+  - "plan が無い場合、既存 rule-driven output は同一 seed・同一入力で byte 一致を維持する。"
+  - "plan がある場合、activity の start/end/time overlap、存在しない poi_id、未知 kind、agent_id dangling を検証する。"
+  - "activity は home / work / study / lunch / errand / social / go_home / wander など既存 action 語彙へ明示的に写像する。"
+  - "plan 指定と POI category 指定の両方を扱い、poi_id が無い category activity は既存 destination selection へ委譲する。"
+  - "activity_plans.jsonl は unknown field を保持し、reader は後方互換を保つ。"
+  - "metrics.json の trip_count_by_action / no_target_rate / arrival_rate で plan 有無の差分を比較できる。"
+  - "LLM 生成、外部 API、ActivitySim / MATSim 本体依存は追加しない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - baseline_repro_check
+    - activity_plan_smoke
+    - results_summary
+    - risks
+    - human_decisions_needed
+  current:
+    changed_files:
+      - docs/ai-ecosystem-tool-spec.md
+      - docs/subagents/contracts/urban-ecosystem-data-contract.md
+      - docs/subagents/work-orders/wo-urban-015-activity-plan-optional-input.yaml
+      - environments/urban_2d/__init__.py
+      - environments/urban_2d/data_loader.py
+      - environments/urban_2d/models.py
+      - environments/urban_2d/rules.py
+      - environments/urban_2d/simulation.py
+      - tools/urban_simulation_cli.py
+      - tools/urban_viewer_server.py
+      - tests/environments/test_urban_data_loader.py
+      - tests/environments/test_urban_simulation.py
+      - tests/tools/test_urban_viewer_server.py
+      - tests/fixtures/activity_plans/minimal.jsonl
+    tests_run:
+      - "python3 -m pytest tests/environments/test_urban_data_loader.py::TestNormalCases::test_activity_plan_valid_with_extra_fields tests/environments/test_urban_data_loader.py::TestIDIntegrity::test_activity_plan_agent_id_reference tests/environments/test_urban_data_loader.py::TestIDIntegrity::test_activity_plan_poi_id_reference tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_unknown_kind tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_overlap tests/environments/test_urban_data_loader.py::TestValueRange::test_activity_plan_rejects_non_increasing_time tests/environments/test_urban_simulation.py::TestActivityPlans tests/environments/test_urban_simulation.py::test_activity_plans_none_preserves_rule_driven_bytes tests/environments/test_urban_simulation.py::test_cli_accepts_activity_plans_optional_input -q -p no:cacheprovider -> 11 passed"
+      - "python3 -m pytest tests/environments/test_urban_data_loader.py tests/environments/test_urban_simulation.py -q -p no:cacheprovider -> 160 passed"
+      - "python3 -m compileall app environments tools tests -q -> passed"
+      - "python3 tools/urban_simulation_cli.py run --sample --activity-plans tests/fixtures/activity_plans/minimal.jsonl --ticks 24 --seed 42 --out /tmp/urban_activity_plan_smoke -> passed"
+      - "python3 -m pytest tests -q -p no:cacheprovider -> 356 passed, 2 skipped"
+    baseline_repro_check: "activity_plans omitted vs activity_plans=None is byte-identical for agent_states, poi_visit_records, interaction_events, and metrics."
+    activity_plan_smoke: "/tmp/urban_activity_plan_smoke generated summary run_id=urban_activity_plan_smoke agents=100 pois=300 ticks=24 interactions=345."
+    results_summary: "ActivityPlan optional input, loader validation, Simulation destination priority, CLI flag, viewer allowlist, and contract/spec v0.5.0 are aligned."
+    risks:
+      - "tests/tools/test_urban_viewer_server.py is skipped in environments without fastapi; compileall still covers syntax."
+      - "Live ActivitySim/MATSim integration and live regional data download remain out of scope."
+    human_decisions_needed:
+      - "Decide whether to include the broader WO-014 regional snapshot changes in the same PR or split WO-015 into its own PR."
+
+notes:
+  - "この WO は地域 realism の行動側スライス。WO-014 の地域 snapshot と組み合わせると、固定地域 + 固定日課 + replay metrics の比較が可能になる。"

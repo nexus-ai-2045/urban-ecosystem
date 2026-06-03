@@ -3,7 +3,7 @@
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §12.1 CLI 仕様 / §9 行動ルール / §13.3 検証
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
 
 scope:
   profiles + POI から §9 のルールで agent_states.jsonl / poi_visit_records.jsonl /
@@ -44,7 +44,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from environments.urban_2d.simulation import Simulation, load_inputs  # noqa: E402
-from environments.urban_2d.data_loader import load_roads  # noqa: E402
+from environments.urban_2d.data_loader import load_activity_plans, load_roads  # noqa: E402
 from environments.urban_2d.road_graph import build_road_graph  # noqa: E402
 from app.llm_provider import make_llm_provider  # noqa: E402
 
@@ -138,6 +138,8 @@ def _run(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    poi_ids = frozenset(p.id for p in pois)
+    agent_ids = frozenset(p.id for p in profiles)
     aoi_count = _count_features(aois_path)
     road_count = _count_features(roadnet_path)
 
@@ -170,10 +172,30 @@ def _run(args: argparse.Namespace) -> int:
             )
             return 2
         llm_opts["project"] = proj
+    elif llm_kind == "local":
+        import os
+        llm_opts["base_url"] = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+        llm_opts["model"] = (
+            os.environ.get("LLM_MODEL")
+            or os.environ.get("LLM_MODEL_DIR")
+            or "local-model"
+        )
     provider = make_llm_provider(llm_kind, **llm_opts)
 
     # --no-summaries で interaction summary 生成をスキップする (#1 会話オプション)
     enable_summaries: bool = not getattr(args, "no_summaries", False)
+
+    activity_plans = None
+    if getattr(args, "activity_plans", None):
+        try:
+            activity_plans = load_activity_plans(
+                Path(args.activity_plans),
+                agent_ids=agent_ids,
+                poi_ids=poi_ids,
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
 
     try:
         sim = Simulation(
@@ -185,6 +207,7 @@ def _run(args: argparse.Namespace) -> int:
             aois=aoi_count,
             roads=road_count,
             road_graph=road_graph,
+            activity_plans=activity_plans,
             llm_provider=provider,
             enable_summaries=enable_summaries,
         )
@@ -210,6 +233,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--profiles", help="agent_profiles_*.json のパス (--sample 無しで必須)")
     run_p.add_argument("--aois", help="aois.geojson のパス (任意 / summary 件数のみ)")
     run_p.add_argument("--roadnet", help="roadnet.geojson のパス (任意 / summary 件数のみ)")
+    run_p.add_argument(
+        "--activity-plans",
+        help="activity_plans.jsonl のパス (任意 / WO-015 optional input)",
+    )
     run_p.add_argument("--seed", type=int, default=42, help="乱数 seed (既定 42)")
     run_p.add_argument("--ticks", type=int, default=24, help="シミュレーション tick 数 (既定 24)")
     run_p.add_argument("--agents", type=int, default=100,
@@ -217,10 +244,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--sample-pois", dest="pois_count", type=int, default=300,
                        help="--sample 生成時の POI 数 (既定 300)")
     run_p.add_argument(
-        "--llm", choices=["rule", "vertex"], default="rule",
+        "--llm", choices=["rule", "local", "vertex"], default="rule",
         help=(
-            "LLM プロバイダ (既定 rule=RuleBasedProvider / vertex=VertexGeminiProvider)。"
-            "vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 (spec §17.5)。"
+            "LLM プロバイダ (既定 rule=RuleBasedProvider / local=OpenAI-compatible local endpoint / "
+            "vertex=VertexGeminiProvider)。vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 "
+            "(spec §17.5)。local 時は LLM_BASE_URL / LLM_MODEL を参照する。"
         ),
     )
     run_p.add_argument(

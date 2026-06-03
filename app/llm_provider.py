@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import json
 import logging
+import urllib.error
+import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -418,6 +420,91 @@ class VertexGeminiProvider(LLMProvider):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# LocalOpenAIProvider — opt-in / OpenAI-compatible local endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LocalOpenAIProvider(LLMProvider):
+    """ローカルの OpenAI-compatible chat completions endpoint を呼ぶプロバイダ。
+
+    想定例:
+      - Ollama OpenAI compatible endpoint
+      - LM Studio local server
+      - llama.cpp server with OpenAI-compatible API
+
+    API キーは不要を既定とし、必要なサーバーでもブラウザ/UIにはキー値を返さない。
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:11434/v1",
+        model: str = "local-model",
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+
+    def complete(self, prompt: str, *, temperature: float = 0.7, max_tokens: int = 256) -> str:
+        """ローカル chat completions endpoint にプロンプトを送る。"""
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        request = urllib.request.Request(
+            f"{self.base_url}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                raw = response.read().decode("utf-8")
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"local LLM endpoint unavailable: {self.base_url}") from exc
+
+        try:
+            body = json.loads(raw)
+            choices = body.get("choices")
+            if isinstance(choices, list) and choices:
+                message = choices[0].get("message", {})
+                content = message.get("content")
+                if isinstance(content, str):
+                    return content.rstrip("\n")
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        raise RuntimeError("local LLM endpoint returned an unsupported response")
+
+    def choose_destination_category(
+        self,
+        context: dict,
+        allowed_categories: list[str],
+    ) -> str:
+        """ローカル LLM に目的地カテゴリを選ばせる。不正応答は fallback。"""
+        if not allowed_categories:
+            return ""
+        prompt = build_destination_prompt(
+            context=context,
+            allowed_categories=allowed_categories,
+        )
+        try:
+            raw = self.complete(prompt, temperature=0.0, max_tokens=64)
+        except Exception:
+            logger.debug("Local LLM 目的地カテゴリ選択で例外発生 — fallback")
+            return ""
+        candidate = raw.strip().rstrip("。、.,")
+        if candidate in allowed_categories:
+            return candidate
+        for line in raw.splitlines():
+            stripped = line.strip().rstrip("。、.,")
+            if stripped in allowed_categories:
+                return stripped
+        logger.debug("Local LLM が不正なカテゴリを返した — fallback")
+        return ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ファクトリ
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -425,7 +512,7 @@ def make_llm_provider(kind: str = "rule", **opts: Any) -> LLMProvider:
     """LLMProvider インスタンスを生成するファクトリ関数。
 
     Args:
-        kind: "rule" (RuleBasedProvider) / "vertex" (VertexGeminiProvider)。
+        kind: "rule" / "local" / "vertex"。
         **opts: VertexGeminiProvider に渡すオプション
                 (model, project, location, client)。
 
@@ -437,9 +524,14 @@ def make_llm_provider(kind: str = "rule", **opts: Any) -> LLMProvider:
     """
     if kind == "rule":
         return RuleBasedProvider()
+    if kind == "local":
+        return LocalOpenAIProvider(**opts)
     if kind == "vertex":
         return VertexGeminiProvider(**opts)
-    raise ValueError(f"未知の LLM プロバイダ kind: {kind!r}。'rule' または 'vertex' を指定してください。")
+    raise ValueError(
+        f"未知の LLM プロバイダ kind: {kind!r}。"
+        "'rule'、'local'、'vertex' のいずれかを指定してください。"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -365,6 +365,14 @@ class TestMapDisplay:
         page.click("#btn-settings")
         assert not panel.is_visible(), "#btn-settings 2回目クリック後に設定パネルが閉じない"
 
+    def test_new_run_panel_exists(self, loaded_page):
+        """左パネルから新しい run の生成入力にアクセスできる。"""
+        page, _ = loaded_page
+        assert page.locator("#new-run-id-input").count() == 1
+        assert page.locator("#new-run-agents-input").input_value() == "100"
+        assert page.locator("#btn-create-run").count() == 1
+        assert page.locator("#llm-provider-select").count() == 1
+
     def test_live_activity_panel_exists(self, loaded_page):
         """右パネルにリアルタイムの直近欄が表示される。"""
         page, _ = loaded_page
