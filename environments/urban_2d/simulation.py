@@ -7,7 +7,8 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
-  poi_visit_records.jsonl / interaction_events.jsonl / summary.json を生成する。
+  poi_visit_records.jsonl / interaction_events.jsonl / summary.json /
+  metrics.json を生成する。
   LLM は呼ばない (RuleBasedProvider 相当)。
 
 決定論 (§13.3.2):
@@ -31,7 +32,9 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 from __future__ import annotations
 
 import json
+import math
 import random
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1072,15 +1075,113 @@ class Simulation:
             "started_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
+    def _build_metrics(self) -> dict[str, Any]:
+        """LLM社会シミュレーション評価用の replay-derived metrics を作る。
+
+        Individual / Scenario / Society Simulation の三層を、現行 MVP の
+        決定論 replay から再計算できる軽量指標へ写像する。
+        実行時刻や外部 API 状態は含めず、同一 seed・同一入力では byte 一致する。
+        """
+        action_counts = Counter(s["action"] for s in self.agent_states)
+        status_counts = Counter(s["status"] for s in self.agent_states)
+        interaction_counts = Counter(e["type"] for e in self.interaction_events)
+        visit_counts = Counter(
+            v["poi_id"] for v in self.visit_records
+            if v.get("poi_id") and v["poi_id"] != "initial_position"
+        )
+        pair_counts = Counter(tuple(e["agent_ids"]) for e in self.interaction_events)
+
+        total_states = len(self.agent_states)
+        total_profiles = len(self.profiles)
+        possible_social_edges = total_profiles * (total_profiles - 1) / 2
+        social_edges = {
+            tuple(sorted((p.id, peer)))
+            for p in self.profiles
+            for peer in p.social_networks
+            if peer in self._profile_ids and peer != p.id
+        }
+
+        return {
+            "schema_version": "social-simulation-metrics-v0.1",
+            "run_id": self.run_id,
+            "seed": self.seed,
+            "ticks": self.ticks,
+            "individual_simulation": {
+                "agents_with_state_history": len({
+                    s["agent_id"] for s in self.agent_states
+                }),
+                "action_diversity": len(action_counts),
+                "action_count_by_type": dict(sorted(action_counts.items())),
+                "profile_coverage": {
+                    "agents": total_profiles,
+                    "with_role": sum(1 for p in self.profiles if p.role),
+                    "with_social_networks": sum(
+                        1 for p in self.profiles if p.social_networks
+                    ),
+                    "with_rich_profile": sum(
+                        1 for p in self.profiles
+                        if p.occupation or p.personality or p.hobbies or p.day_pattern
+                    ),
+                },
+            },
+            "scenario_simulation": {
+                "interaction_count_by_type": dict(sorted(interaction_counts.items())),
+                "relationship_delta_count": sum(
+                    1 for e in self.interaction_events
+                    if e.get("relationship_delta", {}).get("from")
+                    != e.get("relationship_delta", {}).get("to")
+                ),
+                "relationship_reason_count": sum(
+                    1 for e in self.interaction_events
+                    if e.get("relationship_reason")
+                ),
+                "co_presence_distribution": self._co_presence_distribution(),
+                "repeated_interaction_pairs": sum(
+                    1 for count in pair_counts.values() if count > 1
+                ),
+            },
+            "society_simulation": {
+                "arrival_status_rate": _safe_ratio(
+                    status_counts.get("arrived", 0),
+                    total_states,
+                ),
+                "no_target_rate": _safe_ratio(
+                    action_counts.get("no_target", 0),
+                    total_states,
+                ),
+                "poi_visit_entropy": _normalized_entropy(visit_counts),
+                "unique_poi_visit_rate": _safe_ratio(len(visit_counts), len(self.pois)),
+                "social_network_density": _safe_ratio(
+                    len(social_edges),
+                    possible_social_edges,
+                ),
+            },
+        }
+
+    def _co_presence_distribution(self) -> dict[str, int]:
+        """同一 tick・同一 POI に同時滞在した group size 分布を返す。"""
+        groups: dict[tuple[int, str], set[int]] = {}
+        for state in self.agent_states:
+            poi_id = state.get("current_poi_id")
+            if not poi_id:
+                continue
+            groups.setdefault((state["tick"], poi_id), set()).add(state["agent_id"])
+        counts = Counter(
+            len(agent_ids) for agent_ids in groups.values() if len(agent_ids) >= 2
+        )
+        return {str(size): count for size, count in sorted(counts.items())}
+
     def run(self, out_dir: str | Path) -> dict[str, Any]:
-        """simulate して 4 ファイルを out_dir へ書き出す。summary dict を返す。"""
+        """simulate して replay files を out_dir へ書き出す。summary dict を返す。"""
         summary = self.simulate()
+        metrics = self._build_metrics()
         out = Path(out_dir)
         out.mkdir(parents=True, exist_ok=True)
         _write_jsonl(out / "agent_states.jsonl", self.agent_states)
         _write_jsonl(out / "poi_visit_records.jsonl", self.visit_records)
         _write_jsonl(out / "interaction_events.jsonl", self.interaction_events)
         _write_json(out / "summary.json", summary)
+        _write_json(out / "metrics.json", metrics)
         return summary
 
 
@@ -1101,6 +1202,26 @@ def _write_json(path: Path, data: Any) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
         f.write("\n")
+
+
+def _safe_ratio(numerator: float, denominator: float) -> float:
+    """0 除算を避け、metrics 用の安定した比率を返す。"""
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
+
+
+def _normalized_entropy(counts: Counter) -> float:
+    """Counter の Shannon entropy を 0..1 に正規化して返す。"""
+    total = sum(counts.values())
+    kinds = len(counts)
+    if total == 0 or kinds <= 1:
+        return 0.0
+    entropy = 0.0
+    for count in counts.values():
+        p = count / total
+        entropy -= p * math.log(p)
+    return entropy / math.log(kinds)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

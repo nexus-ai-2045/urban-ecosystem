@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.4.0
+version: 0.4.1
 owner: manager
-updated: 2026-05-31
+updated: 2026-06-04
 
 ## Purpose
 
@@ -24,6 +24,7 @@ updated: 2026-05-31
 | `interaction_events.jsonl` | output | yes | 会話・出会い・別れ・喧嘩などの社会イベント。 |
 | `relationships.jsonl` | output | no | 関係性スナップショット (任意 / §Relationship Snapshot)。 |
 | `summary.json` | output | yes | run の件数と集計指標。 |
+| `metrics.json` | output | yes | Individual / Scenario / Society Simulation 評価指標。 |
 
 ## Common Rules
 
@@ -239,7 +240,47 @@ Required (出力する場合): `tick`, `agent_ids` (`[min_id, max_id]`), `score`
 
 Required: `run_id`, `seed`, `ticks`, `agents`, `pois`, `interactions`。Optional: `aois`, `roads`, `started_at`。
 
-**決定論との関係**: 再現性検証 (spec §13.3.2) は `agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl` の 3 ファイルの byte 一致を対象とする。`summary.json` は `started_at` 等の実行時刻を含むため byte 一致対象から除外する。`relationship_reason` は RuleBasedProvider 経路では決定論的なテンプレ文が返るため byte 一致に寄与する。VertexGeminiProvider 経路では Gemini が生成する自然言語テキストとなり非決定論になる。
+## Metrics JSON
+
+`metrics.json` は replay 出力から再計算できる評価指標を持つ。arXiv 2412.03563 の Individual / Scenario / Society Simulation 分類を、現行 MVP の決定論ログに写像するための軽量ファイルである。LLM 行動決定や外部 API 呼び出しは含めない。
+
+```json
+{
+  "schema_version": "social-simulation-metrics-v0.1",
+  "run_id": "urban_demo",
+  "seed": 42,
+  "ticks": 24,
+  "individual_simulation": {
+    "agents_with_state_history": 100,
+    "action_diversity": 7,
+    "action_count_by_type": {"commute": 320},
+    "profile_coverage": {
+      "agents": 100,
+      "with_role": 100,
+      "with_social_networks": 100,
+      "with_rich_profile": 100
+    }
+  },
+  "scenario_simulation": {
+    "interaction_count_by_type": {"conversation": 8},
+    "relationship_delta_count": 8,
+    "relationship_reason_count": 8,
+    "co_presence_distribution": {"2": 4},
+    "repeated_interaction_pairs": 1
+  },
+  "society_simulation": {
+    "arrival_status_rate": 0.08,
+    "no_target_rate": 0.0,
+    "poi_visit_entropy": 0.82,
+    "unique_poi_visit_rate": 0.34,
+    "social_network_density": 0.03
+  }
+}
+```
+
+Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, `scenario_simulation`, `society_simulation`。
+
+**決定論との関係**: 再現性検証 (spec §13.3.2) は `agent_states.jsonl` / `poi_visit_records.jsonl` / `interaction_events.jsonl` / `metrics.json` の byte 一致を対象とする。`summary.json` は `started_at` 等の実行時刻を含むため byte 一致対象から除外する。`relationship_reason` は RuleBasedProvider 経路では決定論的なテンプレ文が返るため byte 一致に寄与する。VertexGeminiProvider 経路では Gemini が生成する自然言語テキストとなり非決定論になる。
 
 ## Change Log
 
@@ -247,3 +288,4 @@ Required: `run_id`, `seed`, `ticks`, `agents`, `pois`, `interactions`。Optional
 - 0.2.0: spec 改訂 (Google Cloud Run + Google Maps + Vertex AI/Gemini, Groq/STT 全除去) に追従。§Coordinate Systems / §Naming Conventions / §Time and Tick / §Enumerations / §Relationship Snapshot を新設。POI/AOI/Road を GeoJSON Feature 構造へ統一し `geometry_type` プロパティを廃止。例の `poi_id` を `cafe_123`→`poi_123`、`category` を `"amenity - cafe"`→`amenity-cafe` に修正。`summary.json` に `seed` を追加し決定論対象外を明記。`relationships.jsonl` を File Names に追加。Purpose から動画要件抽出への言及を削除。
 - 0.3.0 (WO-006): §Agent Profile に optional 拡張フィールドを追加。`surname` / `given` (姓名分割 / `name == surname + given` 保証) / `occupation` (職業詳細) / `personality` (性格傾向) / `hobbies` (趣味リスト) / `day_pattern` (行動傾向 / `"morning"` | `"night"` | `"balanced"`)。後方互換: 全フィールドは optional で既存 simulation / viewer / replay は影響なし。`generate_urban_sample.py` は WO-006 から新フィールドを生成する (rng 消費 Step 10-13)。これは WO-007 (苗字キャラ表示) / WO-008 (LLM 行動決定) の共通土台。
 - 0.4.0 (WO-012): §Interaction Event JSONL に `relationship_reason` を optional フィールドとして正式追加。WO-008 で simulation が emit 済み (`from != to` のときのみ出力、空文字は出力しない)。後方互換: optional かつ §Common Rules の「未知フィールド保持原則」により既存 reader への影響なし。RuleBasedProvider 経路では決定論テンプレ文 (byte 一致維持)、VertexGeminiProvider 経路では Gemini 生成の自然言語テキスト (非決定論) となる。
+- 0.4.1 (WO-URBAN-017): `metrics.json` を required output として追加。Individual / Scenario / Society Simulation の三層評価を replay-derived metrics として出力し、`summary.json` と違って実行時刻を含めないため RuleBasedProvider 経路の byte 一致対象に含める。
