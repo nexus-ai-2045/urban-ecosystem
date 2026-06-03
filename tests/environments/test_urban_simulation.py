@@ -127,6 +127,20 @@ def test_emits_four_files(sample_inputs, tmp_path):
     assert summary["interactions"] == len(event_lines)
 
 
+def test_simulation_rejects_empty_pois(sample_inputs):
+    """POI が空の入力は bbox の min/max ではなく明示エラーにする。"""
+    _, profiles, _ = sample_inputs
+    with pytest.raises(ValueError, match="pois は 1 件以上"):
+        Simulation([], profiles, seed=42, ticks=1)
+
+
+def test_simulation_rejects_empty_profiles(sample_inputs):
+    """profiles が空の入力は bbox の min/max ではなく明示エラーにする。"""
+    pois, _, _ = sample_inputs
+    with pytest.raises(ValueError, match="profiles は 1 件以上"):
+        Simulation(pois, [], seed=42, ticks=1)
+
+
 def test_completes_without_llm_keys(sample_inputs, monkeypatch):
     """LLM 認証情報がなくてもルールベースで完走する (§13.3.1 / RuleBasedProvider)。"""
     # LLM 関連環境変数を消しても完走することを確認する
@@ -471,6 +485,42 @@ def test_cli_sample_rejects_tiny_pois_without_traceback(tmp_path, sample_pois):
     assert "pois は 3 以上" in result.stderr
     assert "Traceback" not in result.stderr
     assert "IndexError" not in result.stderr
+
+
+def test_cli_rejects_empty_profiles_without_traceback(tmp_path):
+    """CLI も empty profiles を readable validation error + exit 2 に変換する。"""
+    pois_path = tmp_path / "pois.geojson"
+    profiles_path = tmp_path / "agent_profiles_N0.json"
+    out = tmp_path / "empty_profiles_run"
+    pois_path.write_text(
+        json.dumps({
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [139.7, 35.66]},
+                    "properties": {"id": "poi_001", "category": "amenity-cafe"},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    profiles_path.write_text("[]", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run",
+            "--pois", str(pois_path),
+            "--profiles", str(profiles_path),
+            "--ticks", "1",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+
+    assert result.returncode == 2
+    assert "profiles は 1 件以上" in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

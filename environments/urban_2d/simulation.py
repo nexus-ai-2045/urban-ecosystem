@@ -141,6 +141,10 @@ class Simulation:
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
+        if not pois:
+            raise ValueError("pois は 1 件以上が必要")
+        if not profiles:
+            raise ValueError("profiles は 1 件以上が必要")
         self.pois = pois
         # agent は id 昇順で固定処理する (決定論)
         self.profiles = sorted(profiles, key=lambda p: p.id)
