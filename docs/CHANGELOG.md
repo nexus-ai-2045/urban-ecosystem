@@ -1,72 +1,47 @@
 # Changelog
 
-このファイルは `python tools/generate_changelog.py` で生成します。
-手で編集せず、Git履歴から更新してください。
+このファイルはリリース単位の人間向け変更履歴です。
+すべての commit は列挙せず、公開協力者と将来の maintainer が読むべき変更だけを要約します。
 
-## Git history
+運用方針は [`docs/release-policy.md`](release-policy.md) を参照してください。
 
-- 2026-06-03 `1c6057c` READMEに#11の1分参加方法を追加する
-- 2026-06-03 `4eb1b75` 公開協業の現在地を最新の入口状態に更新する
-- 2026-06-03 `d4d2c72` Discordフリーズ中の通知手順を再開時参照に寄せる
-- 2026-06-03 `e4933fa` 運用者向けdocsにfallback smoke導線を追加する
-- 2026-06-02 `7768ede` 公開協業の現在地にfallback smoke導線を追加する
-- 2026-06-02 `2db0f1e` 初回協力候補にfallback smoke導線を追加する
-- 2026-06-02 `b885f3b` APIキーなしfallback smokeコマンドを追加する (#40)
-- 2026-06-02 `b509972` Vertex実行例のCLI引数を現行仕様に合わせる (#39)
-- 2026-06-02 `e9ec2f4` Discordフリーズ中の手動案内境界を明確化する (#37)
-- 2026-06-02 `3791dc7` Align collaboration docs with current issue state
-- 2026-06-02 `4570130` Add viewer operations panels
-- 2026-06-02 `6a2e538` CONTRIBUTING に API キーなし確認の境界を追記する
-- 2026-06-02 `e962044` fallback viewer レビュー導線を現在の UI に合わせる
-- 2026-06-02 `e9a53af` README のローカル起動手順に profile 生成補足を追加する
-- 2026-06-02 `1eca87c` fallback viewer の設定表示とライブ概要を追加する
-- 2026-06-02 `253b14c` ローカル .env 読込を明示 opt-in にする (#26)
-- 2026-06-02 `e76d0b1` Discord 導線のフリーズ状態を公開docsに反映する (#25)
-- 2026-06-02 `9ea6b4e` README に公開協業の入口を明記する (#24)
-- 2026-06-01 `ee84bfa` Adopt MIT license
-- 2026-06-01 `b996194` ライセンス決定issueを公開協業導線に追加する (#22)
-- 2026-06-01 `248ff0d` Merge pull request #7 from umisetokikaze/codex/ue-tech-005-ci-e2e
-- 2026-06-01 `f815b6a` Merge pull request #5 from umisetokikaze/codex/ue-tech-004-doc-cli-alignment
-- 2026-06-01 `6178ac0` Clarify public Type1 boundary (#19)
-- 2026-06-01 `d26354e` Merge pull request #6 from umisetokikaze/codex/ue-tech-006-sample-pois-validation
-- 2026-06-01 `9866f33` Document Discord webhook setup checklist (#18)
-- 2026-06-01 `c5f08dd` Add manual Discord notification test (#17)
-- 2026-06-01 `959aa27` Polish Discord onboarding docs (#16)
-- 2026-06-01 `b094af3` Merge pull request #4 from umisetokikaze/codex/ue-tech-002-run-id-consistency
-- 2026-06-01 `962e89c` 公開名義をNexusに統一する方針を追加
-- 2026-06-01 `57d85e6` Add public collaboration onboarding
-- 2026-05-31 `3cf0319` Merge pull request #3 from nexus-ai-2045/codex/code-review-fixes
-- 2026-05-31 `4c27591` Merge pull request #2 from umisetokikaze/codex/ue-tech-003-data-contract-validation
-- 2026-05-31 `5513ba1` Merge pull request #1 from umisetokikaze/codex/ue-tech-001-disable-gcs
-- 2026-05-31 `9face39` feat(urban): spec gap 実装 — viewer/LLM context/E2E/CI marker/profile 検証 + §20.2 tick=0 到達
-- 2026-05-31 `8776033` docs(readme): 課金境界を明示 — デフォルト無料 / Google Cloud は自分で env 設定時のみ自分のGCPに課金
-- 2026-05-31 `2ebb1b9` Enhance role visibility with colored badges in detail panel (tasks 4-5 foundation)
-- 2026-05-31 `570860c` Add role-based agent coloring for more character-like visualization (TDD foundation)
-- 2026-05-31 `16758fe` fix(urban): highlight 解除時に role 別色へ復元 (WO-013)
-- 2026-05-31 `1cddf6d` feat(urban): data-contract v0.4.0 relationship_reason 正式化 + 空文字ガード (WO-012)
-- 2026-05-31 `a86780c` feat(urban): roadnet を Prim 法 MST 化し道路追従で交流発生 (WO-011)
-- 2026-05-31 `5282402` Polish urban viewer design with modern CSS variables and improved visual hierarchy
-- 2026-05-30 `640d07d` docs: add Japanese README
-- 2026-05-30 `cfc15d2` feat(urban): realism batch WO-006..010 + 10-agent viewer fix
-- 2026-05-29 `59c9370` Ignore reference exports
-- 2026-05-29 `5dcf674` test(llm): update summary-match test for name-bearing template
-- 2026-05-29 `64e382e` feat(viewer,sim): display names + real store names in summaries & viewer; optional conversation (#1/#2/#4)
-- 2026-05-29 `c6f8e79` fix(viewer): clearer layer labels (POI->お店・施設 / AOI->エリア / Agents->住人)
-- 2026-05-29 `8cab6e7` feat(llm): LLM-driven destination category choice (RuleBased no-op / VertexGemini opt-in + fallback)
-- 2026-05-29 `0ec70dc` fix(llm): disable thinking (thinking_budget=0) for gemini-2.5-flash summaries
-- 2026-05-29 `a9f2ef2` fix(llm): default model gemini-2.5-flash (2.0-flash returns 404 on Vertex) + robust SDK-missing test
-- 2026-05-29 `92aed19` feat(llm): LLMProvider abstraction (RuleBased default / VertexGemini opt-in) for interaction summaries
-- 2026-05-29 `76deba1` chore(app): auto-load .env in local __main__ run (Cloud Run no-op)
-- 2026-05-29 `87d4b6f` feat(viewer): real Shibuya POIs via Places API + wire Maps key into served app.js
-- 2026-05-29 `2dd43e3` chore(deps): drop unused deps + add pyproject.toml for pytest rootdir
-- 2026-05-29 `9c88fba` refactor(viewer): dedupe CATEGORY_COLORS + harden google maps adapter
-- 2026-05-29 `4e42115` docs(deploy): add max-instances/concurrency guidance + SA hardening notes
-- 2026-05-29 `35e83cc` feat(viewer): social links on map, roads off-by-default, friend names
-- 2026-05-29 `884abed` feat(wo-005): add Cloud Run deploy artifacts (container + entrypoint + docs)
-- 2026-05-29 `23f2de4` fix(wo-004): make --sample produce a self-contained replayable run
-- 2026-05-29 `9027660` feat(wo-003): add FastAPI replay viewer with Maps + fallback
-- 2026-05-29 `ae6a4d6` feat(wo-004): add no-LLM rule-based simulation engine
-- 2026-05-29 `edc04cd` docs: resolve spec assumptions (37 [事実] via research/decision, 2 [実装時確定] runtime-only)
-- 2026-05-29 `3ee9964` feat(data-loader): implement WO-URBAN-001 (models + GeoJSON/JSONL loader + validation, 78 tests pass)
-- 2026-05-29 `4330c80` docs: refine spec P1 (synthetic data gen, behavior edge cases, API schema)
-- 2026-05-29 `43c9b67` chore: scaffold urban-ecosystem (spec, data-contract v0.2, work orders, subagent framework)
+## [Unreleased]
+
+### Added
+
+- リポジトリ全体の release version と release note の運用方針を追加。
+
+### Changed
+
+- `CHANGELOG.md` を Git 履歴一覧から release-oriented な形式に変更。
+
+## [v0.1.0] - 2026-06-03
+
+初回公開 baseline 候補。tag 作成時にこの section を GitHub Release の本文に使う。
+
+### Added
+
+- 都市エージェントシミュレーションの初期実装を追加。
+- FastAPI replay viewer と API key なしで動く fallback viewer を追加。
+- 合成データ生成、ルールベース simulation、replay 用 JSONL 出力を追加。
+- Google Maps / Google Places / Vertex AI Gemini の opt-in 経路を追加。
+- data contract と work order ベースの実装運用を追加。
+- fallback viewer smoke と CI の API key なし検証経路を追加。
+- MIT License と公開協業の入口 docs を追加。
+
+### Changed
+
+- README / CONTRIBUTING / public collaboration docs を、初回協力者が API key なしで確認できる導線に整理。
+- ローカル `.env` 読み込みを明示 opt-in に変更。
+- viewer の状態表示、ライブ概要、設定表示、role 表示を改善。
+- data contract を `0.4.0` まで更新し、`relationship_reason` を正式化。
+
+### Fixed
+
+- fallback viewer の layer label、highlight 解除、sample replay 生成、Vertex 実行例の CLI 引数を修正。
+- Gemini 2.5 Flash の thinking 設定と SDK 未導入時の扱いを堅くした。
+
+### Security
+
+- API key、token、`.env`、内部 URL を公開 issue / PR / docs に貼らない方針を明記。
+- Google Cloud / Maps / Places / Vertex AI は、環境変数を自分で設定した場合だけ使う課金境界を明記。
