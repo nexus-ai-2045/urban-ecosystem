@@ -631,6 +631,34 @@ class TestViewerHTML:
         assert json.dumps(map_id) in res.text
         assert 'const MAPS_API_KEY = "TEST_"KEY\\VALUE";' not in res.text
 
+    def test_maps_env_values_are_stripped_before_html_injection(self, sample_run_dir, monkeypatch):
+        """Secret Manager 値の末尾改行で Maps key / Map ID を壊さない。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "  TEST_KEY_WITH_WHITESPACE\n")
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", "\tTEST_MAP_ID_WITH_WHITESPACE\n")
+
+        res = TestClient(app).get("/")
+
+        assert res.status_code == 200
+        assert json.dumps("TEST_KEY_WITH_WHITESPACE") in res.text
+        assert json.dumps("TEST_MAP_ID_WITH_WHITESPACE") in res.text
+        assert json.dumps("  TEST_KEY_WITH_WHITESPACE\n") not in res.text
+        assert json.dumps("\tTEST_MAP_ID_WITH_WHITESPACE\n") not in res.text
+
+    def test_maps_env_values_are_stripped_before_app_js_injection(self, sample_run_dir, monkeypatch):
+        """app.js 側も Secret Manager 値の前後空白を除去して注入する。"""
+        monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
+        monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "  TEST_KEY_WITH_WHITESPACE\n")
+        monkeypatch.setenv("GOOGLE_MAPS_MAP_ID", "\tTEST_MAP_ID_WITH_WHITESPACE\n")
+
+        res = TestClient(app).get("/static/app.js")
+
+        assert res.status_code == 200
+        assert json.dumps("TEST_KEY_WITH_WHITESPACE") in res.text
+        assert json.dumps("TEST_MAP_ID_WITH_WHITESPACE") in res.text
+        assert json.dumps("  TEST_KEY_WITH_WHITESPACE\n") not in res.text
+        assert json.dumps("\tTEST_MAP_ID_WITH_WHITESPACE\n") not in res.text
+
     def test_demo_map_id_is_not_injected_into_html(self, sample_run_dir, monkeypatch):
         """DEMO_MAP_ID は無効な Map ID なので Maps bootstrap loader へ渡さない。"""
         monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
