@@ -79,12 +79,12 @@ _PLACEHOLDER_SCRIPT  = "%%MAPS_SCRIPT_TAG%%"
 
 def _get_maps_api_key() -> str:
     """GOOGLE_MAPS_API_KEY を環境変数から取得する。未設定時は空文字列。"""
-    return os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    return os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
 
 
 def _get_maps_map_id() -> str:
     """GOOGLE_MAPS_MAP_ID を環境変数から取得する。未設定時は空文字列。"""
-    return os.environ.get("GOOGLE_MAPS_MAP_ID", "")
+    return os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
 
 
 def _get_data_source() -> str:
