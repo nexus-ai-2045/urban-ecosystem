@@ -43,7 +43,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # サーバーモジュールを import
-from tools.urban_viewer_server import app, ALLOWED_FILES, AGENT_PROFILES_RE
+from tools.urban_viewer_server import app, ALLOWED_FILES, AGENT_PROFILES_RE, _RUNTIME_CONFIG
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
     ROLE_LABELS,
@@ -270,6 +270,7 @@ def _create_minimal_static_files(run_dir: Path) -> None:
 @pytest.fixture()
 def client_no_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY 未設定のクライアント。"""
+    _RUNTIME_CONFIG.clear()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -279,6 +280,7 @@ def client_no_key(sample_run_dir, monkeypatch):
 @pytest.fixture()
 def client_with_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY が設定されたクライアント (テスト用ダミーキー)。"""
+    _RUNTIME_CONFIG.clear()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -333,6 +335,73 @@ class TestHealth:
         assert body["data_source"] == "gcs"
         assert body["data_source_supported"] is False
         assert "not implemented" in body["data_source_error"]
+
+
+class TestSettings:
+    def test_get_settings_does_not_expose_maps_key(self, client_with_key):
+        """設定 API はキーの有無だけ返し、キー値は返さない。"""
+        res = client_with_key.get("/api/settings")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["maps"]["api_key"] == "present"
+        assert "TEST_DUMMY_KEY_NOT_REAL" not in res.text
+
+    def test_post_settings_updates_data_dir_for_runs(self, sample_run_dir, tmp_path, monkeypatch):
+        """UI から DATA_DIR を変えると /api/runs の参照先が変わる。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "empty"))
+        new_root = sample_run_dir
+        client = TestClient(app)
+
+        res = client.post("/api/settings", json={"data": {"source": "local", "root": str(new_root)}})
+        runs = client.get("/api/runs").json()["runs"]
+
+        assert res.status_code == 200
+        assert res.json()["data"]["root"] == str(new_root)
+        assert [run["run_id"] for run in runs] == ["test_run"]
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_settings_rejects_missing_data_dir(self, client_no_key, tmp_path):
+        """存在しない DATA_DIR は 400 にする。"""
+        missing = tmp_path / "missing"
+
+        res = client_no_key.post("/api/settings", json={"data": {"root": str(missing)}})
+
+        assert res.status_code == 400
+        assert "DATA_DIR not found" in res.text
+
+    def test_post_settings_accepts_local_llm_model_dir(self, client_no_key, tmp_path):
+        """ローカル LLM の model directory を UI から設定できる。"""
+        model_dir = tmp_path / "models"
+        model_dir.mkdir()
+
+        res = client_no_key.post(
+            "/api/settings",
+            json={
+                "llm": {
+                    "provider": "local",
+                    "model": "local-demo",
+                    "base_url": "http://127.0.0.1:11434/v1",
+                    "model_dir": str(model_dir),
+                }
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["llm"]["provider"] == "local"
+        assert body["llm"]["model_dir_exists"] is True
+
+    def test_post_settings_rejects_missing_llm_model_dir(self, client_no_key, tmp_path):
+        """存在しない LLM_MODEL_DIR は 400 にする。"""
+        res = client_no_key.post(
+            "/api/settings",
+            json={"llm": {"provider": "local", "model_dir": str(tmp_path / "missing")}},
+        )
+
+        assert res.status_code == 400
+        assert "LLM_MODEL_DIR not found" in res.text
 
 
 # ─────────────────────────────────────────────────────────────────────────────

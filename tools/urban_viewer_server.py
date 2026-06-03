@@ -28,7 +28,7 @@ import re
 from pathlib import Path
 from typing import Generator
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -67,6 +67,9 @@ CONTENT_TYPES: dict[str, str] = {
 # 現在の viewer API は local data source のみ実装済み。
 SUPPORTED_DATA_SOURCES: frozenset[str] = frozenset({"local"})
 
+# UI から変更されたランタイム設定。ファイルには保存しない。
+_RUNTIME_CONFIG: dict[str, str] = {}
+
 # run_id バリデーション正規表現 (§21.1)
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
 
@@ -81,26 +84,126 @@ _PLACEHOLDER_SCRIPT  = "%%MAPS_SCRIPT_TAG%%"
 
 def _get_maps_api_key() -> str:
     """GOOGLE_MAPS_API_KEY を環境変数から取得する。未設定時は空文字列。"""
-    return os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+    return _RUNTIME_CONFIG.get("GOOGLE_MAPS_API_KEY", os.environ.get("GOOGLE_MAPS_API_KEY", "")).strip()
 
 
 def _get_maps_map_id() -> str:
     """GOOGLE_MAPS_MAP_ID を環境変数から取得する。未設定時は空文字列。"""
-    return os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
+    return _RUNTIME_CONFIG.get("GOOGLE_MAPS_MAP_ID", os.environ.get("GOOGLE_MAPS_MAP_ID", "")).strip()
 
 
 def _get_data_source() -> str:
     """DATA_SOURCE 環境変数。現時点の実装済み値は 'local' のみ。"""
-    return os.environ.get("DATA_SOURCE", "local")
+    return _RUNTIME_CONFIG.get("DATA_SOURCE", os.environ.get("DATA_SOURCE", "local"))
 
 
 def _get_data_root() -> Path:
     """ローカルデータルートディレクトリ。DATA_DIR env or デフォルト data/。"""
-    data_dir = os.environ.get("DATA_DIR", "")
+    data_dir = _RUNTIME_CONFIG.get("DATA_DIR", os.environ.get("DATA_DIR", ""))
     if data_dir:
-        return Path(data_dir)
+        return Path(data_dir).expanduser()
     # urban-ecosystem ルートの data/ ディレクトリ
     return Path(__file__).parent.parent / "data"
+
+
+def _get_llm_provider() -> str:
+    """LLM_PROVIDER。現シミュレーション CLI の既定は rule。"""
+    return _RUNTIME_CONFIG.get("LLM_PROVIDER", os.environ.get("LLM_PROVIDER", "rule")).strip() or "rule"
+
+
+def _get_llm_model() -> str:
+    """LLM_MODEL。ローカル/クラウド provider の任意表示設定。"""
+    return _RUNTIME_CONFIG.get("LLM_MODEL", os.environ.get("LLM_MODEL", "")).strip()
+
+
+def _get_llm_base_url() -> str:
+    """LLM_BASE_URL。ローカル OpenAI-compatible server 等の任意表示設定。"""
+    return _RUNTIME_CONFIG.get("LLM_BASE_URL", os.environ.get("LLM_BASE_URL", "")).strip()
+
+
+def _get_llm_model_dir() -> str:
+    """LLM_MODEL_DIR。ローカルモデルディレクトリの任意表示設定。"""
+    return _RUNTIME_CONFIG.get("LLM_MODEL_DIR", os.environ.get("LLM_MODEL_DIR", "")).strip()
+
+
+def _get_google_cloud_project() -> str:
+    """GOOGLE_CLOUD_PROJECT。Vertex AI 利用時のプロジェクト設定。"""
+    return _RUNTIME_CONFIG.get(
+        "GOOGLE_CLOUD_PROJECT",
+        os.environ.get("GOOGLE_CLOUD_PROJECT", ""),
+    ).strip()
+
+
+def _set_runtime_value(name: str, value: object) -> None:
+    """UI から受け取った設定値を process-local に保存する。"""
+    if value is None:
+        _RUNTIME_CONFIG.pop(name, None)
+        return
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail=f"{name} must be a string")
+    cleaned = value.strip()
+    if cleaned:
+        _RUNTIME_CONFIG[name] = cleaned
+    else:
+        _RUNTIME_CONFIG.pop(name, None)
+
+
+def _settings_body() -> dict:
+    """UI 表示用の設定状態を返す。秘密値そのものは返さない。"""
+    data_root = _get_data_root().expanduser()
+    llm_provider = _get_llm_provider()
+    llm_model_dir = _get_llm_model_dir()
+    api_key = _get_maps_api_key()
+    map_id = _get_maps_map_id()
+    google_project = _get_google_cloud_project()
+    data_source = _get_data_source()
+    return {
+        "maps": {
+            "api_key": "present" if api_key else "absent",
+            "map_id": "" if map_id == "DEMO_MAP_ID" else map_id,
+            "map_id_state": (
+                "demo" if map_id == "DEMO_MAP_ID"
+                else "present" if map_id
+                else "absent"
+            ),
+            "env": {
+                "api_key": "GOOGLE_MAPS_API_KEY",
+                "map_id": "GOOGLE_MAPS_MAP_ID",
+            },
+        },
+        "data": {
+            "source": data_source,
+            "source_supported": data_source in SUPPORTED_DATA_SOURCES,
+            "root": str(data_root),
+            "root_exists": data_root.is_dir(),
+            "env": {
+                "source": "DATA_SOURCE",
+                "root": "DATA_DIR",
+            },
+        },
+        "llm": {
+            "provider": llm_provider,
+            "provider_supported": llm_provider in {"rule", "local", "vertex"},
+            "model": _get_llm_model(),
+            "base_url": _get_llm_base_url(),
+            "model_dir": llm_model_dir,
+            "model_dir_exists": bool(llm_model_dir) and Path(llm_model_dir).expanduser().is_dir(),
+            "env": {
+                "provider": "LLM_PROVIDER",
+                "model": "LLM_MODEL",
+                "base_url": "LLM_BASE_URL",
+                "model_dir": "LLM_MODEL_DIR",
+            },
+        },
+        "cloud": {
+            "google_cloud_project": google_project,
+            "google_cloud_project_state": "present" if google_project else "absent",
+            "env": {
+                "project": "GOOGLE_CLOUD_PROJECT",
+            },
+        },
+        "runtime_only": True,
+    }
 
 
 def _data_source_error(data_source: str) -> str:
@@ -403,6 +506,92 @@ async def health() -> JSONResponse:
     if data_source not in SUPPORTED_DATA_SOURCES:
         body["data_source_error"] = _data_source_error(data_source)
     return JSONResponse(body)
+
+
+@app.get("/api/settings")
+async def get_settings() -> JSONResponse:
+    """ビューア設定状態を返す。API キー値は返さない。"""
+    return JSONResponse(_settings_body())
+
+
+@app.post("/api/settings")
+async def update_settings(request: Request) -> JSONResponse:
+    """UI から process-local な設定を更新する。
+
+    永続保存はしない。API キー値はレスポンスに含めない。
+    """
+    try:
+        body = await request.json()
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="invalid json") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="request body must be an object")
+
+    maps = body.get("maps", {})
+    data = body.get("data", {})
+    llm = body.get("llm", {})
+    cloud = body.get("cloud", {})
+    for section_name, section in {
+        "maps": maps,
+        "data": data,
+        "llm": llm,
+        "cloud": cloud,
+    }.items():
+        if section is None:
+            continue
+        if not isinstance(section, dict):
+            raise HTTPException(status_code=400, detail=f"{section_name} must be an object")
+
+    if isinstance(maps, dict):
+        if "api_key" in maps:
+            _set_runtime_value("GOOGLE_MAPS_API_KEY", maps["api_key"])
+        if "map_id" in maps:
+            _set_runtime_value("GOOGLE_MAPS_MAP_ID", maps["map_id"])
+
+    if isinstance(data, dict):
+        if "source" in data:
+            source = data["source"]
+            if not isinstance(source, str):
+                raise HTTPException(status_code=400, detail="DATA_SOURCE must be a string")
+            source = source.strip() or "local"
+            if source not in SUPPORTED_DATA_SOURCES:
+                raise HTTPException(status_code=400, detail=_data_source_error(source))
+            _set_runtime_value("DATA_SOURCE", source)
+        if "root" in data:
+            root = data["root"]
+            if root is not None and not isinstance(root, str):
+                raise HTTPException(status_code=400, detail="DATA_DIR must be a string")
+            if isinstance(root, str) and root.strip():
+                root_path = Path(root.strip()).expanduser()
+                if not root_path.is_dir():
+                    raise HTTPException(status_code=400, detail=f"DATA_DIR not found: {root_path}")
+            _set_runtime_value("DATA_DIR", root)
+
+    if isinstance(llm, dict):
+        if "provider" in llm:
+            provider = llm["provider"]
+            if not isinstance(provider, str):
+                raise HTTPException(status_code=400, detail="LLM_PROVIDER must be a string")
+            provider = provider.strip() or "rule"
+            if provider not in {"rule", "local", "vertex"}:
+                raise HTTPException(status_code=400, detail="LLM_PROVIDER must be rule, local, or vertex")
+            _set_runtime_value("LLM_PROVIDER", provider)
+        for json_key, env_key in {
+            "model": "LLM_MODEL",
+            "base_url": "LLM_BASE_URL",
+            "model_dir": "LLM_MODEL_DIR",
+        }.items():
+            if json_key in llm:
+                if json_key == "model_dir" and isinstance(llm[json_key], str) and llm[json_key].strip():
+                    model_dir = Path(llm[json_key].strip()).expanduser()
+                    if not model_dir.is_dir():
+                        raise HTTPException(status_code=400, detail=f"LLM_MODEL_DIR not found: {model_dir}")
+                _set_runtime_value(env_key, llm[json_key])
+
+    if isinstance(cloud, dict) and "google_cloud_project" in cloud:
+        _set_runtime_value("GOOGLE_CLOUD_PROJECT", cloud["google_cloud_project"])
+
+    return JSONResponse(_settings_body())
 
 
 @app.get("/api/runs")

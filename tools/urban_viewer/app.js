@@ -79,9 +79,11 @@ const state = {
     runtime: {
         runId:      "",
         mapMode:    "Fallback",
+        mapPreference: "auto",
         mapsKey:    hasApiKey ? "present" : "absent",
         dataSource: "local",
         mapId:      MAPS_MAP_ID && !MAPS_MAP_ID.startsWith("%%") ? MAPS_MAP_ID : "",
+        settings:   null,
     },
     selection: { agentId: null },
     layerVisible: {
@@ -121,8 +123,19 @@ const layerPoi      = document.getElementById("layer-poi");
 const layerAoi      = document.getElementById("layer-aoi");
 const layerRoad     = document.getElementById("layer-road");
 const layerAgent    = document.getElementById("layer-agent");
+const mapModeSel    = document.getElementById("map-mode-select");
 const settingsBtn   = document.getElementById("btn-settings");
 const settingsPanel = document.getElementById("settings-panel");
+const saveSettingsBtn = document.getElementById("btn-save-settings");
+const settingsStatusEl = document.getElementById("settings-status");
+const mapsApiKeyInput = document.getElementById("maps-api-key-input");
+const mapsMapIdInput = document.getElementById("maps-map-id-input");
+const dataDirInput = document.getElementById("data-dir-input");
+const llmProviderSel = document.getElementById("llm-provider-select");
+const llmModelInput = document.getElementById("llm-model-input");
+const llmBaseUrlInput = document.getElementById("llm-base-url-input");
+const llmModelDirInput = document.getElementById("llm-model-dir-input");
+const googleCloudProjectInput = document.getElementById("google-cloud-project-input");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -149,8 +162,10 @@ const liveEls = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function initAdapter() {
-    if (hasApiKey) {
+    const desiredMode = _resolveDesiredMapMode();
+    if (desiredMode === "google" && hasApiKey) {
         try {
+            if (mapCanvas) mapCanvas.style.display = "none";
             adapter = new GoogleMapsAdapter(mapContainer, MAPS_API_KEY, MAPS_MAP_ID);
             await adapter.init();
             state.runtime.mapMode = "Google Maps";
@@ -177,6 +192,7 @@ async function initAdapter() {
 async function main() {
     // アダプタ初期化
     await initAdapter();
+    await refreshSettingsStatus();
     await refreshHealthStatus();
 
     // run 一覧を取得して selector に反映
@@ -190,6 +206,12 @@ async function main() {
     if (runs && runs.length > 0) {
         await loadRun(runs[0].run_id);
     }
+}
+
+function _resolveDesiredMapMode() {
+    if (state.runtime.mapPreference === "fallback") return "fallback";
+    if (state.runtime.mapPreference === "google") return "google";
+    return hasApiKey ? "google" : "fallback";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,6 +241,105 @@ async function refreshHealthStatus() {
         updateMapRuntimeStatus();
     } catch {
         updateMapRuntimeStatus();
+    }
+}
+
+/** /api/settings を取得し、設定パネルに反映する。 */
+async function refreshSettingsStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        if (!res.ok) return;
+        const json = await res.json();
+        state.runtime.settings = json;
+        state.runtime.mapsKey = json.maps?.api_key || state.runtime.mapsKey;
+        state.runtime.mapId = json.maps?.map_id || "";
+        state.runtime.dataSource = json.data?.source || state.runtime.dataSource;
+        _populateSettingsForm(json);
+        updateMapRuntimeStatus();
+    } catch (error) {
+        console.warn("settings の読み込みに失敗しました", error);
+    }
+}
+
+function _populateSettingsForm(settings) {
+    if (!settings) return;
+    if (mapsApiKeyInput) mapsApiKeyInput.value = "";
+    if (mapsMapIdInput) mapsMapIdInput.value = settings.maps?.map_id || "";
+    if (dataDirInput) dataDirInput.value = settings.data?.root || "";
+    if (llmProviderSel) llmProviderSel.value = settings.llm?.provider || "rule";
+    if (llmModelInput) llmModelInput.value = settings.llm?.model || "";
+    if (llmBaseUrlInput) llmBaseUrlInput.value = settings.llm?.base_url || "";
+    if (llmModelDirInput) llmModelDirInput.value = settings.llm?.model_dir || "";
+    if (googleCloudProjectInput) {
+        googleCloudProjectInput.value = settings.cloud?.google_cloud_project || "";
+    }
+}
+
+async function saveSettings() {
+    if (settingsStatusEl) {
+        settingsStatusEl.className = "settings-status";
+        settingsStatusEl.textContent = "反映中...";
+    }
+    const payload = {
+        maps: {
+            map_id: mapsMapIdInput?.value || "",
+        },
+        data: {
+            source: "local",
+            root: dataDirInput?.value || "",
+        },
+        llm: {
+            provider: llmProviderSel?.value || "rule",
+            model: llmModelInput?.value || "",
+            base_url: llmBaseUrlInput?.value || "",
+            model_dir: llmModelDirInput?.value || "",
+        },
+        cloud: {
+            google_cloud_project: googleCloudProjectInput?.value || "",
+        },
+    };
+    const apiKeyValue = mapsApiKeyInput?.value || "";
+    if (apiKeyValue) {
+        payload.maps.api_key = apiKeyValue;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            throw new Error(json.detail || "settings update failed");
+        }
+        state.runtime.settings = json;
+        state.runtime.mapsKey = json.maps?.api_key || state.runtime.mapsKey;
+        state.runtime.mapId = json.maps?.map_id || "";
+        state.runtime.dataSource = json.data?.source || state.runtime.dataSource;
+        _populateSettingsForm(json);
+        updateMapRuntimeStatus();
+        const needsReload = apiKeyValue || Boolean(mapsMapIdInput?.value);
+        if (settingsStatusEl) {
+            settingsStatusEl.className = "settings-status settings-status--ok";
+            settingsStatusEl.textContent = needsReload
+                ? "反映しました。地図キー変更は再読み込みで有効になります。"
+                : "反映しました。";
+        }
+        if (needsReload) {
+            window.setTimeout(() => window.location.reload(), 700);
+            return;
+        }
+        const runs = await fetchRuns();
+        updateRunSelector(runSel, runs);
+        if (runs && runs.length > 0) {
+            await loadRun(runs[0].run_id);
+        }
+    } catch (error) {
+        if (settingsStatusEl) {
+            settingsStatusEl.className = "settings-status settings-status--error";
+            settingsStatusEl.textContent = String(error.message || error);
+        }
     }
 }
 
@@ -598,10 +719,50 @@ function handleAgentClick(agentId) {
 function updateMapRuntimeStatus() {
     updateMapStatus(mapStatusEls, {
         mode:       state.runtime.mapMode,
+        preference: state.runtime.mapPreference,
         mapsKey:    state.runtime.mapsKey,
         dataSource: state.runtime.dataSource,
         mapId:      state.runtime.mapId,
     });
+}
+
+async function switchMapMode(preference) {
+    stopPlay();
+    state.runtime.mapPreference = preference === "google" || preference === "fallback"
+        ? preference
+        : "auto";
+    if (mapModeSel) mapModeSel.value = state.runtime.mapPreference;
+
+    const desiredMode = _resolveDesiredMapMode();
+    if (desiredMode === "google" && !hasApiKey) {
+        state.runtime.mapMode = "Fallback";
+        updateMapRuntimeStatus();
+        if (settingsStatusEl) {
+            settingsStatusEl.className = "settings-status settings-status--error";
+            settingsStatusEl.textContent = "Google Maps は API key 設定後の再読み込みで使えます。";
+        }
+        return;
+    }
+
+    await initAdapter();
+    await _reapplyCurrentRunLayers();
+    await renderCurrentTick();
+}
+
+async function _reapplyCurrentRunLayers() {
+    const runId = state.runtime.runId;
+    if (!runId) return;
+    const [poisData, aoisData, roadsData] = await Promise.all([
+        fetchRunFile(runId, "pois.geojson"),
+        fetchRunFile(runId, "aois.geojson"),
+        fetchRunFile(runId, "roadnet.geojson"),
+    ]);
+    if (poisData) adapter.setLayer("poi", state.layerVisible.poi, poisData);
+    if (aoisData) adapter.setLayer("aoi", state.layerVisible.aoi, aoisData);
+    if (roadsData) adapter.setLayer("road", state.layerVisible.road, roadsData);
+    if (adapter instanceof FallbackMapAdapter) {
+        adapter._recomputeBounds();
+    }
 }
 
 function updateLiveRuntimePanel(agentStates = null) {
@@ -744,6 +905,17 @@ function wireEvents() {
             const isOpen = !settingsPanel.hidden;
             settingsPanel.hidden = isOpen;
             settingsBtn.setAttribute("aria-expanded", String(!isOpen));
+        });
+    }
+    if (mapModeSel) {
+        mapModeSel.value = state.runtime.mapPreference;
+        mapModeSel.addEventListener("change", async () => {
+            await switchMapMode(mapModeSel.value);
+        });
+    }
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener("click", async () => {
+            await saveSettings();
         });
     }
 
