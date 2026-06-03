@@ -154,16 +154,16 @@ export class GoogleMapsAdapter {
             const latLng = new google.maps.LatLng(agent.lat, agent.lon);
 
             if (this._agentMarkers.has(agent.id)) {
-                // 位置・glyph・title を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4 / WO-007)
-                // WO-007 acceptance: tick 毎・run 跨ぎで glyph / title を更新する。
+                // 位置・glyphText・title を更新し、前 tick で非表示にしたマーカーを再表示する (§5.1.4 / WO-007)
+                // WO-007 acceptance: tick 毎・run 跨ぎで glyphText / title を更新する。
                 const marker = this._agentMarkers.get(agent.id);
                 marker.position = latLng;
                 marker.map = this._map;
-                // glyph / title を最新の label で更新する (profile ロード後の run 跨ぎ対応)
+                // glyphText / title を最新の label で更新する (profile ロード後の run 跨ぎ対応)
                 const pin = this._agentPins.get(agent.id);
                 if (pin) {
                     const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
-                    pin.glyph = glyphText;
+                    pin.glyphText = glyphText;
                 }
                 const titleText = agent.label != null
                     ? `${agent.label} (id:${agent.id})`
@@ -176,10 +176,10 @@ export class GoogleMapsAdapter {
                 const color = (agent.id === this._selectedAgentId)
                     ? HIGHLIGHT_COLOR
                     : (ROLE_COLORS[role] || DEFAULT_ROLE_COLOR);
-                // glyph: label フィールドがあれば名前の短縮形を表示、なければ id
+                // glyphText: label フィールドがあれば名前の短縮形を表示、なければ id
                 const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
                 const pin   = new PinElement({
-                    glyph:           glyphText,
+                    glyphText:       glyphText,
                     background:      color,
                     borderColor:     "#ffffff",
                     glyphColor:      "#ffffff",
@@ -191,10 +191,11 @@ export class GoogleMapsAdapter {
                 const marker = new AdvancedMarkerElement({
                     map:      this._map,
                     position: latLng,
-                    content:  pin.element,
                     title:    titleText,
+                    gmpClickable: true,
                 });
-                marker.addListener("click", () => {
+                marker.replaceChildren(pin);
+                marker.addEventListener("gmp-click", () => {
                     if (this._agentClickCb) this._agentClickCb(agent.id);
                 });
                 this._agentMarkers.set(agent.id, marker);

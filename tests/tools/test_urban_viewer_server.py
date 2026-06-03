@@ -877,7 +877,7 @@ class TestAgentProfileSurnameFields:
     """agent_profiles_N100.json が surname / given フィールドを持つ (WO-006 contract §0.3.0)。
 
     WO-007 の受け入れ条件:
-      - マーカー glyph に surname を使う。
+      - マーカー glyphText に surname を使う。
       - surname 欠落時は name 先頭文字列にフォールバックする。
       - 詳細パネルに「surname given さん」を表示する。
     これらは JS 側で実装されるが、データ契約の検証はサーバーテストで担保する。
@@ -936,7 +936,7 @@ class TestAgentProfileSurnameFields:
             )
 
     def test_surname_fallback_in_minimal_fixture(self):
-        """surname 欠落プロフィールに対する glyph ラベル計算ロジックの検証。
+        """surname 欠落プロフィールに対する glyphText ラベル計算ロジックの検証。
 
         JS 側 app.js の _buildProfileMap / markerData ラベルロジックを
         Python で等価実装して確認する (fallback = name 先頭文字列)。

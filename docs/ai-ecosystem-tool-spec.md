@@ -122,7 +122,7 @@ MVPではフロントエンドのビルド工程を増やさず、素のHTML/CSS
    - AOI: Polygon/MultiPolygon。fillOpacity 0.2 程度の半透明。
    - Road: LineString/MultiLineString。strokeWeight 1-2。
    - レイヤー ON/OFF は各 Data インスタンスに `setMap(map | null)`。
-4. Agent: AdvancedMarkerElement で生成。PinElement で番号付きピン (`glyph = String(agent_id)`、role で色分け)。click で選択イベント発火。
+4. Agent: AdvancedMarkerElement で生成。PinElement で番号付きピン (`glyphText = String(agent_id)`、role で色分け)。click で選択イベント発火。
 5. 帰属表示: Google の attribution / ロゴ DOM を隠さない・重ねない。
 
 ### 5.1.4 位置更新とパフォーマンス方針
