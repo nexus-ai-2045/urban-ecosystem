@@ -31,6 +31,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from app.llm_provider import (
     ALLOWED_CATEGORIES_19_3_1,
     LLMProvider,
+    LocalOpenAIProvider,
     RuleBasedProvider,
     VertexGeminiProvider,
     build_destination_prompt,
@@ -331,6 +332,12 @@ class TestMakeLlmProvider:
         p = make_llm_provider("vertex", client=mock_client)
         assert isinstance(p, VertexGeminiProvider)
 
+    def test_local_returns_local_provider(self):
+        """kind='local' で LocalOpenAIProvider が返る。"""
+        p = make_llm_provider("local", base_url="http://127.0.0.1:11434/v1", model="llama")
+        assert isinstance(p, LocalOpenAIProvider)
+        assert p.model == "llama"
+
     def test_unknown_kind_raises_value_error(self):
         """未知の kind で ValueError が上がる。"""
         with pytest.raises(ValueError, match="未知の LLM プロバイダ kind"):
@@ -347,6 +354,55 @@ class TestMakeLlmProvider:
         p = make_llm_provider("vertex", model="gemini-test", client=mock_client)
         assert isinstance(p, VertexGeminiProvider)
         assert p.model == "gemini-test"
+
+
+class TestLocalOpenAIProvider:
+    """LocalOpenAIProvider の mock HTTP テスト。"""
+
+    def test_complete_reads_chat_completion_content(self, monkeypatch):
+        """OpenAI-compatible 応答から choices[0].message.content を返す。"""
+
+        class _Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return None
+
+            def read(self):
+                return b'{"choices":[{"message":{"content":"hello local\\n"}}]}'
+
+        captured = {}
+
+        def _fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            captured["timeout"] = timeout
+            return _Response()
+
+        monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+        provider = LocalOpenAIProvider(
+            base_url="http://127.0.0.1:11434/v1",
+            model="llama-test",
+            timeout_seconds=3,
+        )
+
+        result = provider.complete("prompt")
+
+        assert result == "hello local"
+        assert captured["url"] == "http://127.0.0.1:11434/v1/chat/completions"
+        assert captured["timeout"] == 3
+
+    def test_choose_destination_category_accepts_allowed_response(self, monkeypatch):
+        """local provider のカテゴリ選択は allowed response を採用する。"""
+        provider = LocalOpenAIProvider(model="llama-test")
+        monkeypatch.setattr(provider, "complete", lambda *_, **__: "amenity-cafe")
+
+        result = provider.choose_destination_category(
+            {"agent_id": 1},
+            ["amenity-cafe", "leisure-park"],
+        )
+
+        assert result == "amenity-cafe"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

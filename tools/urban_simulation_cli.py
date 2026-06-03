@@ -172,6 +172,14 @@ def _run(args: argparse.Namespace) -> int:
             )
             return 2
         llm_opts["project"] = proj
+    elif llm_kind == "local":
+        import os
+        llm_opts["base_url"] = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+        llm_opts["model"] = (
+            os.environ.get("LLM_MODEL")
+            or os.environ.get("LLM_MODEL_DIR")
+            or "local-model"
+        )
     provider = make_llm_provider(llm_kind, **llm_opts)
 
     # --no-summaries で interaction summary 生成をスキップする (#1 会話オプション)
@@ -236,10 +244,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--sample-pois", dest="pois_count", type=int, default=300,
                        help="--sample 生成時の POI 数 (既定 300)")
     run_p.add_argument(
-        "--llm", choices=["rule", "vertex"], default="rule",
+        "--llm", choices=["rule", "local", "vertex"], default="rule",
         help=(
-            "LLM プロバイダ (既定 rule=RuleBasedProvider / vertex=VertexGeminiProvider)。"
-            "vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 (spec §17.5)。"
+            "LLM プロバイダ (既定 rule=RuleBasedProvider / local=OpenAI-compatible local endpoint / "
+            "vertex=VertexGeminiProvider)。vertex 時は GOOGLE_CLOUD_PROJECT 環境変数と ADC 認証が必要 "
+            "(spec §17.5)。local 時は LLM_BASE_URL / LLM_MODEL を参照する。"
         ),
     )
     run_p.add_argument(

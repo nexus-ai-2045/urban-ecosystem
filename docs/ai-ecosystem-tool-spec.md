@@ -923,8 +923,10 @@ MVP の viewer API は `DATA_SOURCE=local` のみを実装する。`DATA_SOURCE=
 | GET | `/static/*` | SPA静的アセット |
 | GET | `/api/health` | ヘルスチェック (Cloud Run liveness) |
 | GET | `/api/runs` | 利用可能 run_id 一覧 |
+| POST | `/api/runs` | 小規模 sample simulation run 生成 |
+| GET | `/api/settings` | ランタイム設定状態 (API key 等の秘密値は返さない) |
+| POST | `/api/settings` | ランタイム設定更新 (process-local / 永続保存なし) |
 | GET | `/api/data/{run_id}/{file}` | GeoJSON/JSONL/summary 配信 |
-| POST | `/api/simulate` | (任意) 小規模ルールベースsimを同期実行しJSONL返却。大規模はJobへ誘導 |
 
 ### 17.4 ローカル開発と本番の差分
 
@@ -1471,6 +1473,48 @@ Content-Type: application/json
 - `runs` 配列はサーバが見つけた全 run を返す。ソート順は `started_at` 降順。[事実: 設計決定/§21.2 — ソートキー確定]
 - run が 0 件のとき `"runs": []` を返す。4xx/5xx は返さない。
 - 各要素は `summary.json` をそのまま転送する形で実装してよい。[事実: 設計決定/§21.2 — MVP 規模 (ラン数 < 100) ではキャッシュ不要。スケール時は要検討]
+
+### 21.2.1 POST /api/runs
+
+小規模 sample simulation run を同期生成する。フロントの New Run パネルから呼ぶ。MVP では `mode=sample` のみを実装し、既存の `tools/generate_urban_sample.py` と `Simulation.run()` を同一プロセスで実行する。大規模 run は Cloud Run Job へ分離する。
+
+```json
+{
+  "mode": "sample",
+  "run_id": "ui_demo_seed42",
+  "seed": 42,
+  "ticks": 288,
+  "agents": 100,
+  "pois": 300
+}
+```
+
+制約:
+
+| フィールド | 制約 |
+| --- | --- |
+| `run_id` | `^[A-Za-z0-9_-]{1,128}$`。既存 run と衝突した場合は 409 |
+| `seed` | 0 以上 2147483647 以下 |
+| `ticks` | 1 以上 2016 以下 |
+| `agents` | 1 以上 1000 以下 |
+| `pois` | 3 以上 2000 以下 |
+
+レスポンスは生成後の `summary.json` 相当を `run` として返す。実行中の LLM provider は `/api/settings` の `LLM_PROVIDER` を使う。`vertex` の場合、`GOOGLE_CLOUD_PROJECT` が未設定なら 400 を返し、未完成 run ディレクトリは削除する。API key や cloud project の秘密値はレスポンスに含めない。
+
+### 21.2.2 GET /api/settings / POST /api/settings
+
+ビューアのランタイム設定を扱う。設定は process-local であり、`.env` や OS keychain へ永続保存しない。`GET /api/settings` は API key の実値を返さず、`present` / `absent` の状態だけ返す。
+
+設定対象:
+
+| セクション | 値 |
+| --- | --- |
+| `maps` | `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_MAP_ID` |
+| `data` | `DATA_SOURCE=local`, `DATA_DIR` |
+| `llm` | `LLM_PROVIDER` (`rule` / `local` / `vertex`), `LLM_MODEL`, `LLM_BASE_URL`, `LLM_MODEL_DIR` |
+| `cloud` | `GOOGLE_CLOUD_PROJECT` |
+
+`local` LLM は OpenAI-compatible `/chat/completions` endpoint を想定する。`LLM_MODEL` が空の場合は `LLM_MODEL_DIR` を model 指定として使う。`vertex` は ADC / Workload Identity と `GOOGLE_CLOUD_PROJECT` を要求する。
 
 ### 21.3 GET /api/data/{run_id}/{file}
 

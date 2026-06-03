@@ -154,6 +154,16 @@ body {
     margin: 8px 0 4px;
 }
 
+.inline-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+}
+
+.inline-fields label {
+    min-width: 0;
+}
+
 .left-panel select:focus {
     outline: none;
     border-color: var(--accent);

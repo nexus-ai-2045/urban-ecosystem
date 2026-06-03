@@ -27,7 +27,7 @@ owner: nexus_ai
 | --- | --- | --- | --- |
 | 4 | 合成データ生成 (WO-002) の地理ロジック未定義 | ✅ | spec **§19** で確定。渋谷 bbox 固定 / POI 300 件カテゴリ分布 / home(75)・work(25)・school(5) POI 割当 / social_networks (Erdős-Rényi 平均次数5) / rng 消費順序固定。残だった [推測] (road 本数 ~299 / home 共有設計 / 氏名パターン / bbox 実座標) は全て `[事実: 設計決定/research]` に解決済。 |
 | 5 | 行動ルールの境界ケース | ✅ | spec **§20** で確定。(a) §20.1 遠距離 commute 継続優先 (b) §20.2 初日 tick=0 初期 status (c) §20.3 MAX_INTERACTIONS_PER_TICK=50 超過時ペア優先順位 (social→距離→seeded_rand)。加えて §20.4 no_target 連続 / §20.5 滞在中の時刻帯境界跨ぎ再評価。§20 の [推測] 18 件は全て §9 由来の `[事実: 設計決定]` に解決済。 |
-| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.3 GET /api/data/{run_id}/{file} (許可リスト9ファイル・JSONL raw stream・403/404) / §21.4 health / §21.5 simulate(任意) / §21.6 CORS 同一オリジン。§21 の [推測] は設計決定 + FastAPI 公式 docs research で全て `[事実]` に解決済。 |
+| 6 | API レスポンス schema 未定義 | ✅ | spec **§21** で確定。§21.1 run_id 命名・発見 / §21.2 GET /api/runs / §21.2.1 POST /api/runs / §21.2.2 GET/POST /api/settings / §21.3 GET /api/data/{run_id}/{file} (許可リスト11ファイル・JSONL raw stream・403/404) / §21.4 health / §21.6 CORS 同一オリジン。§21 の [推測] は設計決定 + FastAPI 公式 docs research で全て `[事実]` に解決済。 |
 
 ## P2 — CEO 判断 / 保留
 

@@ -43,7 +43,13 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # サーバーモジュールを import
-from tools.urban_viewer_server import app, ALLOWED_FILES, AGENT_PROFILES_RE, _RUNTIME_CONFIG
+from tools.urban_viewer_server import (
+    app,
+    ALLOWED_FILES,
+    AGENT_PROFILES_RE,
+    _RUNTIME_CONFIG,
+    _make_configured_llm_provider,
+)
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
     ROLE_LABELS,
@@ -372,7 +378,7 @@ class TestSettings:
         assert "DATA_DIR not found" in res.text
 
     def test_post_settings_accepts_local_llm_model_dir(self, client_no_key, tmp_path):
-        """ローカル LLM の model directory を UI から設定できる。"""
+        """ローカル LLM の model path fallback を UI から設定できる。"""
         model_dir = tmp_path / "models"
         model_dir.mkdir()
 
@@ -393,6 +399,19 @@ class TestSettings:
         assert body["llm"]["provider"] == "local"
         assert body["llm"]["model_dir_exists"] is True
 
+    def test_local_llm_uses_model_dir_when_model_is_empty(self, client_no_key, tmp_path):
+        """model 名が空なら LLM_MODEL_DIR を local provider の model として使う。"""
+        model_dir = tmp_path / "models"
+        model_dir.mkdir()
+        client_no_key.post(
+            "/api/settings",
+            json={"llm": {"provider": "local", "model": "", "model_dir": str(model_dir)}},
+        )
+
+        provider = _make_configured_llm_provider()
+
+        assert provider.model == str(model_dir)
+
     def test_post_settings_rejects_missing_llm_model_dir(self, client_no_key, tmp_path):
         """存在しない LLM_MODEL_DIR は 400 にする。"""
         res = client_no_key.post(
@@ -402,6 +421,65 @@ class TestSettings:
 
         assert res.status_code == 400
         assert "LLM_MODEL_DIR not found" in res.text
+
+
+class TestCreateRun:
+    def test_post_runs_creates_sample_run(self, tmp_path, monkeypatch):
+        """UI から sample run を生成し、/api/runs で列挙できる。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+        client = TestClient(app)
+
+        res = client.post(
+            "/api/runs",
+            json={
+                "mode": "sample",
+                "run_id": "ui_test_run",
+                "seed": 42,
+                "agents": 2,
+                "pois": 10,
+                "ticks": 2,
+            },
+        )
+        runs = client.get("/api/runs").json()["runs"]
+
+        assert res.status_code == 200
+        assert res.json()["run"]["run_id"] == "ui_test_run"
+        assert [run["run_id"] for run in runs] == ["ui_test_run"]
+        assert (tmp_path / "ui_test_run" / "agent_states.jsonl").exists()
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_runs_rejects_duplicate_run_id(self, tmp_path, monkeypatch):
+        """既存 run_id は上書きせず 409 にする。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        client = TestClient(app)
+        payload = {"mode": "sample", "run_id": "dupe_run", "agents": 2, "pois": 10, "ticks": 2}
+
+        first = client.post("/api/runs", json=payload)
+        second = client.post("/api/runs", json=payload)
+
+        assert first.status_code == 200
+        assert second.status_code == 409
+        _RUNTIME_CONFIG.clear()
+
+    def test_post_runs_requires_google_project_for_vertex(self, tmp_path, monkeypatch):
+        """Vertex AI provider は GOOGLE_CLOUD_PROJECT 未設定なら実行前に 400。"""
+        _RUNTIME_CONFIG.clear()
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        client = TestClient(app)
+        client.post("/api/settings", json={"llm": {"provider": "vertex"}})
+
+        res = client.post(
+            "/api/runs",
+            json={"mode": "sample", "run_id": "vertex_no_project", "agents": 2, "pois": 10, "ticks": 2},
+        )
+
+        assert res.status_code == 400
+        assert "GOOGLE_CLOUD_PROJECT" in res.text
+        assert not (tmp_path / "vertex_no_project").exists()
+        _RUNTIME_CONFIG.clear()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

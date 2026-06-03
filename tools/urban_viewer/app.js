@@ -119,6 +119,13 @@ const speedSel      = document.getElementById("speed-select");
 const sliderEl      = document.getElementById("time-slider");
 const runSel        = document.getElementById("run-select");
 const loadBtn       = document.getElementById("btn-load");
+const createRunBtn  = document.getElementById("btn-create-run");
+const createRunStatusEl = document.getElementById("create-run-status");
+const newRunIdInput = document.getElementById("new-run-id-input");
+const newRunSeedInput = document.getElementById("new-run-seed-input");
+const newRunTicksInput = document.getElementById("new-run-ticks-input");
+const newRunAgentsInput = document.getElementById("new-run-agents-input");
+const newRunPoisInput = document.getElementById("new-run-pois-input");
 const layerPoi      = document.getElementById("layer-poi");
 const layerAoi      = document.getElementById("layer-aoi");
 const layerRoad     = document.getElementById("layer-road");
@@ -198,6 +205,7 @@ async function main() {
     // run 一覧を取得して selector に反映
     const runs = await fetchRuns();
     updateRunSelector(runSel, runs);
+    _setDefaultNewRunId(runs);
 
     // イベント配線
     wireEvents();
@@ -206,6 +214,14 @@ async function main() {
     if (runs && runs.length > 0) {
         await loadRun(runs[0].run_id);
     }
+}
+
+function _setDefaultNewRunId(runs) {
+    if (!newRunIdInput) return;
+    const existing = new Set((runs || []).map((run) => run.run_id));
+    if (newRunIdInput.value && !existing.has(newRunIdInput.value)) return;
+    const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
+    newRunIdInput.value = `ui_demo_${stamp}`;
 }
 
 function _resolveDesiredMapMode() {
@@ -341,6 +357,59 @@ async function saveSettings() {
             settingsStatusEl.textContent = String(error.message || error);
         }
     }
+}
+
+function _readIntegerInput(inputEl, fallback) {
+    const value = parseInt(inputEl?.value || "", 10);
+    return Number.isInteger(value) ? value : fallback;
+}
+
+async function createRunFromForm() {
+    if (!createRunBtn) return;
+    const runId = (newRunIdInput?.value || "").trim();
+    if (!runId) {
+        _setCreateRunStatus("Run ID が必要です。", true);
+        return;
+    }
+    const payload = {
+        mode: "sample",
+        run_id: runId,
+        seed: _readIntegerInput(newRunSeedInput, 42),
+        ticks: _readIntegerInput(newRunTicksInput, 288),
+        agents: _readIntegerInput(newRunAgentsInput, 100),
+        pois: _readIntegerInput(newRunPoisInput, 300),
+    };
+    createRunBtn.disabled = true;
+    _setCreateRunStatus("生成中...");
+    try {
+        const res = await fetch(`${API_BASE}/api/runs`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            throw new Error(json.detail || "run creation failed");
+        }
+        const runs = await fetchRuns();
+        updateRunSelector(runSel, runs);
+        if (runSel) runSel.value = json.run?.run_id || runId;
+        _setDefaultNewRunId(runs);
+        _setCreateRunStatus("生成しました。", false);
+        await loadRun(json.run?.run_id || runId);
+    } catch (error) {
+        _setCreateRunStatus(String(error.message || error), true);
+    } finally {
+        createRunBtn.disabled = false;
+    }
+}
+
+function _setCreateRunStatus(message, isError = false) {
+    if (!createRunStatusEl) return;
+    createRunStatusEl.className = isError
+        ? "settings-status settings-status--error"
+        : "settings-status settings-status--ok";
+    createRunStatusEl.textContent = message;
 }
 
 /**
@@ -916,6 +985,11 @@ function wireEvents() {
     if (saveSettingsBtn) {
         saveSettingsBtn.addEventListener("click", async () => {
             await saveSettings();
+        });
+    }
+    if (createRunBtn) {
+        createRunBtn.addEventListener("click", async () => {
+            await createRunFromForm();
         });
     }
 
