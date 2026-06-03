@@ -42,5 +42,8 @@ jobs:
       - name: Install Playwright browser
         run: python -m playwright install --with-deps chromium
 
+      - name: Check generated docs are in sync
+        run: python tools/docs_sync_check.py --check
+
       - name: Run pytest without paid API credentials
         run: python -m pytest tests -q -m "not requires_api"

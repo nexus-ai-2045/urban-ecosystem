@@ -42,6 +42,34 @@
         <div id="load-status" aria-live="polite" aria-label="ロード結果"></div>
       </section>
 
+      <section class="nav-section" aria-labelledby="create-run-section-title">
+        <div id="create-run-section-title" class="panel-title">New Run</div>
+        <label class="field-label" for="new-run-id-input">Run ID</label>
+        <input id="new-run-id-input" type="text" autocomplete="off" value="ui_demo">
+        <div class="inline-fields">
+          <label>
+            <span class="field-label">Seed</span>
+            <input id="new-run-seed-input" type="number" min="0" max="2147483647" value="42">
+          </label>
+          <label>
+            <span class="field-label">Ticks</span>
+            <input id="new-run-ticks-input" type="number" min="1" max="2016" value="288">
+          </label>
+        </div>
+        <div class="inline-fields">
+          <label>
+            <span class="field-label">Agents</span>
+            <input id="new-run-agents-input" type="number" min="1" max="1000" value="100">
+          </label>
+          <label>
+            <span class="field-label">POIs</span>
+            <input id="new-run-pois-input" type="number" min="3" max="2000" value="300">
+          </label>
+        </div>
+        <button id="btn-create-run" type="button">Run を作る</button>
+        <div id="create-run-status" class="settings-status" aria-live="polite"></div>
+      </section>
+
       <section class="nav-section" aria-labelledby="layer-section-title">
         <div id="layer-section-title" class="panel-title">Layers</div>
         <label class="layer-toggle">
@@ -65,6 +93,12 @@
 
       <section class="nav-section" aria-labelledby="map-section-title">
         <div id="map-section-title" class="panel-title">Map</div>
+        <label class="field-label" for="map-mode-select">表示モード</label>
+        <select id="map-mode-select" aria-label="地図表示モード">
+          <option value="auto">自動</option>
+          <option value="google">Google Maps</option>
+          <option value="fallback">Fallback</option>
+        </select>
         <div id="map-status-panel" class="map-status-panel" aria-live="polite">
           <div class="status-row">
             <span class="status-label">描画</span>
@@ -94,18 +128,61 @@
           title="設定"
         >⚙</button>
         <div id="settings-panel" class="settings-panel" hidden>
-          <div class="settings-row">
-            <span>データ</span>
-            <span id="data-source-value">local</span>
+          <div class="settings-header">
+            <span>Runtime Settings</span>
+            <span id="settings-runtime-value">起動中のみ</span>
           </div>
-          <div class="settings-row">
-            <span>Map ID</span>
-            <span id="map-id-value">未設定</span>
+
+          <div class="settings-group">
+            <div class="settings-group-title">地図</div>
+            <div class="settings-row">
+              <span>Google Maps</span>
+              <span id="google-maps-config-value">未接続</span>
+            </div>
+            <label class="field-label" for="maps-api-key-input">API key</label>
+            <input id="maps-api-key-input" type="password" autocomplete="off" placeholder="GOOGLE_MAPS_API_KEY">
+            <label class="field-label" for="maps-map-id-input">Map ID</label>
+            <input id="maps-map-id-input" type="text" autocomplete="off" placeholder="GOOGLE_MAPS_MAP_ID">
+            <div class="settings-row">
+              <span>Map ID</span>
+              <span id="map-id-value">未設定</span>
+            </div>
           </div>
-          <div class="settings-row">
-            <span>Google Maps</span>
-            <span id="google-maps-config-value">未接続</span>
+
+          <div class="settings-group">
+            <div class="settings-group-title">データ</div>
+            <label class="field-label" for="data-dir-input">DATA_DIR</label>
+            <input id="data-dir-input" type="text" autocomplete="off" placeholder="/path/to/data">
+            <div class="settings-row">
+              <span>データ</span>
+              <span id="data-source-value">local</span>
+            </div>
           </div>
+
+          <div class="settings-group">
+            <div class="settings-group-title">LLM</div>
+            <label class="field-label" for="llm-provider-select">Provider</label>
+            <select id="llm-provider-select" aria-label="LLM provider">
+              <option value="rule">Rule</option>
+              <option value="local">Local</option>
+              <option value="vertex">Vertex AI</option>
+            </select>
+            <label class="field-label" for="llm-model-input">Model name</label>
+            <input id="llm-model-input" type="text" autocomplete="off" placeholder="model name">
+            <label class="field-label" for="llm-base-url-input">Local endpoint</label>
+            <input id="llm-base-url-input" type="text" autocomplete="off" placeholder="http://127.0.0.1:11434/v1">
+            <label class="field-label" for="llm-model-dir-input">Model path fallback</label>
+            <input id="llm-model-dir-input" type="text" autocomplete="off" placeholder="/path/to/model-or-dir">
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-title">Google Cloud</div>
+            <label class="field-label" for="google-cloud-project-input">Project</label>
+            <input id="google-cloud-project-input" type="text" autocomplete="off" placeholder="GOOGLE_CLOUD_PROJECT">
+          </div>
+
+          <button id="btn-save-settings" class="settings-save-button" type="button">設定を反映</button>
+          <div id="settings-status" class="settings-status" aria-live="polite"></div>
         </div>
       </div>
     </aside>

@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -45,7 +45,7 @@ from .data_loader import (
     load_pois,
     load_agent_profiles,
 )
-from .models import POI, AgentProfile
+from .models import Activity, ActivityPlan, POI, AgentProfile
 from .road_graph import RoadGraph
 
 if TYPE_CHECKING:
@@ -66,6 +66,18 @@ def tick_to_day_time(tick: int) -> tuple[int, str]:
     hh = total // 60
     mm = total % 60
     return day, f"{hh:02d}:{mm:02d}:00"
+
+
+def _time_to_minutes(time_str: str) -> int:
+    hh, mm, ss = [int(part) for part in time_str.split(":")]
+    return hh * 60 + mm + (1 if ss > 0 else 0)
+
+
+def _activity_kind_to_action(kind: str) -> str:
+    """Activity kind を既存 AgentState.action / VisitRecord.reason 語彙へ写像する。"""
+    if kind == "home":
+        return "go_home"
+    return kind
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -97,6 +109,8 @@ class _AgentRuntime:
     # WO-009: 道路追従用の残りウェイポイント列 [(lat, lon), ...]
     # 空リスト = 直線補間フォールバック (road graph なし / 到達不能)
     route_waypoints: list[tuple[float, float]] = field(default_factory=list)
+    # 当該移動で使った経路種別。移動中/到着 tick の AgentState に optional 出力する。
+    route_mode: str = "none"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -120,6 +134,7 @@ class Simulation:
         aois: int = 0,
         roads: int = 0,
         road_graph: Optional[RoadGraph] = None,
+        activity_plans: Optional[list[ActivityPlan]] = None,
         llm_provider: Optional[Any] = None,
         enable_summaries: bool = True,
     ) -> None:
@@ -136,6 +151,8 @@ class Simulation:
             road_graph: RoadGraph インスタンス (WO-009 道路追従 §acceptance 1-5)。
                 None の場合は直線補間フォールバックで動作する (後方互換)。
                 road_graph を渡すとエージェントが最短経路で道路追従移動する。
+            activity_plans: optional activity_plans.jsonl 入力。None の場合は既存
+                rule-driven destination selection を維持する (WO-015)。
             llm_provider: LLMProvider インスタンス (spec §10.1)。
                 None の場合は RuleBasedProvider を使う (MVP 既定)。
                 RuleBasedProvider 経路では決定論が保たれる (byte 一致 §13.3.2)。
@@ -158,6 +175,12 @@ class Simulation:
         self.roads = roads
         # WO-009: 道路追従グラフ (None = 直線補間フォールバック)
         self.road_graph: Optional[RoadGraph] = road_graph
+        self.activity_plan_index: dict[tuple[int, int], tuple[Activity, ...]] = {}
+        if activity_plans:
+            self.activity_plan_index = {
+                (plan.agent_id, plan.day): plan.activities
+                for plan in activity_plans
+            }
 
         # LLMProvider: None の場合は遅延生成で RuleBasedProvider を使う
         self._llm_provider: Optional[Any] = llm_provider
@@ -378,6 +401,10 @@ class Simulation:
           RuleBasedProvider は "" を返すため候補は変化せず決定論が維持される。
           VertexGeminiProvider が不正/例外時も §9.3 ルールにフォールバックする。
         """
+        activity_choice = self._choose_activity_destination(agent, tick, poi_presence)
+        if activity_choice is not None:
+            return activity_choice
+
         minutes = rules.minutes_of_tick(tick)
         mode, vocab, reason = rules.schedule_decision(minutes, agent.profile.role)
 
@@ -435,6 +462,49 @@ class Simulation:
             return (poi, "wander", mode)
         # 現地滞在
         return (None, "wander", "wander_stay")
+
+    def _choose_activity_destination(
+        self,
+        agent: _AgentRuntime,
+        tick: int,
+        poi_presence: dict[str, set[int]],
+    ) -> Optional[tuple[Optional[POI], str, str]]:
+        """activity_plans.jsonl の active activity から目的地を返す (WO-015)。
+
+        plan が無い agent/day/tick では None を返し、既存 §9.3 ルールへ委譲する。
+        poi_id がある activity は固定目的地、category のみの activity は既存の
+        カテゴリ候補抽出 + LLM 絞り込み + 最近傍選択へ委譲する。
+        """
+        day, time_str = tick_to_day_time(tick)
+        activities = self.activity_plan_index.get((agent.profile.id, day))
+        if not activities:
+            return None
+        minutes = _time_to_minutes(time_str)
+        active = next(
+            (
+                activity for activity in activities
+                if _time_to_minutes(activity.start) <= minutes < _time_to_minutes(activity.end)
+            ),
+            None,
+        )
+        if active is None:
+            return None
+
+        action = _activity_kind_to_action(active.kind)
+        if active.poi_id:
+            return (self._poi_by_id.get(active.poi_id), action, "activity_fixed")
+        if active.category:
+            cands = [p for p in self.pois if p.category == active.category]
+            cands = self._llm_narrow_candidates(agent, tick, cands, poi_presence=poi_presence)
+            poi = rules.nearest_poi(agent.lat, agent.lon, cands)
+            if poi is None:
+                return (None, "no_target", "activity_category")
+            return (poi, action, "activity_category")
+        if active.kind == "home":
+            return (self._resolve_fixed_poi(agent, agent.profile.home_poi_id), action, "activity_home")
+        if active.kind in ("work", "study"):
+            return (self._resolve_fixed_poi(agent, agent.profile.work_or_school_poi_id), action, "activity_routine")
+        return (None, action, "activity_stay")
 
     def _friend_target_pois(
         self,
@@ -503,10 +573,12 @@ class Simulation:
                 agent.internal = "idle"
                 agent.dwell_remaining = 0
                 agent.route_waypoints = []
+                agent.route_mode = "none"
             elif target.id == agent.current_poi_id and self._at_poi_coords(agent, target):
                 # 既に目的地 POI に居る (stay_current / 初期位置一致): 移動せず滞在
                 agent.internal = "at_poi"
                 agent.route_waypoints = []
+                agent.route_mode = "none"
                 if tick == 0:
                     # §20.2 項4/項5: tick=0 で初期位置=目的地 POI に一致 → 「到達」扱い。
                     # arrived を出力し、visit record を 1 行出力する (移動開始は記録しない §9.5)。
@@ -521,7 +593,7 @@ class Simulation:
                 agent.internal = "moving"
                 # WO-009: 道路追従ルートを計算して waypoints に格納する。
                 # road_graph がない場合は空リスト → 既存の直線補間フォールバック。
-                agent.route_waypoints = self._compute_route(
+                agent.route_waypoints, agent.route_mode = self._compute_route(
                     agent.lat, agent.lon, target.lat, target.lon
                 )
 
@@ -565,18 +637,18 @@ class Simulation:
         src_lon: float,
         dst_lat: float,
         dst_lon: float,
-    ) -> list[tuple[float, float]]:
-        """road_graph で src → dst のウェイポイント列を返す。
+    ) -> tuple[list[tuple[float, float]], str]:
+        """road_graph で src → dst のウェイポイント列と route_mode を返す。
 
-        road_graph がない場合は空リストを返す (直線補間フォールバック)。
-        到達不能の場合も空リストを返す (RoadGraph.route は [(dst_lat, dst_lon)] を返すが、
+        road_graph がない場合は ([], "linear_fallback") を返す。
+        到達不能の場合も直線 fallback として返す (RoadGraph.route は [(dst_lat, dst_lon)] を返すが、
         それは dst スナップなので最終目的地 = dst_lat/dst_lon と同等 → 直線で十分)。
 
         ウェイポイントは「まだ向かうべき残り点列」。先頭から順に消費する。
         最終要素に近づいたら到達判定を行う。
         """
         if self.road_graph is None or self.road_graph.is_empty():
-            return []
+            return [], "linear_fallback"
         waypoints = self.road_graph.route(src_lat, src_lon, dst_lat, dst_lon)
         # フォールバック (グラフ空 / 到達不能): [(dst_lat, dst_lon)] を 1 要素で返すが
         # そのまま使うと「waypoints がある」と判定されてしまう。
@@ -584,8 +656,8 @@ class Simulation:
         # ただし到達可能 (>=2 ノード) のみ道路追従を使う。
         if len(waypoints) <= 1:
             # 1 要素 = 直線フォールバック (到達不能) または同一ノード
-            return []
-        return list(waypoints)
+            return [], "linear_fallback"
+        return list(waypoints), "roadnet"
 
     def _step_along_route(
         self,
@@ -1020,6 +1092,8 @@ class Simulation:
             row["current_poi_id"] = agent.current_poi_id
         if agent.target_poi is not None and agent.internal == "moving":
             row["target_poi_id"] = agent.target_poi.id
+        if agent.route_mode != "none":
+            row["route_mode"] = agent.route_mode
         return row
 
     def simulate(self) -> dict[str, Any]:
@@ -1055,6 +1129,10 @@ class Simulation:
             # 状態行を出力 (agent_id 昇順)
             for rt in runtimes:
                 self.agent_states.append(self._make_state_row(rt, tick))
+            # arrived tick には route_mode を出したいが、次 tick の staying には引き継がない。
+            for rt in runtimes:
+                if rt.internal != "moving":
+                    rt.route_mode = "none"
             # interaction 処理 (rng 非依存 / seeded_rand)
             events = self._process_interactions(runtimes, tick)
             self.interaction_events.extend(events)
@@ -1085,6 +1163,12 @@ class Simulation:
         action_counts = Counter(s["action"] for s in self.agent_states)
         status_counts = Counter(s["status"] for s in self.agent_states)
         interaction_counts = Counter(e["type"] for e in self.interaction_events)
+        trip_counts = Counter(
+            v["reason"] for v in self.visit_records if v.get("reason")
+        )
+        route_mode_counts = Counter(
+            s["route_mode"] for s in self.agent_states if s.get("route_mode")
+        )
         visit_counts = Counter(
             v["poi_id"] for v in self.visit_records
             if v.get("poi_id") and v["poi_id"] != "initial_position"
@@ -1145,9 +1229,19 @@ class Simulation:
                     status_counts.get("arrived", 0),
                     total_states,
                 ),
+                "arrival_rate": _safe_ratio(
+                    status_counts.get("arrived", 0),
+                    sum(route_mode_counts.values()),
+                ),
                 "no_target_rate": _safe_ratio(
                     action_counts.get("no_target", 0),
                     total_states,
+                ),
+                "trip_count_by_action": dict(sorted(trip_counts.items())),
+                "route_mode_count": dict(sorted(route_mode_counts.items())),
+                "route_fallback_rate": _safe_ratio(
+                    route_mode_counts.get("linear_fallback", 0),
+                    sum(route_mode_counts.values()),
                 ),
                 "poi_visit_entropy": _normalized_entropy(visit_counts),
                 "unique_poi_visit_rate": _safe_ratio(len(visit_counts), len(self.pois)),

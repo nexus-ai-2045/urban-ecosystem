@@ -13,6 +13,12 @@
 
 ```
 
+## docs impact
+
+- [ ] API / CLI / data allowlist / runtime settings を変更していません
+- [ ] 変更した場合、`python tools/docs_sync_check.py --write` と `python tools/docs_sync_check.py --check` を実行しました
+- [ ] spec / data contract / README / runbook の更新要否を確認しました
+
 ## TYPE1 public PR gate
 
 - [ ] public PR 作成前に人間レビューを受けました

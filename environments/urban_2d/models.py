@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -24,6 +24,12 @@ ACTION_VALUES = frozenset({
     "commute", "work", "study", "lunch", "errand",
     "social", "go_home", "wander", "no_target",
 })
+
+ACTIVITY_KIND_VALUES = frozenset({
+    "home", "work", "study", "lunch", "errand", "social", "go_home", "wander",
+})
+
+ROUTE_MODE_VALUES = frozenset({"roadnet", "linear_fallback"})
 
 VISIT_ACTION_VALUES = frozenset({"visit"})
 
@@ -150,7 +156,7 @@ class AgentState:
 
     contract §Agent State JSONL:
       Required: tick, day, time, agent_id, lat, lon, action, status
-      Optional: current_poi_id, target_poi_id
+      Optional: current_poi_id, target_poi_id, route_mode
     """
     tick: int
     day: int
@@ -162,6 +168,7 @@ class AgentState:
     status: str
     current_poi_id: Optional[str] = None
     target_poi_id: Optional[str] = None
+    route_mode: Optional[str] = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -200,4 +207,32 @@ class InteractionEvent:
     summary: str
     location_poi_id: Optional[str] = None
     relationship_delta: Optional[dict[str, str]] = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Activity:
+    """Activity plan の 1 activity。
+
+    contract §Activity Plans JSONL:
+      Required: kind, start, end
+      Optional: poi_id, category
+    """
+    kind: str
+    start: str
+    end: str
+    poi_id: Optional[str] = None
+    category: Optional[str] = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ActivityPlan:
+    """Activity Plans JSONL の 1 行。
+
+    1 agent / 1 day の予定を表す optional input。
+    """
+    agent_id: int
+    day: int
+    activities: tuple[Activity, ...]
     extra: dict[str, Any] = field(default_factory=dict)
