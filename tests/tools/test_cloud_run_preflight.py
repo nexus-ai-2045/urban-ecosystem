@@ -49,8 +49,15 @@ def test_run_preflight_skip_smoke_reports_no_remote_execution() -> None:
     assert report["scope"]["secret_manager_accessed"] is False
     assert report["scope"]["public_access_changed"] is False
     assert report["scope"]["billing_scope_changed"] is False
+    assert report["scope"]["local_docker_required"] is False
     assert "gcloud" in report["commands_not_executed"]
     assert any(check["name"] == "fallback viewer smoke" and check["status"] == "skipped" for check in report["checks"])
+    assert any(
+        check["name"] == "local Docker is optional for this preflight"
+        and check["status"] == "ok"
+        and check["required"] is False
+        for check in report["checks"]
+    )
 
 
 def test_markdown_evidence_contains_issue_and_local_only_scope() -> None:
@@ -69,3 +76,4 @@ def test_markdown_evidence_contains_issue_and_local_only_scope() -> None:
     assert "Cloud Run local preflight evidence (NEX-29)" in markdown
     assert "mode: `local-only`" in markdown
     assert "GCP executed: `False`" in markdown
+    assert "local Docker required: `False`" in markdown
