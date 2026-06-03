@@ -4,7 +4,7 @@ urban_2d データローダー。
 GeoJSON / JSON / JSONL ファイルを読み込み、正規化・検証して
 models.py の dataclass を返す。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
 検証仕様: docs/ai-ecosystem-tool-spec.md §13.1
 
 エラー報告ポリシー:
@@ -30,13 +30,17 @@ from .models import (
     Road,
     AgentProfile,
     AgentState,
+    Activity,
+    ActivityPlan,
     VisitRecord,
     InteractionEvent,
     ACTION_VALUES,
+    ACTIVITY_KIND_VALUES,
     AGENT_STATUS_VALUES,
     AGENT_ROLE_VALUES,
     INTERACTION_TYPE_VALUES,
     RELATIONSHIP_STATE_VALUES,
+    ROUTE_MODE_VALUES,
     VISIT_ACTION_VALUES,
     TIME_RE,
     TICK_MINUTES,
@@ -599,7 +603,7 @@ def load_agent_profiles(
 
 _STATE_KNOWN_KEYS = {
     "tick", "day", "time", "agent_id", "lat", "lon",
-    "action", "status", "current_poi_id", "target_poi_id",
+    "action", "status", "current_poi_id", "target_poi_id", "route_mode",
 }
 
 
@@ -630,6 +634,10 @@ def _parse_agent_state(obj: dict, lineno: int, filename: str) -> AgentState:
     if status not in AGENT_STATUS_VALUES:
         _warn_enum(loc, "status", status, AGENT_STATUS_VALUES)
 
+    route_mode = obj.get("route_mode")
+    if route_mode is not None and route_mode not in ROUTE_MODE_VALUES:
+        _warn_enum(loc, "route_mode", route_mode, ROUTE_MODE_VALUES)
+
     extra = _extract_extra(obj, _STATE_KNOWN_KEYS)
     return AgentState(
         tick=tick,
@@ -642,6 +650,7 @@ def _parse_agent_state(obj: dict, lineno: int, filename: str) -> AgentState:
         status=status,
         current_poi_id=obj.get("current_poi_id"),
         target_poi_id=obj.get("target_poi_id"),
+        route_mode=route_mode,
         extra=extra,
     )
 
@@ -686,6 +695,149 @@ def load_agent_states(
                 )
 
     return [s for _, s in state_rows]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ActivityPlan ローダー (activity_plans.jsonl)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PLAN_KNOWN_KEYS = {"agent_id", "day", "activities"}
+_ACTIVITY_KNOWN_KEYS = {"kind", "start", "end", "poi_id", "category"}
+
+
+def _time_to_minutes(time_str: str) -> int:
+    hh, mm, ss = [int(x) for x in time_str.split(":")]
+    return hh * 60 + mm + (1 if ss > 0 else 0)
+
+
+def _parse_activity(obj: dict, lineno: int, filename: str, index: int) -> Activity:
+    loc = _loc(filename, lineno)
+    _require(isinstance(obj, dict), loc, f"activities[{index}]", "object")
+    for req in ("kind", "start", "end"):
+        _require(req in obj, loc, f"activities[{index}].{req}", "required")
+
+    kind = obj["kind"]
+    _require(
+        isinstance(kind, str) and kind in ACTIVITY_KIND_VALUES,
+        loc,
+        f"activities[{index}].kind",
+        f"one of {sorted(ACTIVITY_KIND_VALUES)}",
+        kind,
+    )
+    start = _check_time(loc, f"activities[{index}].start", obj["start"])
+    end = _check_time(loc, f"activities[{index}].end", obj["end"])
+    _require(
+        _time_to_minutes(start) < _time_to_minutes(end),
+        loc,
+        f"activities[{index}].end",
+        "start より後の時刻",
+        end,
+    )
+
+    poi_id = obj.get("poi_id")
+    category = obj.get("category")
+    if poi_id is not None:
+        _require(isinstance(poi_id, str), loc, f"activities[{index}].poi_id", "string")
+    if category is not None:
+        _require(
+            isinstance(category, str) and _CATEGORY_RE.match(category) is not None,
+            loc,
+            f"activities[{index}].category",
+            "<group>-<sub>",
+            category,
+        )
+
+    extra = _extract_extra(obj, _ACTIVITY_KNOWN_KEYS)
+    return Activity(
+        kind=kind,
+        start=start,
+        end=end,
+        poi_id=poi_id,
+        category=category,
+        extra=extra,
+    )
+
+
+def _parse_activity_plan(obj: dict, lineno: int, filename: str) -> ActivityPlan:
+    loc = _loc(filename, lineno)
+    for req in ("agent_id", "day", "activities"):
+        _require(req in obj, loc, req, "required")
+    _require(isinstance(obj["agent_id"], int), loc, "agent_id", "integer")
+    _require(
+        isinstance(obj["day"], int) and obj["day"] >= 0,
+        loc,
+        "day",
+        "non-negative integer",
+        obj.get("day"),
+    )
+    _require(isinstance(obj["activities"], list), loc, "activities", "array")
+
+    activities = tuple(
+        _parse_activity(activity, lineno, filename, idx)
+        for idx, activity in enumerate(obj["activities"])
+    )
+    sorted_activities = sorted(
+        activities,
+        key=lambda a: (_time_to_minutes(a.start), _time_to_minutes(a.end)),
+    )
+    for prev, cur in zip(sorted_activities, sorted_activities[1:]):
+        _require(
+            _time_to_minutes(prev.end) <= _time_to_minutes(cur.start),
+            loc,
+            "activities",
+            "non-overlapping activities",
+            f"{prev.start}-{prev.end} overlaps {cur.start}-{cur.end}",
+        )
+
+    extra = _extract_extra(obj, _PLAN_KNOWN_KEYS)
+    return ActivityPlan(
+        agent_id=obj["agent_id"],
+        day=obj["day"],
+        activities=activities,
+        extra=extra,
+    )
+
+
+def load_activity_plans(
+    path: Union[str, Path],
+    agent_ids: Optional[frozenset[int]] = None,
+    poi_ids: Optional[frozenset[str]] = None,
+) -> list[ActivityPlan]:
+    """activity_plans.jsonl を読み込み ActivityPlan リストを返す。
+
+    activity_plans は optional input。指定された場合のみ agent / POI 参照整合を検証する。
+    """
+    path = Path(path)
+    filename = path.name
+    plan_rows: list[tuple[int, ActivityPlan]] = []
+    seen: set[tuple[int, int]] = set()
+    for lineno, obj in _iter_jsonl(path, filename):
+        plan = _parse_activity_plan(obj, lineno, filename)
+        loc = _loc(filename, lineno)
+        key = (plan.agent_id, plan.day)
+        _require(key not in seen, loc, "agent_id/day", "1行だけ", key)
+        seen.add(key)
+        plan_rows.append((lineno, plan))
+
+    if agent_ids is not None:
+        for lineno, plan in plan_rows:
+            loc = _loc(filename, lineno)
+            _require(plan.agent_id in agent_ids, loc, "agent_id", "既存 agent id", plan.agent_id)
+
+    if poi_ids is not None:
+        for lineno, plan in plan_rows:
+            loc = _loc(filename, lineno)
+            for idx, activity in enumerate(plan.activities):
+                if activity.poi_id is not None:
+                    _require(
+                        activity.poi_id in poi_ids,
+                        loc,
+                        f"activities[{idx}].poi_id",
+                        "既存 POI id",
+                        activity.poi_id,
+                    )
+
+    return [p for _, p in plan_rows]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -913,4 +1065,3 @@ def _check_unique_ids(ids: list, filename: str) -> None:
                 f"{_loc(filename)} 重複 ID={id_val!r} (各コレクション内で一意であること)"
             )
         seen.add(id_val)
-

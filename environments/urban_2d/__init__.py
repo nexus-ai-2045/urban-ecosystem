@@ -4,7 +4,7 @@ urban_2d 環境パッケージ。
 POI/AOI/Road/AgentProfile/AgentState/VisitRecord/InteractionEvent の
 dataclass モデルとデータローダーを提供する。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.2.0
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
 """
 
 from .models import (
@@ -13,6 +13,8 @@ from .models import (
     Road,
     AgentProfile,
     AgentState,
+    Activity,
+    ActivityPlan,
     VisitRecord,
     InteractionEvent,
 )
@@ -22,6 +24,7 @@ from .data_loader import (
     load_roads,
     load_agent_profiles,
     load_agent_states,
+    load_activity_plans,
     load_visit_records,
     load_interaction_events,
     ValidationWarning,
@@ -40,6 +43,8 @@ __all__ = [
     "Road",
     "AgentProfile",
     "AgentState",
+    "Activity",
+    "ActivityPlan",
     "VisitRecord",
     "InteractionEvent",
     # loader
@@ -48,6 +53,7 @@ __all__ = [
     "load_roads",
     "load_agent_profiles",
     "load_agent_states",
+    "load_activity_plans",
     "load_visit_records",
     "load_interaction_events",
     # simulation

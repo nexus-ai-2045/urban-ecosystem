@@ -206,6 +206,27 @@ Human gate 要点:
 
 Phase 1 完了済み (本バッチ対象外): viewer ラベル平易化 / 会話要約 LLM 化 / 実店名・擬似苗字 / POI 実名。
 
+## Regional Simulation Adoption Batch
+
+地域を限定した simulation を、見た目の realism だけでなく「比較可能な replay」として改善する batch。
+
+| WO | 要件 | owner | depends_on | human gate | 系統 |
+| --- | --- | --- | --- | --- | --- |
+| WO-URBAN-017 Social Simulation Evaluation | replay-derived `metrics.json` | developer | 004 / 008 / 012 | G1 / G3 / G4 | 評価基盤 |
+| WO-URBAN-014 Regional Open Data Snapshot | OSMnx / Overture 等の open data snapshot を contract へ変換 | developer | 009 / 017 | G1 / G2 / G4 | 地域データ |
+| WO-URBAN-015 Activity Plan Optional Input | optional `activity_plans.jsonl` で activity chain を取り込む | developer | 004 / 017 | G1 / G3 / G4 | 行動予定 |
+
+推奨実装順:
+
+- まず WO-017 で `route_fallback_rate` / `trip_count_by_action` / `arrival_rate` を出し、地域データ差し替えの比較軸を固定する。
+- 次に WO-014 で API キーなし fixture 経路の open data snapshot を作り、Google Places live 取得を標準経路にしない。
+- その後 WO-015 で optional activity plan を入れる。plan が無い場合の既存 rule-driven output は byte 再現性を維持する。
+
+Human gate 要点:
+
+- WO-014: live download / 外部 API / dataset license / 大容量 fixture は G2 / G4 境界。テストは live network に依存させない。
+- WO-015: data-contract MINOR 改訂と行動モデル分岐を含むため G1。ActivitySim / MATSim 本体依存は追加しない。
+
 ## Definition of Done
 
 - 仕様書とデータ契約に反映済み。
@@ -219,4 +240,4 @@ Phase 1 完了済み (本バッチ対象外): viewer ラベル平易化 / 会話
 
 第一成果物 (WO-URBAN-001〜005 を通した「100 体 1 日リプレイ」) は達成済み。
 
-次の着手は Urban Realism Batch の `WO-URBAN-006 Rich Profile` から始める。理由は、姓名分割と profile context が WO-007 (苗字表示) と WO-008 (行動決定 LLM 本体) の共通土台になるため。WO-009 (道路追従) と WO-010 (ラベル日本語化) は書き込みパスが重ならないので並列可。開発・検証は 10 体で回す (CEO 確定 2026-05-29)。
+Urban Realism Batch の WO-006〜013 と WO-017 は進行済み。次の着手は Regional Simulation Adoption Batch の `WO-URBAN-014 Regional Open Data Snapshot`。理由は、WO-017 の metrics により、地域データ差し替え後の `route_fallback_rate` / `trip_count_by_action` / `arrival_rate` を比較できるようになったため。WO-014 の後に `WO-URBAN-015 Activity Plan Optional Input` へ進む。

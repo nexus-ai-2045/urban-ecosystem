@@ -47,7 +47,7 @@ contracts:
       version: 0.4.0
   produces:
     - id: urban-ecosystem-data-contract
-      version: 0.4.1
+      version: 0.4.2
 
 depends_on:
   work_orders:
@@ -77,6 +77,7 @@ acceptance:
   - "`Simulation.run()` が `metrics.json` を `summary.json` と並べて出力する。"
   - "`metrics.json` は Individual / Scenario / Society Simulation の三層を持つ。"
   - "`metrics.json` は replay-derived で、RuleBasedProvider 経路では同一 seed・同一入力で byte 一致する。"
+  - "`metrics.json` は trip_count_by_action / route_mode_count / route_fallback_rate を含み、地域データ差し替え時の移動品質を比較できる。"
   - "data contract と viewer allowlist が `metrics.json` を許可する。"
   - "既存の `summary.json` stdout 契約は壊さない。"
   - "LLM 行動決定、外部 API 呼び出し、実在人物再現は追加しない。"
