@@ -33,6 +33,16 @@ python tools/smoke_fallback_viewer.py
 
 Google Maps、Google Places、Vertex AI、Cloud Run などは、各自の Google Cloud project で試せます。その場合の課金と設定は、その project の所有者側で発生します。Nexus 管理の project を使う作業だけ、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
 
+参加ルートの切り分け:
+
+| 立場 | まず使うもの | Google Cloud / Maps | 期待すること |
+|---|---|---|---|
+| 初回参加者 | API キーなしの fallback viewer | 不要 | 画面の分かりにくさ、README の迷いどころをコメントする |
+| 自分の GCP で試す人 | 自分の project / API key | 任意。課金・公開範囲は自分で管理 | Google Maps / Places / Vertex AI を opt-in で試す |
+| Nexus maintainer | Nexus 管理 project / Cloud Run | 承認した範囲だけ使う | 非公開 smoke、公開 demo、Secret Manager、IAM を管理する |
+
+このため、リポジトリ参加の正規ルートは fallback viewer です。Cloud Run の公開 URL、Nexus 管理 project、Map ID、実 Google Maps 表示は、参加の前提ではなく maintainer demo / advanced setup として扱います。
+
 ## 特徴
 
 - 🗺️ **実 Google Maps + 実渋谷 POI**。API キーが無くても fallback 地図で動く（CI / テスト主経路）。
@@ -195,6 +205,8 @@ API key、token、`.env`、個人情報、内部 URL は貼らないでくださ
 Cloud Run での実機確認は、各自の Google Cloud project でも実行できます。その場合の課金、公開範囲、Secret Manager、IAM 変更は、その project の所有者側で管理してください。
 
 Nexus 管理の project を使う場合だけ、maintainer 承認後に実行します。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
+
+非公開 Cloud Run Service は、ブラウザで URL を直に開くと 403 になります。これは故障ではなく、公開範囲を閉じているためです。参加者に見せる公開 demo にする場合は、maintainer が課金・公開範囲・API key 制限を確認してから `allow-unauthenticated` や IAP などを選びます。
 
 ## ドキュメント
 
