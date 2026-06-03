@@ -29,6 +29,9 @@ python tools/smoke_fallback_viewer.py
 現在の最初の入口:
 
 - GitHub issue #11: fallback 地図ビューアの見やすさレビュー
+- GitHub issue #65: どんな街データを入れると面白そうか
+- GitHub issue #66: 設定画面で分かりにくいところ
+- GitHub issue #67: README や仕様書で迷うところ
 - 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
 
 Google Maps、Google Places、Vertex AI、Cloud Run などは、各自の Google Cloud project で試せます。その場合の課金と設定は、その project の所有者側で発生します。Nexus 管理の project を使う作業だけ、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
@@ -183,7 +186,16 @@ python tools/smoke_fallback_viewer.py
 
 公開協業で見せる作業・判断・採否の正本は GitHub の docs / issues / PR です。まずは [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md) と [`docs/good-first-issues.md`](docs/good-first-issues.md) を見てください。
 
-#11 はコードを書かなくても参加できます。1分で反応する場合は、次だけコメントしてください。
+コードを書かなくても参加できます。1分で反応する場合は、次のどれかに「ここ分からない」「これ見たい」だけでもコメントしてください。
+
+| issue | コメントしてほしいこと |
+|---|---|
+| [#11 fallback 地図ビューアの見やすさをレビューする](https://github.com/nexus-ai-2045/urban-ecosystem/issues/11) | 画面、地図、再生操作で分かりにくいところ |
+| [#65 初見歓迎: どんな街データを入れると面白そう？](https://github.com/nexus-ai-2045/urban-ecosystem/issues/65) | 駅、お店、学校、道路など、入れると面白そうな街データ |
+| [#66 初見歓迎: 設定画面で分かりにくいところを教えてください](https://github.com/nexus-ai-2045/urban-ecosystem/issues/66) | Google Maps、ローカル LLM、Google Cloud 設定で怖い/分からないところ |
+| [#67 初見歓迎: READMEや仕様書で迷うところを教えてください](https://github.com/nexus-ai-2045/urban-ecosystem/issues/67) | README、仕様書、起動手順で迷った場所 |
+
+#11 の fallback viewer を試す場合は、次だけコメントしてください。
 
 1. `python tools/smoke_fallback_viewer.py` が通ったか。
 2. fallback 地図、左パネル、右ライブ概要、下部コントロールで分かりにくい場所。
@@ -194,7 +206,9 @@ API key、token、`.env`、個人情報、内部 URL は貼らないでくださ
 | 場所 | 役割 |
 |---|---|
 | GitHub PR #9 | 協業入口を repository に入れた土台 |
-| GitHub issue #11 | 現在 open の初回協力入口。fallback 地図ビューアの見やすさレビュー |
+| GitHub PR #64 | 地域データ、設定UI、run生成、docs drift gate を入れる draft PR |
+| GitHub issue #11 | fallback 地図ビューアの見やすさレビュー |
+| GitHub issue #65 / #66 / #67 | 初見コメント用の入口。街データ、設定画面、README/仕様書の迷いどころ |
 | GitHub issue #10 / #12 | maintainer baseline 済みで close。再現性・課金境界の追加 feedback は新しい小さい issue に分ける |
 | GitHub issue #13 | Discord PR 通知はフリーズ方針により close。再開時は新しい判断で扱う |
 | Linear | Nexus maintainer 側の内部マイルストーン / 運用管理。公開正本ではない |
