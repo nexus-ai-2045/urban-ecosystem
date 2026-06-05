@@ -8,35 +8,53 @@
 
 ## はじめて触る人へ
 
-まずは公開デモを開いて、実際の地図ビューアを見てください。
+### 最短導線（5 分で OK）
 
-- 公開デモ: <https://urban-ecosystem-qbdvhvtbea-an.a.run.app/>
+1. 公開デモを見る  
+   <https://urban-ecosystem-qbdvhvtbea-an.a.run.app/>
+2. 画面上の「分かりにくさ」を3つだけメモする  
+3. そのまま Issue / コメントへ投げる
 
-最初から Google Cloud や API キーを用意する必要はありません。ローカルで試す場合も、API キーなしで動く fallback 地図ビューアを見て、「分かりにくいところ」「見やすくしたいところ」をコメントしてもらえるだけで助かります。
+このプロジェクトは、最初から Google Cloud や API キーは不要です。  
+ローカルでは fallback 地図ビューアで十分、API キーなしでも体験できます。
 
 ```bash
 unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
 python tools/smoke_fallback_viewer.py
 ```
 
-起動できたら、表示された URL を開いてください。
+`python tools/smoke_fallback_viewer.py` の起動後、表示 URL を開いてください。
 
-見るポイント:
+### 見るときの目安
 
-- 左側の状態表示が分かりやすいか。
-- 地図上の POI / AOI / 住人の意味が伝わるか。
-- 右側のライブ概要で、いま何が起きているか追えるか。
-- 下部の再生、ステップ、速度操作が初見で使えるか。
+- 左側の状態表示が直感的か
+- POI / AOI / 住人マーカーの意味が伝わるか
+- ライブ概要で「今何が起きているか」が追えるか
+- 再生 / ステップ / 速度操作を迷わず扱えるか
 
-コードを書かなくても大丈夫です。「ここが分からない」「この文言が不親切」「このボタンが見つけにくい」みたいなコメントも歓迎です。
+`「ここが分からない」「この文言が不親切」「このボタンが見つけにくい」`  
+のどれか1つでも見つかれば、レビューとして十分です。
 
-現在の最初の入口:
+### 入口（今コメントしやすい場所）
 
-- GitHub issue #11: fallback 地図ビューアの見やすさレビュー
-- GitHub issue #65: どんな街データを入れると面白そうか
-- GitHub issue #66: 設定画面で分かりにくいところ
-- GitHub issue #67: README や仕様書で迷うところ
-- 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
+- [GitHub issue #11](https://github.com/nexus-ai-2045/urban-ecosystem/issues/11): fallback 地図ビューアの見やすさレビュー
+- [GitHub issue #65](https://github.com/nexus-ai-2045/urban-ecosystem/issues/65): どんな街データを入れると面白そうか
+- [GitHub issue #66](https://github.com/nexus-ai-2045/urban-ecosystem/issues/66): 設定画面で分かりにくいところ
+- [GitHub issue #67](https://github.com/nexus-ai-2045/urban-ecosystem/issues/67): README / 仕様書の見直し
+- 参加の全体像: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
+
+### 公開デモの上限
+
+公開デモは負荷対策のため、実機側の制限があります。  
+そのため、条件を上回ると生成できない/時間がかかることがあります。
+
+- 既定の `urban_demo` は「`agents=100`, `pois=300`, `ticks=24` で公開中
+- `POST /api/runs` で作る場合の受け付け範囲
+  - `agents`: 1〜1,000
+  - `pois`: 3〜2,000
+  - `ticks`: 1〜2,016
+- その範囲外は `400` で即エラー
+- 体感で重いときや同時接続が高いときは、上限を下げる（例: `agents` などを減らす）か、時間をおいて再実行
 
 Google Maps、Google Places、Vertex AI、Cloud Run などは、各自の Google Cloud project で試せます。その場合の課金と設定は、その project の所有者側で発生します。Nexus 管理の project を使う作業だけ、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
 
