@@ -17,11 +17,7 @@
 ### 最短導線（5 分で OK）
 
 1. 公開デモを見る  
-<<<<<<< HEAD
    [urban-ecosystem demo](https://urban-ecosystem-qbdvhvtbea-an.a.run.app/)
-=======
-   <https://urban-ecosystem-qbdvhvtbea-an.a.run.app/>
->>>>>>> origin/main
 2. 画面上の「分かりにくさ」を3つだけメモする  
 3. そのまま Issue / コメントへ投げる
 
