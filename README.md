@@ -8,7 +8,11 @@
 
 ## はじめて触る人へ
 
-最初から Google Cloud や API キーを用意する必要はありません。まずは API キーなしで動く fallback 地図ビューアを見て、「分かりにくいところ」「見やすくしたいところ」をコメントしてもらえるだけで助かります。
+まずは公開デモを開いて、実際の地図ビューアを見てください。
+
+- 公開デモ: <https://urban-ecosystem-qbdvhvtbea-an.a.run.app/>
+
+最初から Google Cloud や API キーを用意する必要はありません。ローカルで試す場合も、API キーなしで動く fallback 地図ビューアを見て、「分かりにくいところ」「見やすくしたいところ」をコメントしてもらえるだけで助かります。
 
 ```bash
 unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
@@ -234,7 +238,7 @@ Nexus 管理の project を使う場合だけ、maintainer 承認後に実行し
 - Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
 - 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
 - 初回協力候補: [`docs/good-first-issues.md`](docs/good-first-issues.md)
-- README・仕様書の改善についての議論: [Issue #67](https://github.com/urban-ecosystem/urban-ecosystem/issues/67)
+- README・仕様書の改善についての議論: [Issue #67](https://github.com/nexus-ai-2045/urban-ecosystem/issues/67)
 - 公開協業 runbook: [`docs/public-collaboration-runbook.md`](docs/public-collaboration-runbook.md)
 - 公開名義方針: [`docs/public-identity-policy.md`](docs/public-identity-policy.md)
 - ライセンス決定メモ: [`docs/license-decision.md`](docs/license-decision.md)
