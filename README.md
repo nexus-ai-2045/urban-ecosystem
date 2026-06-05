@@ -6,12 +6,18 @@
 渋谷の実在スポットを舞台に、住人エージェントが通勤・昼食・買い物・交流・帰宅を行い、
 その 1 日を地図ビューアでリプレイできます。
 
+## 公開デモ / バージョン
+
+- 公開デモ: [urban-ecosystem](https://urban-ecosystem-qbdvhvtbea-an.a.run.app/)
+- アプリ版バージョン: `0.1.0`
+- データ契約バージョン: [`0.5.0`](docs/subagents/contracts/urban-ecosystem-data-contract.md)
+
 ## はじめて触る人へ
 
 ### 最短導線（5 分で OK）
 
 1. 公開デモを見る  
-   <https://urban-ecosystem-qbdvhvtbea-an.a.run.app/>
+   [urban-ecosystem demo](https://urban-ecosystem-qbdvhvtbea-an.a.run.app/)
 2. 画面上の「分かりにくさ」を3つだけメモする  
 3. そのまま Issue / コメントへ投げる
 
