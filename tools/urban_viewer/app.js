@@ -46,6 +46,13 @@ const hasApiKey = MAPS_API_KEY && !MAPS_API_KEY.startsWith("%%");
 /** requestAnimationFrame の実時間あたり tick 数: speed(1|2|5) x を何 ms で 1 tick 進めるか */
 const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
 
+const RUN_CREATE_LIMITS = {
+    seed: { min: 0, max: 2_147_483_647 },
+    ticks: { min: 1, max: 2016 },
+    agents: { min: 1, max: 1_000 },
+    pois: { min: 3, max: 2_000 },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ViewerState 初期値
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +133,9 @@ const newRunSeedInput = document.getElementById("new-run-seed-input");
 const newRunTicksInput = document.getElementById("new-run-ticks-input");
 const newRunAgentsInput = document.getElementById("new-run-agents-input");
 const newRunPoisInput = document.getElementById("new-run-pois-input");
+const runLimitCapacityEl = document.getElementById("run-limit-capacity");
+const runLimitPreviewEl = document.getElementById("run-limit-preview");
+const runLoadScoreEl = document.getElementById("run-load-score");
 const layerPoi      = document.getElementById("layer-poi");
 const layerAoi      = document.getElementById("layer-aoi");
 const layerRoad     = document.getElementById("layer-road");
@@ -201,6 +211,7 @@ async function main() {
     await initAdapter();
     await refreshSettingsStatus();
     await refreshHealthStatus();
+    _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
     const runs = await fetchRuns();
@@ -364,21 +375,150 @@ function _readIntegerInput(inputEl, fallback) {
     return Number.isInteger(value) ? value : fallback;
 }
 
+function _readIntegerInputState(inputEl, fallback, label) {
+    const raw = inputEl?.value;
+    const parsed = parseInt(raw, 10);
+    if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return {
+            value: fallback,
+            valid: false,
+            issue: `${label}は空欄です`,
+        };
+    }
+    if (!Number.isInteger(parsed)) {
+        return {
+            value: fallback,
+            valid: false,
+            issue: `${label}は整数で入力してください`,
+        };
+    }
+    return { value: parsed, valid: true, issue: "" };
+}
+
+function _formatRunLoadScore({ ticks, agents, pois }) {
+    if (ticks <= 0 || agents <= 0 || pois <= 0) return "—";
+    const normalized = [
+        ticks / RUN_CREATE_LIMITS.ticks.max,
+        agents / RUN_CREATE_LIMITS.agents.max,
+        pois / RUN_CREATE_LIMITS.pois.max,
+    ];
+    const avgRatio = (normalized[0] + normalized[1] + normalized[2]) / normalized.length;
+    const pct = Math.round(avgRatio * 100);
+    if (pct >= 90) return `高負荷（${pct}%）`;
+    if (pct >= 60) return `やや重め（${pct}%）`;
+    return `軽量（${pct}%）`;
+}
+
+function _runPayloadFromInputs() {
+    const seed = _readIntegerInputState(newRunSeedInput, 42, "seed");
+    const ticks = _readIntegerInputState(newRunTicksInput, 288, "ticks");
+    const agents = _readIntegerInputState(newRunAgentsInput, 100, "agents");
+    const pois = _readIntegerInputState(newRunPoisInput, 300, "pois");
+
+    const runId = (newRunIdInput?.value || "").trim();
+    const issues = [];
+    if (!runId) issues.push("Run ID は必須です");
+
+    if (!seed.valid && seed.issue) issues.push(seed.issue);
+    if (!ticks.valid && ticks.issue) issues.push(ticks.issue);
+    if (!agents.valid && agents.issue) issues.push(agents.issue);
+    if (!pois.valid && pois.issue) issues.push(pois.issue);
+
+    const rangeChecks = [
+        {
+            label: "seed",
+            value: seed.value,
+            valid: seed.value >= RUN_CREATE_LIMITS.seed.min && seed.value <= RUN_CREATE_LIMITS.seed.max,
+            issue: `seed は ${RUN_CREATE_LIMITS.seed.min}〜${RUN_CREATE_LIMITS.seed.max} で指定してください`,
+        },
+        {
+            label: "ticks",
+            value: ticks.value,
+            valid: ticks.value >= RUN_CREATE_LIMITS.ticks.min && ticks.value <= RUN_CREATE_LIMITS.ticks.max,
+            issue: `ticks は ${RUN_CREATE_LIMITS.ticks.min}〜${RUN_CREATE_LIMITS.ticks.max} で指定してください`,
+        },
+        {
+            label: "agents",
+            value: agents.value,
+            valid: agents.value >= RUN_CREATE_LIMITS.agents.min && agents.value <= RUN_CREATE_LIMITS.agents.max,
+            issue: `agents は ${RUN_CREATE_LIMITS.agents.min}〜${RUN_CREATE_LIMITS.agents.max} で指定してください`,
+        },
+        {
+            label: "pois",
+            value: pois.value,
+            valid: pois.value >= RUN_CREATE_LIMITS.pois.min && pois.value <= RUN_CREATE_LIMITS.pois.max,
+            issue: `pois は ${RUN_CREATE_LIMITS.pois.min}〜${RUN_CREATE_LIMITS.pois.max} で指定してください`,
+        },
+    ];
+
+    for (const check of rangeChecks) {
+        if (!check.valid) issues.push(check.issue);
+    }
+
+    const uniqueIssues = [...new Set(issues)];
+    return {
+        runId,
+        seedValue: seed.value,
+        ticksValue: ticks.value,
+        agentsValue: agents.value,
+        poisValue: pois.value,
+        payload: {
+            mode: "sample",
+            run_id: runId,
+            seed: seed.value,
+            ticks: ticks.value,
+            agents: agents.value,
+            pois: pois.value,
+        },
+        valid: uniqueIssues.length === 0,
+        issues: uniqueIssues,
+        issueText: uniqueIssues.join(" / "),
+        loadScoreText: _formatRunLoadScore({
+            ticks: ticks.value,
+            agents: agents.value,
+            pois: pois.value,
+        }),
+    };
+}
+
+function _updateRunLimitsDisplay() {
+    if (runLimitCapacityEl) {
+        runLimitCapacityEl.textContent = `ticks ${RUN_CREATE_LIMITS.ticks.min}〜${RUN_CREATE_LIMITS.ticks.max}, agents ${RUN_CREATE_LIMITS.agents.min}〜${RUN_CREATE_LIMITS.agents.max}, pois ${RUN_CREATE_LIMITS.pois.min}〜${RUN_CREATE_LIMITS.pois.max}`;
+    }
+    const state = _runPayloadFromInputs();
+    if (runLimitPreviewEl) {
+        runLimitPreviewEl.textContent = `ticks ${state.ticksValue} / ${RUN_CREATE_LIMITS.ticks.max}, agents ${state.agentsValue} / ${RUN_CREATE_LIMITS.agents.max}, pois ${state.poisValue} / ${RUN_CREATE_LIMITS.pois.max}`;
+        runLimitPreviewEl.classList.remove("status-pill--ok", "status-pill--warning", "status-pill--muted");
+        if (state.valid) {
+            runLimitPreviewEl.classList.add("status-pill--ok");
+        } else {
+            runLimitPreviewEl.classList.add("status-pill--warning");
+        }
+        runLimitPreviewEl.title = state.issueText || "入力値は上限内です";
+    }
+    if (runLoadScoreEl) {
+        runLoadScoreEl.textContent = state.loadScoreText;
+        runLoadScoreEl.classList.remove("status-pill--ok", "status-pill--warning", "status-pill--muted");
+        const scoreText = state.loadScoreText;
+        if (scoreText.startsWith("高負荷")) {
+            runLoadScoreEl.classList.add("status-pill--warning");
+        } else if (scoreText.startsWith("やや重め")) {
+            runLoadScoreEl.classList.add("status-pill--warning");
+        } else {
+            runLoadScoreEl.classList.add("status-pill--ok");
+        }
+    }
+}
+
 async function createRunFromForm() {
     if (!createRunBtn) return;
-    const runId = (newRunIdInput?.value || "").trim();
-    if (!runId) {
-        _setCreateRunStatus("Run ID が必要です。", true);
+
+    const state = _runPayloadFromInputs();
+    if (!state.valid) {
+        _setCreateRunStatus(state.issueText || "入力に問題があります。", true);
         return;
     }
-    const payload = {
-        mode: "sample",
-        run_id: runId,
-        seed: _readIntegerInput(newRunSeedInput, 42),
-        ticks: _readIntegerInput(newRunTicksInput, 288),
-        agents: _readIntegerInput(newRunAgentsInput, 100),
-        pois: _readIntegerInput(newRunPoisInput, 300),
-    };
+    const payload = state.payload;
     createRunBtn.disabled = true;
     _setCreateRunStatus("生成中...");
     try {
@@ -393,10 +533,11 @@ async function createRunFromForm() {
         }
         const runs = await fetchRuns();
         updateRunSelector(runSel, runs);
-        if (runSel) runSel.value = json.run?.run_id || runId;
+        const createdRunId = json.run?.run_id || state.runId;
+        if (runSel) runSel.value = createdRunId;
         _setDefaultNewRunId(runs);
         _setCreateRunStatus("生成しました。", false);
-        await loadRun(json.run?.run_id || runId);
+        await loadRun(createdRunId);
     } catch (error) {
         _setCreateRunStatus(String(error.message || error), true);
     } finally {
@@ -991,6 +1132,10 @@ function wireEvents() {
         createRunBtn.addEventListener("click", async () => {
             await createRunFromForm();
         });
+    }
+    for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {
+        if (!inputEl) continue;
+        inputEl.addEventListener("input", _updateRunLimitsDisplay);
     }
 
     // 再生/停止

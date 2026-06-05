@@ -67,6 +67,20 @@
           </label>
         </div>
         <button id="btn-create-run" type="button">Run を作る</button>
+        <div id="run-limit-panel" class="map-status-panel" style="margin-top: 6px;">
+          <div class="status-row">
+            <span class="status-label">上限</span>
+            <span id="run-limit-capacity" class="status-value">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">現在の入力</span>
+            <span id="run-limit-preview" class="status-pill status-pill--muted">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">負荷見積</span>
+            <span id="run-load-score" class="status-pill status-pill--muted">—</span>
+          </div>
+        </div>
         <div id="create-run-status" class="settings-status" aria-live="polite"></div>
       </section>
 
