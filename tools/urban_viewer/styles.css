@@ -444,21 +444,22 @@ body {
 
 /* ─── 右パネル ─────────────────────────────────────────────────────── */
 .right-panel {
-    width: 330px;
-    min-width: 290px;
+    width: 360px;
+    min-width: 320px;
     background: var(--bg-panel);
     border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm);
 }
 
 .live-panel {
-    padding: 16px;
+    padding: 14px;
     border-bottom: 1px solid var(--border-color);
     background: #f8fbfa;
+    flex-shrink: 0;
 }
 
 .live-header {
@@ -476,13 +477,13 @@ body {
 
 .live-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .live-grid > div {
     min-width: 0;
-    padding: 8px;
+    padding: 7px 8px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: #ffffff;
@@ -506,8 +507,8 @@ body {
 }
 
 .live-activity {
-    margin-top: 14px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid var(--border-color);
 }
 
@@ -521,7 +522,7 @@ body {
 .live-activity-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     list-style: none;
     color: var(--text-primary);
     font-size: 12px;
@@ -531,8 +532,8 @@ body {
     display: grid;
     grid-template-columns: 54px minmax(0, 1fr);
     gap: 8px;
-    min-height: 28px;
-    padding: 6px 8px;
+    min-height: 26px;
+    padding: 5px 7px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: #ffffff;
@@ -558,42 +559,54 @@ body {
 
 /* 凡例 */
 #legend-panel {
-    padding: 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-color);
+    background: #ffffff;
+    flex-shrink: 0;
 }
 
 .legend-header {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 10px;
+    letter-spacing: 0;
+    margin-bottom: 6px;
 }
 
 .legend-total {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
-    margin-bottom: 10px;
-    padding: 4px 0;
+    margin-bottom: 8px;
+    padding: 0;
 }
 
 .legend-cats {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 8px;
+    max-height: 104px;
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .legend-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    min-width: 0;
+    min-height: 22px;
+    padding: 2px 6px;
+    border: 1px solid #edf1f2;
+    border-radius: 6px;
+    background: #fbfcfc;
+    font-size: 11px;
 }
 
 .legend-dot {
-    width: 11px;
-    height: 11px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
     border: 1px solid rgba(0,0,0,0.1);
@@ -608,15 +621,16 @@ body {
 
 .legend-count {
     color: var(--text-secondary);
-    font-size: 11px;
-    min-width: 24px;
+    font-size: 10px;
+    min-width: 18px;
     text-align: right;
 }
 
 /* 詳細パネル */
 #detail-panel {
     flex: 1;
-    padding: 16px;
+    min-height: 0;
+    padding: 14px;
     overflow-y: auto;
 }
 

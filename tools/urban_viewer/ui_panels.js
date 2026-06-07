@@ -175,7 +175,7 @@ export function updateLegend(legendEl, data, agentCount) {
 
     const total = document.createElement("div");
     total.className   = "legend-total";
-    total.textContent = `POI: ${pois.length} / AOI: ${aois.length} / エージェント: ${agentCount}`;
+    total.textContent = `POI ${pois.length} / AOI ${aois.length} / 住人 ${agentCount}`;
     legendEl.appendChild(total);
 
     const cats = document.createElement("div");

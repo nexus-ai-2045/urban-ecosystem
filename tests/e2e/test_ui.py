@@ -394,22 +394,23 @@ class TestLayerToggle:
         }""")
 
     def test_poi_layer_toggle(self, loaded_page):
-        """POI レイヤーチェックボックスを OFF にすると canvas が再描画される。"""
+        """POI レイヤーはデフォルト OFF で、ON にすると canvas が再描画される。"""
         page, _ = loaded_page
         checkbox = page.locator("#layer-poi")
         assert checkbox.count() == 1, "#layer-poi チェックボックスが存在しない"
+        assert not checkbox.is_checked(), "POI レイヤーはデフォルト OFF のはず"
 
-        # ON 状態の canvas データ
-        data_on = self._capture_canvas_data(page)
-        assert data_on, "canvas データが空"
+        # OFF 状態の canvas データ
+        data_off = self._capture_canvas_data(page)
+        assert data_off, "canvas データが空"
 
-        # チェックを外して OFF にする
+        # チェックを入れて ON にする
         page.evaluate("document.getElementById('layer-poi').click()")
         time.sleep(0.2)  # 再描画を待つ
 
-        data_off = self._capture_canvas_data(page)
+        data_on = self._capture_canvas_data(page)
         # ON/OFF で canvas データが変化することを確認 (= 再描画された)
-        assert data_on != data_off, "POI レイヤーをOFFにしても canvas が変化しない"
+        assert data_on != data_off, "POI レイヤーをONにしても canvas が変化しない"
 
         # 元に戻す
         page.evaluate("document.getElementById('layer-poi').click()")
@@ -523,8 +524,8 @@ class TestAgentClickDetail:
         before_text = page.locator("#detail-panel").inner_text()
 
         # canvas 上でエージェント円を見つけてクリックする。
-        # エージェント円は白背景 (255,255,255) の円で描画されている。
-        # canvas の imageData を走査して白ピクセルを探し、その座標をクリックする。
+        # 実地図寄せの描画では通常エージェントは小さな半透明色点なので、
+        # role 色に近いピクセルを探し、その座標をクリックする。
         click_result = page.evaluate("""() => {
             const c = document.getElementById('map-canvas');
             if (!c || c.width === 0) return null;
@@ -532,7 +533,6 @@ class TestAgentClickDetail:
             const w = c.width;
             const h = c.height;
             const data = ctx.getImageData(0, 0, w, h).data;
-            // エージェント円の内側は白 (255,255,255) で塗られている (fallback_map_adapter.js _drawAgents)
             // 中央付近から探す (端は POI / AOI が多い)
             const startX = Math.floor(w * 0.1);
             const endX   = Math.floor(w * 0.9);
@@ -542,8 +542,10 @@ class TestAgentClickDetail:
                 for (let x = startX; x < endX; x += 2) {
                     const idx = (y * w + x) * 4;
                     const r = data[idx], g = data[idx+1], b = data[idx+2], a = data[idx+3];
-                    // 白ピクセル: r>=250, g>=250, b>=250, a=255
-                    if (r >= 250 && g >= 250 && b >= 250 && a === 255) {
+                    const blueAgent = b > 130 && g > 90 && r < 120;
+                    const yellowAgent = r > 170 && g > 140 && b < 120;
+                    const darkAgent = r < 90 && g < 110 && b < 120;
+                    if (a === 255 && (blueAgent || yellowAgent || darkAgent)) {
                         return { x, y };
                     }
                 }

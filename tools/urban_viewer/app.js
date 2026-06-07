@@ -13,8 +13,8 @@
 
 "use strict";
 
-import { FallbackMapAdapter }  from "./fallback_map_adapter.js";
-import { GoogleMapsAdapter }   from "./google_maps_adapter.js";
+import { FallbackMapAdapter }  from "./fallback_map_adapter.js?v=20260606-realflow";
+import { GoogleMapsAdapter }   from "./google_maps_adapter.js?v=20260606-realflow";
 import {
     updateLegend,
     updateAgentDetail,
@@ -25,7 +25,7 @@ import {
     updateSlider,
     updatePlayButton,
     updateRunSelector,
-} from "./ui_panels.js";
+} from "./ui_panels.js?v=20260606-realflow";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 定数
@@ -94,7 +94,7 @@ const state = {
     },
     selection: { agentId: null },
     layerVisible: {
-        poi:   true,
+        poi:   false,
         aoi:   true,
         road:  false,   // ランダム道路はデフォルト非表示 (意味の薄い飾り)
         agent: true,
@@ -717,6 +717,13 @@ async function renderCurrentTick() {
 
     const tick       = ticks[tickIndex];
     const agentStates = statesByTick.get(tick) || [];
+    const nextTick = tickIndex < ticks.length - 1 ? ticks[tickIndex + 1] : null;
+    const nextStateMap = new Map();
+    if (nextTick !== null) {
+        for (const s of statesByTick.get(nextTick) || []) {
+            nextStateMap.set(s.agent_id, s);
+        }
+    }
 
     // profileMap は loadRun 時にキャッシュ済みのものを再利用する (#5: 毎フレーム再生成を避ける)
     // profiles は loadRun 後不変なのでキャッシュが最新であることが保証される
@@ -734,6 +741,7 @@ async function renderCurrentTick() {
         } else {
             label = String(s.agent_id);
         }
+        const next = nextStateMap.get(s.agent_id);
         return {
             id:  s.agent_id,
             lat: s.lat,
@@ -742,6 +750,9 @@ async function renderCurrentTick() {
             status: s.status,
             role:   profile?.role || "other",
             label,
+            moving: _isMovingAction(s.action),
+            nextLat: next?.lat,
+            nextLon: next?.lon,
         };
     });
 
@@ -853,6 +864,9 @@ function _renderInterpolated(alpha) {
             status: s.status,
             role:   profile?.role || "other",
             label,
+            moving: _isMovingAction(s.action),
+            nextLat: next?.lat,
+            nextLon: next?.lon,
         };
     });
 
@@ -878,6 +892,10 @@ function stopPlay() {
     }
     updatePlayButton(playBtn, false);
     updateLiveRuntimePanel();
+}
+
+function _isMovingAction(action) {
+    return action === "move" || action === "walking" || action === "commute";
 }
 
 /**

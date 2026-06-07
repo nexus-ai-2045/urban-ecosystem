@@ -46,7 +46,7 @@ function buildMarkerLabel(text) {
     return {
         text,
         color: "#ffffff",
-        fontSize: "11px",
+        fontSize: "10px",
         fontWeight: "700",
     };
 }
@@ -54,12 +54,16 @@ function buildMarkerLabel(text) {
 function buildClassicMarkerIcon(color) {
     return {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
+        scale: 4.2,
         fillColor: color,
-        fillOpacity: 0.95,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
+        fillOpacity: 0.58,
+        strokeColor: "#1f2933",
+        strokeWeight: 1,
     };
+}
+
+function isUsableNextPosition(agent) {
+    return Number.isFinite(agent.nextLat) && Number.isFinite(agent.nextLon);
 }
 
 export class GoogleMapsAdapter {
@@ -100,6 +104,10 @@ export class GoogleMapsAdapter {
 
         // 友達リンク線 (google.maps.Polyline) のリスト
         this._socialLinkPolylines = [];
+
+        this._agentLayerVisible = true;
+        this._agentDensityCircles = [];
+        this._agentMovementLines = [];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -148,9 +156,11 @@ export class GoogleMapsAdapter {
      */
     setLayer(name, visible, geojson = null) {
         if (name === "agent") {
+            this._agentLayerVisible = visible;
             for (const marker of this._agentMarkers.values()) {
                 this._setMarkerMap(marker, visible ? this._map : null);
             }
+            this._setAgentContextVisible(visible);
             return;
         }
 
@@ -188,7 +198,7 @@ export class GoogleMapsAdapter {
                 // WO-007 acceptance: tick 毎・run 跨ぎで glyphText / title を更新する。
                 const marker = this._agentMarkers.get(agent.id);
                 this._setMarkerPosition(marker, latLng);
-                this._setMarkerMap(marker, this._map);
+                this._setMarkerMap(marker, this._agentLayerVisible ? this._map : null);
                 const glyphText = agent.label != null ? String(agent.label) : String(agent.id);
                 this._setMarkerLabel(agent.id, marker, glyphText);
                 const titleText = agent.label != null
@@ -228,6 +238,8 @@ export class GoogleMapsAdapter {
                 this._setMarkerMap(marker, null);
             }
         }
+
+        this._renderAgentContext(agents);
 
         // markerclusterer 拡張ポイント: クラスタを再描画
         if (this._markerClusterer) {
@@ -321,13 +333,14 @@ export class GoogleMapsAdapter {
 
     _createAdvancedMarker(agentId, AdvancedMarkerElement, PinElement, latLng, glyphText, color, titleText) {
         const pin = new PinElement({
-            glyphText,
+            glyphText:        "",
+            scale:           0.52,
             background:      color,
-            borderColor:     "#ffffff",
-            glyphColor:      "#ffffff",
+            borderColor:     "#1f2933",
+            glyphColor:      "transparent",
         });
         const marker = new AdvancedMarkerElement({
-            map:      this._map,
+            map:      this._agentLayerVisible ? this._map : null,
             position: latLng,
             title:    titleText,
             gmpClickable: true,
@@ -339,10 +352,9 @@ export class GoogleMapsAdapter {
 
     _createClassicMarker(latLng, glyphText, color, titleText) {
         return new google.maps.Marker({
-            map:      this._map,
+            map:      this._agentLayerVisible ? this._map : null,
             position: latLng,
             title:    titleText,
-            label:    buildMarkerLabel(glyphText),
             icon:     buildClassicMarkerIcon(color),
         });
     }
@@ -374,11 +386,11 @@ export class GoogleMapsAdapter {
     _setMarkerLabel(agentId, marker, glyphText) {
         const pin = this._agentPins.get(agentId);
         if (pin) {
-            pin.glyphText = glyphText;
+            pin.glyphText = "";
             return;
         }
         if (typeof marker.setLabel === "function") {
-            marker.setLabel(buildMarkerLabel(glyphText));
+            marker.setLabel(null);
         }
     }
 
@@ -391,6 +403,64 @@ export class GoogleMapsAdapter {
         const marker = this._agentMarkers.get(agentId);
         if (marker && typeof marker.setIcon === "function") {
             marker.setIcon(buildClassicMarkerIcon(color));
+        }
+    }
+
+    _renderAgentContext(agents) {
+        this._clearAgentContext();
+        if (!this._agentLayerVisible || !this._map) return;
+
+        for (const agent of agents) {
+            const color = ROLE_COLORS[agent.role] || DEFAULT_ROLE_COLOR;
+            const center = new google.maps.LatLng(agent.lat, agent.lon);
+            const circle = new google.maps.Circle({
+                center,
+                radius: agent.moving ? 24 : 34,
+                fillColor: color,
+                fillOpacity: agent.moving ? 0.035 : 0.055,
+                strokeOpacity: 0,
+                clickable: false,
+                map: this._map,
+            });
+            this._agentDensityCircles.push(circle);
+
+            if (agent.moving && isUsableNextPosition(agent)) {
+                const next = new google.maps.LatLng(agent.nextLat, agent.nextLon);
+                const line = new google.maps.Polyline({
+                    path: [center, next],
+                    strokeColor: color,
+                    strokeOpacity: 0.22,
+                    strokeWeight: 1.2,
+                    clickable: false,
+                    icons: [{
+                        icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 1.6 },
+                        offset: "72%",
+                    }],
+                    map: this._map,
+                });
+                this._agentMovementLines.push(line);
+            }
+        }
+    }
+
+    _clearAgentContext() {
+        for (const circle of this._agentDensityCircles) {
+            circle.setMap(null);
+        }
+        for (const line of this._agentMovementLines) {
+            line.setMap(null);
+        }
+        this._agentDensityCircles = [];
+        this._agentMovementLines = [];
+    }
+
+    _setAgentContextVisible(visible) {
+        const map = visible ? this._map : null;
+        for (const circle of this._agentDensityCircles) {
+            circle.setMap(map);
+        }
+        for (const line of this._agentMovementLines) {
+            line.setMap(map);
         }
     }
 
@@ -448,9 +518,9 @@ export class GoogleMapsAdapter {
             return {
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 5,
+                    scale: 3.5,
                     fillColor: color,
-                    fillOpacity: 0.9,
+                    fillOpacity: 0.55,
                     strokeColor: "#ffffff",
                     strokeWeight: 1,
                 },
@@ -460,9 +530,9 @@ export class GoogleMapsAdapter {
         // AOI: Polygon -> 半透明
         this._dataLayers.aoi.setStyle({
             fillColor:   "#66bb6a",
-            fillOpacity: 0.2,
-            strokeColor: "#43a047",
-            strokeWeight: 1.5,
+            fillOpacity: 0.08,
+            strokeColor: "#2f855a",
+            strokeWeight: 0.9,
         });
 
         // Road: LineString -> 淡い細線 (表示専用の飾りと分かる程度に薄く)
