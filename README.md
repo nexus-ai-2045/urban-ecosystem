@@ -272,7 +272,7 @@ Nexus 管理の project を使う場合だけ、maintainer 承認後に実行し
 
 - HTML preview: [`docs/cross-world-operator-roadmap.html`](docs/cross-world-operator-roadmap.html), [`docs/cross-world-operator-todo.html`](docs/cross-world-operator-todo.html)
 - 正本docs: [`docs/cross-world-operator-roadmap.md`](docs/cross-world-operator-roadmap.md), [`docs/cross-world-operator-todo.md`](docs/cross-world-operator-todo.md), [`docs/cross-world-operator-linear-drafts.md`](docs/cross-world-operator-linear-drafts.md)
-- 実装前仕様: [`docs/cross-world-operator-mvp-001-sentinel-entry.md`](docs/cross-world-operator-mvp-001-sentinel-entry.md), [`docs/cross-world-operator-mvp-002-world-bridge.md`](docs/cross-world-operator-mvp-002-world-bridge.md), [`docs/cross-world-operator-mvp-003-guide-agent-roster.md`](docs/cross-world-operator-mvp-003-guide-agent-roster.md), [`docs/cross-world-operator-mvp-004-motif-arc-pack.md`](docs/cross-world-operator-mvp-004-motif-arc-pack.md)
+- 実装前仕様: [`docs/cross-world-operator-mvp-001-sentinel-entry.md`](docs/cross-world-operator-mvp-001-sentinel-entry.md), [`docs/cross-world-operator-mvp-002-world-bridge.md`](docs/cross-world-operator-mvp-002-world-bridge.md), [`docs/cross-world-operator-mvp-003-guide-agent-roster.md`](docs/cross-world-operator-mvp-003-guide-agent-roster.md), [`docs/cross-world-operator-mvp-004-motif-arc-pack.md`](docs/cross-world-operator-mvp-004-motif-arc-pack.md), [`docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md`](docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Drift防止: `python tools/docs_sync_check.py --check` がREADMEリンク、version一致、TODO/MVP欠番、公開安全境界を確認する。
 
 ## ライセンス
