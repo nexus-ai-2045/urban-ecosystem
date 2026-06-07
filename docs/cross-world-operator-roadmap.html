@@ -186,7 +186,7 @@
       </p>
       <div class="meta" aria-label="document metadata">
         <span class="pill">Status: draft</span>
-        <span class="pill">Version: 0.1.7</span>
+        <span class="pill">Version: 0.1.8</span>
         <span class="pill">Owner: manager</span>
         <span class="pill">Updated: 2026-06-08</span>
         <span class="pill">Data contract: unchanged</span>
@@ -209,9 +209,31 @@
       <h2>Versioning</h2>
       <p>
         Cross-world Operator Mode の docs package version は意味単位で自動更新する。
-        現在の <code>0.1.7</code> は、MVP-006 Governance And Fractal Decisionの実装前仕様とdrift gate拡張を追加した PATCH 更新。
+        現在の <code>0.1.8</code> は、Cross-world Operator Modeをskill meshとorchestration packにする前提をMVP-006へ明記した PATCH 更新。
         Urban Ecosystem data contract は変更しない。
       </p>
+    </section>
+
+    <section>
+      <h2>Skill / Orchestration Premise</h2>
+      <p>
+        Cross-world Operator Mode は、最終的に単一機能ではなく、再利用可能な skill 集合と、
+        それらを安全に呼び分ける orchestration 群として扱う。
+      </p>
+      <div class="grid">
+        <article>
+          <h3>Skill mesh</h3>
+          <p>operator entry、world bridge、guide / roster、motif intake、assessment、governance、distributed ops、intake lifecycleを責任単位に分ける。</p>
+        </article>
+        <article>
+          <h3>Orchestration pack</h3>
+          <p>FDE packet、human gate、drift check、public-safe validator、review handoff、rollback conditionを束ねる。</p>
+        </article>
+        <article>
+          <h3>Loop guard</h3>
+          <p>recursive skill callには、maximum depth、allowed I/O、source category、human gate、loop guardを必須にする。</p>
+        </article>
+      </div>
     </section>
 
     <section>

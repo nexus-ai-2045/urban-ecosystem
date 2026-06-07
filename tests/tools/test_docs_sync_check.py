@@ -58,7 +58,7 @@ def test_cross_world_drift_detects_missing_readme_link(tmp_path: Path) -> None:
 def test_cross_world_drift_detects_version_mismatch(tmp_path: Path) -> None:
     _write_minimal_cross_world_tree(tmp_path)
     todo = tmp_path / "docs" / "cross-world-operator-todo.md"
-    todo.write_text(todo.read_text(encoding="utf-8").replace("- Version: `0.1.7`", "- Version: `0.1.6`"), encoding="utf-8")
+    todo.write_text(todo.read_text(encoding="utf-8").replace("- Version: `0.1.8`", "- Version: `0.1.7`"), encoding="utf-8")
 
     errors = cross_world_drift_errors(tmp_path)
 
@@ -101,15 +101,15 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
         encoding="utf-8",
     )
 
-    (docs / "cross-world-operator-roadmap.md").write_text("- Version: `0.1.7`\n", encoding="utf-8")
-    (docs / "cross-world-operator-roadmap.html").write_text("<span>Version: 0.1.7</span>\n", encoding="utf-8")
+    (docs / "cross-world-operator-roadmap.md").write_text("- Version: `0.1.8`\n", encoding="utf-8")
+    (docs / "cross-world-operator-roadmap.html").write_text("<span>Version: 0.1.8</span>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.html").write_text("<html></html>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.md").write_text(
-        "- Version: `0.1.7`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
+        "- Version: `0.1.8`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
         encoding="utf-8",
     )
     (docs / "cross-world-operator-linear-drafts.md").write_text(
-        "- Version: `0.1.7`\n"
+        "- Version: `0.1.8`\n"
         + "\n".join(f"UE-XWORLD-MVP-{index:03d}" for index in range(0, 9))
         + "\ncross-world-operator-mvp-001-sentinel-entry.md\n"
         + "wo-urban-020-cross-world-sentinel-entry.yaml\n"

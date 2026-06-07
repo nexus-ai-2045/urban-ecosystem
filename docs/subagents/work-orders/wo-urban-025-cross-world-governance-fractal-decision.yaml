@@ -1,7 +1,7 @@
 id: wo-urban-025-cross-world-governance-fractal-decision
 title: "MVP-006 Governance And Fractal Decision"
 status: draft
-cross_world_operator_version: 0.1.7
+cross_world_operator_version: 0.1.8
 owner_role: developer
 support_roles:
   - quality-gate
@@ -10,7 +10,8 @@ support_roles:
 goal: >
   Cross-world Operator Mode の MVP-006 として、FDE packet、三権分立風の
   proposal / review / execution / oversight分離、user oversight、
-  three AI branches + meta-user構造を公開安全な意思決定枠として定義する。
+  three AI branches + meta-user構造、skill mesh / orchestration pack前提を
+  公開安全な意思決定枠として定義する。
 
 context:
   must_read:
@@ -47,6 +48,7 @@ scope:
     - "prophecy、inevitable future、未検証の未来断定をしない。"
     - "numeric meaningを実装根拠として確定しない。"
     - "cloud command、external API、Discord投稿、Linear issue作成、GitHub issue作成を行わない。"
+    - "loop guard、allowed I/O、human gateが未定義のrecursive skill callを実装しない。"
 
 contracts:
   consumes:
@@ -79,9 +81,10 @@ commands:
 acceptance:
   - "`docs/cross-world-operator-mvp-006-governance-fractal-decision.md` が追加され、governance layerとFDE packetを日本語で説明している。"
   - "`XWORLD-TODO-024`、`XWORLD-TODO-025`、`XWORLD-TODO-026`、`XWORLD-TODO-027`、`XWORLD-TODO-029`、`XWORLD-TODO-030` だけを MVP-006 の対象としている。"
-  - "Cross-world Operator Mode docs package version を `0.1.7` にし、意味単位の自動version更新ルールに従っている。"
+  - "Cross-world Operator Mode docs package version を `0.1.8` にし、意味単位の自動version更新ルールに従っている。"
   - "userをagentではなくexternal monitor / fourth-power oversightとして定義している。"
   - "proposal / review / execution / oversightが分離されている。"
+  - "Cross-world Operator Modeをskill meshとorchestration packにする前提を明記している。"
   - "Numeric Operating Protocolはparking-lotのまま、理由と再確認条件がある。"
   - "実装コード、data contract、cloud/API、Linear issue、Discord投稿は変更・作成していない。"
 
