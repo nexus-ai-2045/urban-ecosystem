@@ -1,0 +1,93 @@
+id: wo-urban-021-cross-world-bridge-state-model
+title: "MVP-002 World Bridge State Model"
+status: draft
+cross_world_operator_version: 0.1.2
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - quality-gate
+
+goal: >
+  Cross-world Operator Mode の MVP-002 として、physical / simulated / liminal の三層world、
+  layer間移動、Minimum World Packet、Event + Music Layerの実装境界を定義する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/type1-public-pr-gate.md
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-linear-drafts.md
+    - docs/cross-world-operator-mvp-001-sentinel-entry.md
+    - docs/cross-world-operator-mvp-002-world-bridge.md
+  references:
+    - docs/subagents/work-orders/wo-urban-020-cross-world-sentinel-entry.yaml
+
+scope:
+  allowed_write_paths:
+    - docs/cross-world-operator-mvp-002-world-bridge.md
+    - docs/cross-world-operator-linear-drafts.md
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-roadmap.html
+    - docs/subagents/work-orders/wo-urban-021-cross-world-bridge-state-model.yaml
+  read_only_paths:
+    - app/
+    - tools/
+    - tests/
+    - docs/subagents/contracts/
+  out_of_scope:
+    - "この work order 作成 PR では実装コード、data contract、generated docs、テストコードを変更しない。"
+    - "WebAudio実装、音源生成、asset追加は行わない。"
+    - "real-world eventやbrand固有体験を再現しない。"
+    - "operatorがsimulation stateを直接変更するcontrol modeは含めない。"
+    - "cloud command、external API、Discord投稿、Linear issue作成、GitHub issue作成を行わない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-020-cross-world-sentinel-entry
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python tools/docs_sync_check.py --check"
+    - "python -m pytest tests/ -q -p no:cacheprovider"
+  optional: []
+
+acceptance:
+  - "`docs/cross-world-operator-mvp-002-world-bridge.md` が追加され、三層worldとlayer間移動を日本語で説明している。"
+  - "`XWORLD-TODO-003`、`XWORLD-TODO-017`、`XWORLD-TODO-018`、`XWORLD-TODO-036` だけを MVP-002 の対象としている。"
+  - "Cross-world Operator Mode docs package version を `0.1.2` にし、意味単位の自動version更新ルールに従っている。"
+  - "Minimum World Packet の7項目と不足時の `watch` / `parking-lot` 戻しを明記している。"
+  - "Event + Music Layerを体験信号として扱い、WebAudio実装は後続prototypeに分離している。"
+  - "実装コード、data contract、cloud/API、Linear issue、Discord投稿は変更・作成していない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この work order は MVP-002 の実装着手前spec。data contract影響の有無は次PRで確定する。"

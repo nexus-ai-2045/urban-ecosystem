@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.1`
+- Version: `0.1.3`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -295,9 +295,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-003 World Bridge Actor
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: model/design work order
+- Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: data contract review
 - Acceptance:
   - `physical`, `simulated`, `liminal` の状態定義がある。
@@ -443,9 +443,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-017 Three-world Layer
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: world layer model work order
+- Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: data contract review
 - Acceptance:
   - `physical`, `simulated`, `liminal` の3層定義を持つ。
@@ -453,9 +453,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-018 Event + Music Layer
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: prototype work order
+- Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: asset/publication review
 - Acceptance:
   - event participation feelをpublic-safeに抽象化する。
@@ -634,9 +634,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-036 Minimum World Packet Checklist
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: checklist work order
+- Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: quality-gate review
 - Acceptance:
   - 7項目を満たさないideaをimplementation readyにしない。
