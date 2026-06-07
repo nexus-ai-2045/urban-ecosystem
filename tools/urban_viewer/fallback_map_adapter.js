@@ -36,7 +36,7 @@ import { CATEGORY_COLORS, ROLE_COLORS } from "./colors.js";
 const CANVAS_PADDING = 20;
 
 /** エージェント円の半径 (px) */
-const AGENT_RADIUS = 7;
+const AGENT_RADIUS = 4;
 
 /** POI 点の半径 (px) */
 const POI_RADIUS = 3;
@@ -53,6 +53,17 @@ const SOCIAL_LINK_WIDTH = 2;
 /** 友達マーカー強調リングの色 */
 const FRIEND_RING_COLOR = "rgba(230, 120, 30, 0.9)";
 
+function _hexToRgba(hex, alpha) {
+    const value = String(hex || "").replace("#", "");
+    if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+        return `rgba(44, 62, 80, ${alpha})`;
+    }
+    const r = parseInt(value.slice(0, 2), 16);
+    const g = parseInt(value.slice(2, 4), 16);
+    const b = parseInt(value.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export class FallbackMapAdapter {
     /**
      * @param {HTMLCanvasElement} canvas
@@ -66,7 +77,7 @@ export class FallbackMapAdapter {
 
         // レイヤーデータ保持
         this._layers = {
-            poi:   { geojson: null, visible: true },
+            poi:   { geojson: null, visible: false },
             aoi:   { geojson: null, visible: true },
             road:  { geojson: null, visible: false },  // 既定非表示 (app.js と統一 / 意味の薄い飾り)
             agent: { markers: [],   visible: true },
@@ -315,8 +326,10 @@ export class FallbackMapAdapter {
             this._drawSocialLinkLines(this._socialLinks.center, this._socialLinks.friends);
         }
 
-        // Agent (番号付き円)
+        // Agent (密度 -> 移動方向 -> 点)
         if (this._layers.agent.visible) {
+            this._drawAgentDensity(this._layers.agent.markers);
+            this._drawAgentMovement(this._layers.agent.markers);
             this._drawAgents(this._layers.agent.markers);
         }
 
@@ -393,9 +406,9 @@ export class FallbackMapAdapter {
                     }
                     ctx.closePath();
                 }
-                ctx.fillStyle = "rgba(100, 180, 100, 0.18)";
+                ctx.fillStyle = "rgba(100, 180, 100, 0.10)";
                 ctx.fill();
-                ctx.strokeStyle = "rgba(60, 140, 60, 0.5)";
+                ctx.strokeStyle = "rgba(60, 140, 60, 0.38)";
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
@@ -453,26 +466,79 @@ export class FallbackMapAdapter {
             const roleColor = ROLE_COLORS[agent.role] || AGENT_DEFAULT_COLOR;
             const color = isSelected ? HIGHLIGHT_COLOR : roleColor;
 
-            // 外枠
+            // 実地図の歩行者に見えるよう、通常時は小さな半透明点にする。
             ctx.beginPath();
-            ctx.arc(x, y, AGENT_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = isSelected ? "#ffeeee" : "#ffffff";
+            ctx.arc(x, y, isSelected ? AGENT_RADIUS + 2 : AGENT_RADIUS, 0, Math.PI * 2);
+            ctx.globalAlpha = isSelected ? 1 : 0.62;
+            ctx.fillStyle = isSelected ? "rgba(255, 238, 238, 0.95)" : color;
             ctx.fill();
             ctx.strokeStyle = color;
-            ctx.lineWidth = isSelected ? 2.5 : 1.5;
+            ctx.lineWidth = isSelected ? 2.5 : 1;
             ctx.stroke();
+            ctx.globalAlpha = 1;
 
-            // ラベルテキスト: label フィールドがあれば使用し、なければ id で表示
-            const labelText = agent.label != null ? String(agent.label) : String(agent.id);
-            ctx.fillStyle = color;
-            ctx.font = `${isSelected ? "bold " : ""}8px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(labelText, x, y);
+            if (isSelected) {
+                const labelText = agent.label != null ? String(agent.label) : String(agent.id);
+                ctx.fillStyle = color;
+                ctx.font = "bold 8px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(labelText, x, y);
+            }
         }
         // テキスト描画後にデフォルトに戻す
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
+    }
+
+    _drawAgentDensity(agents) {
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.globalCompositeOperation = "multiply";
+        for (const agent of agents) {
+            const { x, y } = this._project(agent.lat, agent.lon);
+            const color = ROLE_COLORS[agent.role] || AGENT_DEFAULT_COLOR;
+            const gradient = ctx.createRadialGradient(x, y, 1, x, y, agent.moving ? 15 : 20);
+            gradient.addColorStop(0, _hexToRgba(color, agent.moving ? 0.16 : 0.22));
+            gradient.addColorStop(1, _hexToRgba(color, 0));
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, agent.moving ? 15 : 20, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    _drawAgentMovement(agents) {
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (const agent of agents) {
+            if (!agent.moving || !Number.isFinite(agent.nextLat) || !Number.isFinite(agent.nextLon)) continue;
+            const { x, y } = this._project(agent.lat, agent.lon);
+            const next = this._project(agent.nextLat, agent.nextLon);
+            const dx = next.x - x;
+            const dy = next.y - y;
+            if (dx * dx + dy * dy < 4) continue;
+            const color = ROLE_COLORS[agent.role] || AGENT_DEFAULT_COLOR;
+            ctx.strokeStyle = _hexToRgba(color, 0.28);
+            ctx.fillStyle = _hexToRgba(color, 0.28);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(next.x, next.y);
+            ctx.stroke();
+
+            const angle = Math.atan2(dy, dx);
+            const arrowX = x + dx * 0.72;
+            const arrowY = y + dy * 0.72;
+            ctx.beginPath();
+            ctx.moveTo(arrowX, arrowY);
+            ctx.lineTo(arrowX - Math.cos(angle - 0.55) * 5, arrowY - Math.sin(angle - 0.55) * 5);
+            ctx.lineTo(arrowX - Math.cos(angle + 0.55) * 5, arrowY - Math.sin(angle + 0.55) * 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
     }
 
     /**

@@ -166,7 +166,7 @@ def test_small_run_loads_agent_profiles_n10(variable_profile_server):
                 """() => {
                     const legend = document.getElementById('legend-panel');
                     const status = document.getElementById('load-status');
-                    return legend && status && (legend.textContent || '').includes('エージェント: 10');
+                    return legend && status && (legend.textContent || '').includes('住人 10');
                 }""",
                 timeout=15000,
             )
@@ -176,7 +176,7 @@ def test_small_run_loads_agent_profiles_n10(variable_profile_server):
 
             assert "agent_profiles_N10.json" in load_status
             assert "読込失敗" not in load_status
-            assert "エージェント: 10" in legend_text
+            assert "住人 10" in legend_text
         finally:
             page.close()
             browser.close()

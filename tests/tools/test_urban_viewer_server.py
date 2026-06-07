@@ -678,7 +678,12 @@ class TestDataEndpoint:
         run_dir.mkdir(parents=True)
         outside = tmp_path / "outside_summary.json"
         outside.write_text('{"run_id":"outside"}', encoding="utf-8")
-        (run_dir / "summary.json").symlink_to(outside)
+        try:
+            (run_dir / "summary.json").symlink_to(outside)
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                pytest.skip("Windows symlink privilege is not available")
+            raise
 
         monkeypatch.setenv("DATA_DIR", str(data_root))
         monkeypatch.delenv("DATA_SOURCE", raising=False)
