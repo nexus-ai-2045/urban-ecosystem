@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.5`
+- Version: `0.1.6`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -433,9 +433,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-016 Human/AI Assessment Lab
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: assessment design work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: ethics/safety review
 - Acceptance:
   - deceptionではなくhuman-likeness、intention inference、boundary recognitionを評価する。
@@ -473,9 +473,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-020 Post-Singularity Scenario Boundary
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: scenario boundary work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: speculative claim review
 - Acceptance:
   - predictionではなくbounded scenario familyとして扱う。
@@ -483,9 +483,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-021 Chaotic Three-Body World Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `external-practice`
-- Next artifact: benchmark design work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: public-safe benchmark review
 - Acceptance:
   - initial-condition sensitivityとstable-windowをtoy scenarioで扱う。
@@ -493,9 +493,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-022 Frontier AI Capability Layer Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `external-practice`
-- Next artifact: safety benchmark work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: safety review
 - Acceptance:
   - long-horizon autonomy、tool use、governance gateを公開安全に扱う。
@@ -503,9 +503,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-023 Scale-Simplification Simulation Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `external-practice`
-- Next artifact: benchmark design work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: source abstraction review
 - Acceptance:
   - micro social layerとmacro physical layerを比較できる。
@@ -555,9 +555,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-028 Agent Harness Layer Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: harness assessment work order
+- Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: implementation boundary review
 - Acceptance:
   - model capabilityとproduct harness qualityを分ける。
