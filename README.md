@@ -268,6 +268,13 @@ Nexus 管理の project を使う場合だけ、maintainer 承認後に実行し
 - ライセンス決定メモ: [`docs/license-decision.md`](docs/license-decision.md)
 - Discord PR 通知: [`docs/discord-pr-notifications.md`](docs/discord-pr-notifications.md)
 
+### Cross-world Operator Mode
+
+- HTML preview: [`docs/cross-world-operator-roadmap.html`](docs/cross-world-operator-roadmap.html), [`docs/cross-world-operator-todo.html`](docs/cross-world-operator-todo.html)
+- 正本docs: [`docs/cross-world-operator-roadmap.md`](docs/cross-world-operator-roadmap.md), [`docs/cross-world-operator-todo.md`](docs/cross-world-operator-todo.md), [`docs/cross-world-operator-linear-drafts.md`](docs/cross-world-operator-linear-drafts.md)
+- 実装前仕様: [`docs/cross-world-operator-mvp-001-sentinel-entry.md`](docs/cross-world-operator-mvp-001-sentinel-entry.md), [`docs/cross-world-operator-mvp-002-world-bridge.md`](docs/cross-world-operator-mvp-002-world-bridge.md)
+- Drift防止: `python tools/docs_sync_check.py --check` がREADMEリンク、version一致、TODO/MVP欠番、公開安全境界を確認する。
+
 ## ライセンス
 
 MIT License です。詳細は [`LICENSE`](LICENSE) を参照してください。
