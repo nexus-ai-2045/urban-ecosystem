@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cross-world Operator Mode 未実装TODO</title>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --panel: #ffffff;
+      --ink: #202124;
+      --muted: #5f6368;
+      --line: #d8d7d0;
+      --accent: #0f766e;
+      --accent-2: #7c3aed;
+      --watch: #9a4d00;
+      --reject: #8b1e1e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+    }
+
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin: 0 0 12px;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin: 40px 0 14px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin: 0 0 8px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    code {
+      background: #ecebe5;
+      border-radius: 4px;
+      padding: 0.1rem 0.32rem;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .meta,
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 0.88rem;
+    }
+
+    .pill.accepted,
+    .pill.not-started {
+      color: var(--accent);
+      border-color: #96d2ca;
+    }
+
+    .pill.watch {
+      color: var(--watch);
+      border-color: #dfbd86;
+    }
+
+    .pill.rejected {
+      color: var(--reject);
+      border-color: #d7a1a1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .todo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 12px;
+    }
+
+    .card,
+    .todo {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .todo h3 {
+      color: var(--accent);
+    }
+
+    .todo .id {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.84rem;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 1.2rem;
+    }
+
+    .callout {
+      background: var(--panel);
+      border-left: 4px solid var(--accent-2);
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .coverage .card strong {
+      color: var(--accent-2);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Cross-world Operator Mode 未実装TODO</h1>
+      <p>ロードマップに載った未実装分を、公開安全なTODOとして漏れなく管理するための一覧。</p>
+      <div class="meta">
+        <span class="pill">Status: draft</span>
+        <span class="pill">Owner: manager</span>
+        <span class="pill">Updated: 2026-06-08</span>
+        <span class="pill">Docs-only</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Context Idea Coverage Guarantee</h2>
+      <div class="callout">
+        <p>
+          保証対象は、会話の全ニュアンスではなく、採用済み・採用候補ideaを
+          <code>source -> public-safe name -> TODO -> gate</code> に変換して落とさないこと。
+        </p>
+      </div>
+      <div class="grid">
+        <div class="card"><strong>accepted</strong><br>必ずTODO IDを持つ。</div>
+        <div class="card"><strong>parking-lot</strong><br>理由と再確認条件を持つ。</div>
+        <div class="card"><strong>watch</strong><br>外部状況・設計判断・追加情報待ち。</div>
+        <div class="card"><strong>rejected/out-of-scope</strong><br>公開安全・範囲・権利・外部action境界の理由を持つ。</div>
+      </div>
+    </section>
+
+    <section class="coverage">
+      <h2>Coverage一覧</h2>
+      <div class="grid">
+        <div class="card"><strong>operator / agent-possession idea</strong><br>Cross-world Operator Mode<br><code>XWORLD-TODO-001</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>world bridge actor idea</strong><br>World Bridge Actor<br><code>XWORLD-TODO-003</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>guide / partner / roster idea</strong><br>Guide / Partner, Agent Roster<br><code>XWORLD-TODO-004, 005</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>cyber-ops milestones</strong><br>Cyber-ops Milestones<br><code>XWORLD-TODO-006</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>added motif arcs</strong><br>Motif Arcs<br><code>XWORLD-TODO-007..015</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>pilot sync idea</strong><br>Pilot Sync Arc<br><code>XWORLD-TODO-015</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>human / AI assessment idea</strong><br>Human/AI Assessment Lab<br><code>XWORLD-TODO-016</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>three-world layer</strong><br>Three-world Layer<br><code>XWORLD-TODO-017</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>event + 8-bit music</strong><br>Event + Music Layer<br><code>XWORLD-TODO-018</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>next motif expansion guarantee</strong><br>Next Motif Expansion Slot<br><code>XWORLD-TODO-019</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>post-singularity scenario</strong><br>Post-Singularity Scenario Boundary<br><code>XWORLD-TODO-020</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>chaotic world benchmark</strong><br>Chaotic Three-Body World Benchmark<br><code>XWORLD-TODO-021</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>frontier AI benchmark</strong><br>Frontier AI Capability Layer Benchmark<br><code>XWORLD-TODO-022</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>scale-simplification idea</strong><br>Scale-Simplification Simulation Benchmark<br><code>XWORLD-TODO-023</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>agent harness layer</strong><br>Agent Harness Layer Benchmark<br><code>XWORLD-TODO-028</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>user oversight</strong><br>User Oversight Fourth-Power Layer<br><code>XWORLD-TODO-029</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>three AI branches + meta-user</strong><br>Deliberative Separation-of-Powers Layer<br><code>XWORLD-TODO-030</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>FDE decision protocol</strong><br>FDE Packet Router Benchmark<br><code>XWORLD-TODO-027</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>repo-as-skill / recursive calls</strong><br>Repository-as-Skill Mesh<br><code>XWORLD-TODO-031</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>P2P distributed operations</strong><br>P2P Distributed Operations Spike<br><code>XWORLD-TODO-032</code><br><span class="pill watch">watch</span></div>
+        <div class="card"><strong>cloud capacity</strong><br>Cloud Capacity Envelope<br><code>XWORLD-TODO-033</code><br><span class="pill watch">watch</span></div>
+        <div class="card"><strong>worldbuilding pipeline idea</strong><br>Worldbuilding Extraction Pipeline<br><code>XWORLD-TODO-034</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>minimum world richness</strong><br>Minimum World Packet<br><code>XWORLD-TODO-036</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>GitHub / Discord add request</strong><br>Add Request Intake<br><code>XWORLD-TODO-037</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>orphan / stale / heartbeat</strong><br>Lifecycle Tracking<br><code>XWORLD-TODO-038</code><br><span class="pill accepted">accepted</span></div>
+        <div class="card"><strong>operator-entry trigger boundary</strong><br>Operator-entry Trigger Boundary<br><code>XWORLD-TODO-039</code><br><span class="pill accepted">accepted</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Phase 1: Operator MVP</h2>
+      <div class="todo-grid">
+        <article class="todo"><div class="id">XWORLD-TODO-001</div><h3>Cross-world Operator Mode</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p>agentを選び、inspection/control viewpointに入り、通常replayへ戻る全体構想。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-002</div><h3>Sentinel MVP</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p>最小operator modeのentry / return / selectionを定義する。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-003</div><h3>World Bridge Actor</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p><code>physical</code>, <code>simulated</code>, <code>liminal</code> の移動モデル。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-004</div><h3>Guide / Partner</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p>operatorの案内・伴走roleを定義する。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-005</div><h3>Agent Roster</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p>monitoring / pursuit / intervention archetypeを増やす。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-006</div><h3>Cyber-ops Milestones</h3><div class="pills"><span class="pill not-started">not_started</span><span class="pill">creative-hypothesis</span></div><p>cross-world operation、field support、supervisor roleを分割する。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Phase 2: Motif Arcs</h2>
+      <div class="todo-grid">
+        <article class="todo"><div class="id">XWORLD-TODO-007</div><h3>Equivalent Exchange Pair</h3><p>cost、restoration、pair dependency。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-008</div><h3>Pillar Council Arc</h3><p>guardian、council、patron-leader、corruption-prime structure。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-009</div><h3>Unstable Power Arc</h3><p>city-scale instability、uncontrolled power、containment dynamics。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-010</div><h3>Boundary War Arc</h3><p>wall/boundary logic、protector、strategist、elite intervention。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-011</div><h3>Fighter Archetype Set</h3><p>discipline、rivalry、precision、training、event-duel。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-012</div><h3>Social-Tech Mirror Lab</h3><p>technologyがbehavior、identity、trustを歪めるshort scenario。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-013</div><h3>Judgment Game Arc</h3><p>judgment、surveillance、inference、counter-inference。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-014</div><h3>Ecological Mediation Arc</h3><p>environmental negotiation、swarm intelligence、non-human agency。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-015</div><h3>Pilot Sync Arc</h3><p>synchronization threshold、bio-machine pressure。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Phase 3: Assessment / World Layers</h2>
+      <div class="todo-grid">
+        <article class="todo"><div class="id">XWORLD-TODO-016</div><h3>Human/AI Assessment Lab</h3><p>human-likeness、intention inference、boundary recognition。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-017</div><h3>Three-world Layer</h3><p><code>physical</code>, <code>simulated</code>, <code>liminal</code>。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-018</div><h3>Event + Music Layer</h3><p>event participation feelと8-bit WebAudio cue。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-019</div><h3>Next Motif Expansion Slot</h3><p>次のmotifを保証付きで受ける枠。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-020</div><h3>Post-Singularity Scenario Boundary</h3><p>predictionではなくbounded scenario family。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-021</div><h3>Chaotic Three-Body World Benchmark</h3><p>initial-condition sensitivityとstable window。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-022</div><h3>Frontier AI Capability Layer Benchmark</h3><p>long-horizon autonomy、tool use、governance gate。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-023</div><h3>Scale-Simplification Simulation Benchmark</h3><p>micro social layerとmacro physical layerの比較。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Phase 4: Governance / Operations</h2>
+      <div class="todo-grid">
+        <article class="todo"><div class="id">XWORLD-TODO-024</div><h3>Future-Known Implementation Frame</h3><p>future image、local capacity、implementation gapの比較。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-025</div><h3>Human Time-Sense Boundary Benchmark</h3><p>wait value、progress、stuck state、next return point。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-026</div><h3>Numeric Operating Protocol</h3><span class="pill watch">parking-lot</span><p>creative hypothesis。workflow接続まで保留。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-027</div><h3>FDE Packet Router Benchmark</h3><p><code>entry -> packet -> evidence -> decision -> closure</code>。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-028</div><h3>Agent Harness Layer Benchmark</h3><p>model capabilityとproduct harness qualityを分ける。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-029</div><h3>User Oversight Fourth-Power Layer</h3><p>userをexternal monitorとして定義する。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-030</div><h3>Deliberative Separation-of-Powers Layer</h3><p>proposal / review / execution / oversightを分ける。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-031</div><h3>Repository-as-Skill Mesh</h3><span class="pill watch">watch</span><p>loop guardとmax traversal depth待ち。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-032</div><h3>P2P Distributed Operations Spike</h3><span class="pill watch">watch</span><p>identity、trust、moderation設計待ち。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-033</div><h3>Cloud Capacity Envelope</h3><span class="pill watch">watch</span><p>target service、cost、credentials、rollback plan待ち。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-034</div><h3>Worldbuilding Extraction Pipeline</h3><p>section / layer / claim / term / validation / report。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Cross-cutting TODO</h2>
+      <div class="todo-grid">
+        <article class="todo"><div class="id">XWORLD-TODO-035</div><h3>Public-safe Naming Validator</h3><p>protected names、private paths、external post body、secret-like stringsを検出する。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-036</div><h3>Minimum World Packet Checklist</h3><p>7項目を満たさないideaをimplementation readyにしない。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-037</div><h3>Add Request Intake Draft Flow</h3><p>GitHub/Discordの「追加して」をdraft candidateに変換する。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-038</div><h3>Orphan / Stale / Heartbeat Tracking</h3><p>orphan threshold、self-report stale、draft-only heartbeat。</p></article>
+        <article class="todo"><div class="id">XWORLD-TODO-039</div><h3>Operator-entry Trigger Boundary</h3><p>public codeにprotected phraseをhard-codeしない。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Rejected / Out of Scope</h2>
+      <ul>
+        <li>作品名・キャラクター名をpublic implementation IDにすること。</li>
+        <li>private path、private chat phrase、voice-chat transcriptをpublic docsへ出すこと。</li>
+        <li>外部post本文をpublic docsに引用すること。</li>
+        <li>GitHub issue、Linear issue、Discord投稿をこのTODO PRで作ること。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -4,6 +4,8 @@
 - Owner: `manager`
 - Updated: `2026-06-08`
 - 詳細表示: [cross-world-operator-roadmap.html](cross-world-operator-roadmap.html)
+- 未実装TODO: [cross-world-operator-todo.md](cross-world-operator-todo.md)
+- TODO HTML: [cross-world-operator-todo.html](cross-world-operator-todo.html)
 - Work order: [wo-urban-018-cross-world-operator-roadmap.yaml](subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml)
 
 ## 目的
