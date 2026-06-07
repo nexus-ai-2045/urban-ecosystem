@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.6`
+- Version: `0.1.7`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -516,9 +516,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-024 Future-Known Implementation Frame
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: review method work order
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: source category review
 - Acceptance:
   - old future image、current local capacity、implementation gapを比較する。
@@ -526,9 +526,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-025 Human Time-Sense Boundary Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: reporting benchmark work order
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: assessment review
 - Acceptance:
   - wait value、progress、stuck state、next return pointをreportできる。
@@ -538,16 +538,16 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 - Status: `parking-lot`
 - Source category: `creative-hypothesis`
-- Next artifact: hypothesis note
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: human review before implementation
 - Reason: numeric meaningはcreative hypothesisであり、実装根拠としては未成熟。
 - Recheck condition: concrete operator workflowに接続できた時。
 
 ### XWORLD-TODO-027 FDE Packet Router Benchmark
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: governance work order
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: governance review
 - Acceptance:
   - `entry -> packet -> evidence -> decision -> closure` をTODO/PR判断に適用できる。
@@ -565,9 +565,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-029 User Oversight Fourth-Power Layer
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: governance work order
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: human oversight review
 - Acceptance:
   - userをagentではなくexternal monitorとして定義する。
@@ -575,9 +575,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-030 Deliberative Separation-of-Powers Layer
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: decision record work order
+- Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: governance review
 - Acceptance:
   - proposal、review、execution、meta-user oversightを分ける。

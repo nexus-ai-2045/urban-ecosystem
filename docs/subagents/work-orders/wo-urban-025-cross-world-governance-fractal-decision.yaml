@@ -1,0 +1,97 @@
+id: wo-urban-025-cross-world-governance-fractal-decision
+title: "MVP-006 Governance And Fractal Decision"
+status: draft
+cross_world_operator_version: 0.1.7
+owner_role: developer
+support_roles:
+  - quality-gate
+  - governance-reviewer
+
+goal: >
+  Cross-world Operator Mode の MVP-006 として、FDE packet、三権分立風の
+  proposal / review / execution / oversight分離、user oversight、
+  three AI branches + meta-user構造を公開安全な意思決定枠として定義する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/type1-public-pr-gate.md
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-linear-drafts.md
+    - docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md
+    - docs/cross-world-operator-mvp-006-governance-fractal-decision.md
+  references:
+    - docs/subagents/work-orders/wo-urban-024-cross-world-assessment-benchmark-lab.yaml
+
+scope:
+  allowed_write_paths:
+    - README.md
+    - docs/cross-world-operator-mvp-006-governance-fractal-decision.md
+    - docs/cross-world-operator-linear-drafts.md
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-roadmap.html
+    - docs/subagents/work-orders/wo-urban-025-cross-world-governance-fractal-decision.yaml
+    - tools/docs_sync_check.py
+    - tests/tools/test_docs_sync_check.py
+  read_only_paths:
+    - app/
+    - docs/subagents/contracts/
+  out_of_scope:
+    - "この work order 作成 PR では実装コード、data contract、generated docsを変更しない。"
+    - "userを自動agentとして扱わない。"
+    - "human approvalを省略するclosed-loop automationを設計しない。"
+    - "prophecy、inevitable future、未検証の未来断定をしない。"
+    - "numeric meaningを実装根拠として確定しない。"
+    - "cloud command、external API、Discord投稿、Linear issue作成、GitHub issue作成を行わない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-024-cross-world-assessment-benchmark-lab
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python tools/docs_sync_check.py --check"
+    - "python -m pytest tests/ -q -p no:cacheprovider"
+  optional: []
+
+acceptance:
+  - "`docs/cross-world-operator-mvp-006-governance-fractal-decision.md` が追加され、governance layerとFDE packetを日本語で説明している。"
+  - "`XWORLD-TODO-024`、`XWORLD-TODO-025`、`XWORLD-TODO-026`、`XWORLD-TODO-027`、`XWORLD-TODO-029`、`XWORLD-TODO-030` だけを MVP-006 の対象としている。"
+  - "Cross-world Operator Mode docs package version を `0.1.7` にし、意味単位の自動version更新ルールに従っている。"
+  - "userをagentではなくexternal monitor / fourth-power oversightとして定義している。"
+  - "proposal / review / execution / oversightが分離されている。"
+  - "Numeric Operating Protocolはparking-lotのまま、理由と再確認条件がある。"
+  - "実装コード、data contract、cloud/API、Linear issue、Discord投稿は変更・作成していない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この work order は MVP-006 の実装着手前spec。MVP-007のrecursive skill / distributed opsへloop guardとoversight boundaryを渡す。"

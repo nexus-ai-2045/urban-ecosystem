@@ -45,6 +45,7 @@ CROSS_WORLD_README_LINKS = [
     "docs/cross-world-operator-mvp-003-guide-agent-roster.md",
     "docs/cross-world-operator-mvp-004-motif-arc-pack.md",
     "docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md",
+    "docs/cross-world-operator-mvp-006-governance-fractal-decision.md",
 ]
 
 CROSS_WORLD_SCAN_TERMS = [
@@ -298,6 +299,8 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         "wo-urban-023-cross-world-motif-arc-pack.yaml",
         "cross-world-operator-mvp-005-assessment-benchmark-lab.md",
         "wo-urban-024-cross-world-assessment-benchmark-lab.yaml",
+        "cross-world-operator-mvp-006-governance-fractal-decision.md",
+        "wo-urban-025-cross-world-governance-fractal-decision.yaml",
     ]
     for link in required_linear_links:
         if link not in linear:
@@ -309,11 +312,13 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         project_root / "docs" / "cross-world-operator-mvp-003-guide-agent-roster.md",
         project_root / "docs" / "cross-world-operator-mvp-004-motif-arc-pack.md",
         project_root / "docs" / "cross-world-operator-mvp-005-assessment-benchmark-lab.md",
+        project_root / "docs" / "cross-world-operator-mvp-006-governance-fractal-decision.md",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-020-cross-world-sentinel-entry.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-021-cross-world-bridge-state-model.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-022-cross-world-guide-agent-roster.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-023-cross-world-motif-arc-pack.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-024-cross-world-assessment-benchmark-lab.yaml",
+        project_root / "docs" / "subagents" / "work-orders" / "wo-urban-025-cross-world-governance-fractal-decision.yaml",
     ]
     for path in scan_paths:
         text = _read(path)
