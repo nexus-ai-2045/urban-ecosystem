@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cross-world Operator Mode ロードマップ</title>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --panel: #ffffff;
+      --ink: #202124;
+      --muted: #5f6368;
+      --line: #d8d7d0;
+      --accent: #0f766e;
+      --accent-2: #7c3aed;
+      --warn: #9a4d00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin: 0 0 12px;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin: 40px 0 14px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin: 0 0 8px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code {
+      background: #ecebe5;
+      border-radius: 4px;
+      padding: 0.1rem 0.32rem;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 0.9rem;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .card strong {
+      color: var(--accent);
+    }
+
+    .roadmap {
+      display: grid;
+      gap: 10px;
+      counter-reset: item;
+    }
+
+    .roadmap article {
+      counter-increment: item;
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 14px 14px 52px;
+    }
+
+    .roadmap article::before {
+      content: counter(item);
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 1.2rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .source-list dt {
+      color: var(--accent-2);
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    .source-list dd {
+      margin: 2px 0 0;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Cross-world Operator Mode ロードマップ</h1>
+      <p>
+        viewer / operator が複数の simulation layer をまたいで agent を一時的に観測・操作・案内するための
+        docs-only roadmap preview。
+      </p>
+      <div class="meta" aria-label="document metadata">
+        <span class="pill">Status: draft</span>
+        <span class="pill">Owner: manager</span>
+        <span class="pill">Updated: 2026-06-08</span>
+        <span class="pill">Data contract: unchanged</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>目的</h2>
+      <p>
+        この最初の PR では、既存の Urban Ecosystem data contract を変更しない。
+        実装も入れず、公開可能な roadmap docs と work order だけを追加する。
+      </p>
+      <p>
+        発想段階で参照した外部作品名・キャラクター名は、実装 ID や公開識別子として使わない。
+        公開面では abstract archetype / milestone に変換した名前だけを使う。
+      </p>
+    </section>
+
+    <section>
+      <h2>公開命名境界</h2>
+      <div class="grid">
+        <div class="card"><strong>Cross-world Operator Mode</strong><br>virtual-world operator / agent-possession motif</div>
+        <div class="card"><strong>Sentinel MVP</strong><br>最小 takeover / monitoring MVP</div>
+        <div class="card"><strong>World Bridge Actor</strong><br>virtual / physical bridge actor</div>
+        <div class="card"><strong>Guide / Partner</strong><br>guide / partner roles</div>
+        <div class="card"><strong>Agent Roster</strong><br>monitoring / intervention agents</div>
+        <div class="card"><strong>Cyber-ops Milestones</strong><br>cyber-operations / field-support roles</div>
+        <div class="card"><strong>Equivalent Exchange Pair</strong><br>paired restoration / exchange motifs</div>
+        <div class="card"><strong>Pillar Council Arc</strong><br>guardian / council / patron / corruption-prime motifs</div>
+        <div class="card"><strong>Unstable Power Arc</strong><br>rider / unstable vessel / dormant city-core motifs</div>
+        <div class="card"><strong>Boundary War Arc</strong><br>boundary / protector / strategist motifs</div>
+        <div class="card"><strong>Fighter Archetype Set</strong><br>discipline / rival / precision fighter motifs</div>
+        <div class="card"><strong>Pilot Sync Arc</strong><br>pilot trio / synchronization / bio-machine motifs</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>ロードマップ</h2>
+      <div class="roadmap">
+        <article><h3>Sentinel MVP</h3><p>agent 選択、inspection/control viewpoint、通常 replay への復帰を定義する。</p></article>
+        <article><h3>World Bridge Actor</h3><p><code>physical</code>, <code>simulated</code>, <code>liminal</code> を行き来する state model。</p></article>
+        <article><h3>Guide / Partner</h3><p>operator が見ているものを説明し、安全な行動を助ける guide / companion archetype。</p></article>
+        <article><h3>Agent Roster</h3><p>監視・追跡・介入 archetype を増やす。copyrighted names や real-person identities は encoding しない。</p></article>
+        <article><h3>Cyber-ops Milestones</h3><p>cross-world operation、field support、supervisor role を future work order として整理する。</p></article>
+        <article><h3>Equivalent Exchange Pair</h3><p>cost、restoration、pair dependency、body/soul separation を mechanics として扱う。</p></article>
+        <article><h3>Pillar Council Arc</h3><p>guardian、council、patron-leader、corruption-prime structure を social hierarchy / conflict として扱う。</p></article>
+        <article><h3>Unstable Power Arc</h3><p>city-scale instability、uncontrolled power、awakening event、containment dynamics。</p></article>
+        <article><h3>Boundary War Arc</h3><p>wall/boundary logic、external-world pressure、protector、strategist、elite intervention。</p></article>
+        <article><h3>Fighter Archetype Set</h3><p>discipline、rivalry、precision、training、event-duel を optional scenario pattern とする。</p></article>
+        <article><h3>Social-Tech Mirror Lab</h3><p>technology が human behavior、incentives、identity、trust をどう歪めるかを short scenario で検証する。</p></article>
+        <article><h3>Judgment Game Arc</h3><p>judgment、surveillance、inference、counter-inference、adversarial reasoning。</p></article>
+        <article><h3>Ecological Mediation Arc</h3><p>environmental negotiation、collective organisms、swarm intelligence、non-human agency。</p></article>
+        <article><h3>Pilot Sync Arc</h3><p>reluctant pilot、quiet mirror、rival pilot、synchronization threshold、bio-machine pressure。</p></article>
+        <article><h3>Human/AI Evaluation Lab</h3><p>欺瞞ではなく、human-likeness、intention inference、boundary recognition、evaluator calibration を評価する。</p></article>
+        <article><h3>Three-world Layer</h3><p><code>physical</code>, <code>simulated</code>, <code>liminal</code> を初期 three-layer world model とする。</p></article>
+        <article><h3>Event + Music Layer</h3><p>vehicle-event / virtual-performer の参加感と、後続の 8-bit WebAudio cue prototype。</p></article>
+        <article><h3>Next Motif Expansion Slot</h3><p>次の承認 motif を追加できる extension point を残す。</p></article>
+        <article><h3>Post-Singularity Scenario Boundary</h3><p>prediction ではなく bounded scenario family として扱う。</p></article>
+        <article><h3>Chaotic Three-Body World Benchmark</h3><p>initial-condition sensitivity、stable-window、chaotic-era、local policy evaluation を見る。</p></article>
+        <article><h3>Frontier AI Capability Layer Benchmark</h3><p>long-horizon autonomy、tool use、misuse-adjacent constraints、governance thresholds を public-safe に扱う。</p></article>
+        <article><h3>Scale-Simplification Simulation Benchmark</h3><p>micro social layer と macro physical layer を比較し、scale を広げることで simulation noise が減る場合を評価する。</p></article>
+        <article><h3>Future-Known Implementation Frame</h3><p>昔の future-world image、現在の local capacity、repo が埋める gap を比較する。</p></article>
+        <article><h3>Human Time-Sense Boundary Benchmark</h3><p>wait value、progress、stuck state、next return point、embodied urgency を人間に伝えられるかを見る。</p></article>
+        <article><h3>Numeric Operating Protocol</h3><p>cycle、compression、opening、split-count rule を creative operating hypothesis として扱う。</p></article>
+        <article><h3>FDE Packet Router Benchmark</h3><p><code>entry -> packet -> evidence -> decision -> closure</code> で loose chat residue を防ぐ。</p></article>
+        <article><h3>Agent Harness Layer Benchmark</h3><p>model capability と product harness quality を分ける。</p></article>
+        <article><h3>User Oversight Fourth-Power Layer</h3><p>user を external observer / fourth-power media layer として定義する。</p></article>
+        <article><h3>Deliberative Separation-of-Powers Layer</h3><p>proposal / review / execution と meta-user oversight に分ける。</p></article>
+        <article><h3>Repository-as-Skill Mesh</h3><p>repo を callable skills と recursive references の集合として検討する。</p></article>
+        <article><h3>P2P Distributed Operations Spike</h3><p>identity、trust、sync、conflict resolution、moderation、abuse resistance を先に設計する。</p></article>
+        <article><h3>Cloud Capacity Envelope</h3><p>cloud use は target service、data egress、cost/quota、credentials、rollback plan を human gate の後に置く。</p></article>
+        <article><h3>Worldbuilding Extraction Pipeline</h3><p>source article を section / layer / claim / term に分解し、link validation と orchestration report で閉じる。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>拡張保証</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Archetype Guarantee</h3>
+          <p>agent selection、operator guidance、conflict、evaluation、replay explanation のいずれかに現れる actor / role archetype が最低1つある。</p>
+        </div>
+        <div class="card">
+          <h3>World Guarantee</h3>
+          <p>world rule、pressure、layer、institution、ecology、machine system、boundary condition のいずれかが最低1つある。</p>
+        </div>
+      </div>
+      <div class="note warning">
+        Operator-entry phrase は internal design input として扱えるが、public code に copyrighted catchphrase、
+        character name、quoted line を hard-code しない。
+      </div>
+    </section>
+
+    <section>
+      <h2>Minimum World Richness Guarantee</h2>
+      <ul>
+        <li>Place and environment</li>
+        <li>Rules of possibility</li>
+        <li>Social fabric</li>
+        <li>Resources and power</li>
+        <li>History and memory</li>
+        <li>Daily life signal</li>
+        <li>Change pressure</li>
+      </ul>
+      <p>
+        7項目を満たせない addition は、<code>parking-lot</code> または <code>watch</code> item としてのみ扱う。
+      </p>
+    </section>
+
+    <section>
+      <h2>Fractal Decision / FDE</h2>
+      <p>
+        default decision shape は three AI branches plus one meta-user oversight layer。
+        Proposal branch、Review branch、Execution branch、Fourth-power oversight に分ける。
+      </p>
+      <div class="grid">
+        <div class="card"><strong>Entry</strong><br>decision を trigger したもの。</div>
+        <div class="card"><strong>Packet</strong><br>smallest reviewable unit。</div>
+        <div class="card"><strong>Evidence</strong><br>local files、tests、sources、explicit assumptions。</div>
+        <div class="card"><strong>Decision</strong><br>adopt、revise、park、reroute、reject、escalate。</div>
+        <div class="card"><strong>Closure</strong><br>何が変わり、何が残り、誰が reopen できるか。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Scale-Simplification Simulation Benchmark</h2>
+      <p>
+        外部公開post由来の採用候補として、scale を広げると simulation が単純化する場合がある、
+        という benchmark を追加する。引用ではなく抽象化した評価軸として扱う。
+      </p>
+      <div class="grid">
+        <div class="card"><strong>Social Noise</strong><br>人間社会の個別具体は noise が多く、local simulation が難しい場合がある。</div>
+        <div class="card"><strong>Physical Scale</strong><br>物理法則が支配する大きな scale では、rule set が少なくなり model 化しやすい場合がある。</div>
+        <div class="card"><strong>Cognition Boundary</strong><br>難しさは world 側だけでなく、人間の認知・理解・観測粒度にも依存する。</div>
+        <div class="card"><strong>Layer Comparison</strong><br>micro social layer と macro physical layer を比較できるようにする。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Worldbuilding Extraction Pipeline</h2>
+      <p>
+        別projectから採用するのは内容ではなく pipeline のみ。private path、固有記事、固有世界名、
+        本文断片は public docs に持ち込まない。
+      </p>
+      <div class="grid">
+        <div class="card"><strong>Section Split</strong><br>source article を section に分解する。</div>
+        <div class="card"><strong>Layer Classify</strong><br>section を world layer に分類する。</div>
+        <div class="card"><strong>Claim Extract</strong><br>claim candidate を抽出する。</div>
+        <div class="card"><strong>Claim Metadata</strong><br>subject、predicate、claim kind、source、terms を付ける。</div>
+        <div class="card"><strong>Vocabulary</strong><br>terms を concept vocabulary として集約する。</div>
+        <div class="card"><strong>Validation</strong><br>wiki-style link / reference の欠落を検証する。</div>
+        <div class="card"><strong>Orchestration Report</strong><br>生成手順、抽出数、検証結果を残す。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Non-goals / Gates</h2>
+      <ul>
+        <li>fictional characters の再現や protected lines の引用はしない。</li>
+        <li>internal notes、private paths、voice-chat transcripts は public docs に出さない。</li>
+        <li>Discord から GitHub へ auto-write しない。</li>
+        <li>P2P は design spike 先行。network implementation には入らない。</li>
+        <li>cloud commands、cloud resources、secrets、billing / quota changes はこの PR では扱わない。</li>
+        <li>follow-up implementation には separate approved work order が必要。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Source Categories</h2>
+      <dl class="source-list">
+        <dt>public-policy</dt>
+        <dd>existing project policy / gate / public collaboration rule。implementation 前に repo docs と照合する。</dd>
+        <dt>external-practice</dt>
+        <dd>external product / community-management practice に grounded。short source link または review note を残す。</dd>
+        <dt>project-hypothesis</dt>
+        <dd>この project の local operating rule。real review cycle で試すまで adjustable とする。</dd>
+        <dt>creative-hypothesis</dt>
+        <dd>original motif synthesis / speculative design。industry practice として提示しない。</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>初回 PR Scope</h2>
+      <p>
+        初回 PR は docs-only。application code、data contracts、generated docs、tests は変更しない。
+        GitHub / Linear / Discord / cloud / external API の write actions は human review の後に分離する。
+      </p>
+    </section>
+  </main>
+</body>
+</html>
