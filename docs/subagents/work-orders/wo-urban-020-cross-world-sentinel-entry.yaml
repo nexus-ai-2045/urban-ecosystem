@@ -1,6 +1,7 @@
 id: wo-urban-020-cross-world-sentinel-entry
 title: "MVP-001 Sentinel Operator Entry"
 status: draft
+cross_world_operator_version: 0.1.1
 owner_role: developer
 support_roles:
   - scenario-designer
@@ -71,6 +72,7 @@ commands:
 
 acceptance:
   - "`docs/cross-world-operator-mvp-001-sentinel-entry.md` が追加され、entry / inspection / return の最小フローを日本語で説明している。"
+  - "Cross-world Operator Mode docs package version を `0.1.1` にし、意味単位の自動version更新ルールを明記している。"
   - "`XWORLD-TODO-001`、`XWORLD-TODO-002`、`XWORLD-TODO-039` だけを MVP-001 の対象としている。"
   - "failure state と trigger boundary が明記されている。"
   - "protected phrase、作品名、キャラクター名、私的path、外部投稿本文を public implementation ID として使っていない。"

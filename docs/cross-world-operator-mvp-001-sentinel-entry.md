@@ -1,6 +1,7 @@
 # MVP-001 Sentinel Operator Entry 実装前仕様
 
 - Status: `draft`
+- Version: `0.1.1`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - Linear draft: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
@@ -12,6 +13,12 @@
 `UE-XWORLD-MVP-001 Sentinel Operator Entry` は、operatorが抽象agentを選び、inspection viewpointへ入り、通常replayへ戻る最小モードを定義するためのMVPです。
 
 このPRでは実装コードを変更しません。次の実装PRで迷わないよう、entry、return、trigger boundary、failure state、acceptanceを公開安全な粒度で固定します。
+
+## Versioning
+
+この仕様追加は、Cross-world Operator Mode docs package の `0.1.1` PATCH更新です。
+
+data contract、主要API、operator state modelの確定実装は含まないため、Urban Ecosystem data contract `0.5.0` は変更しません。
 
 ## 対象TODO
 
