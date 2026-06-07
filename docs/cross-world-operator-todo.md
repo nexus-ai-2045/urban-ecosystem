@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.8`
+- Version: `0.1.9`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -585,27 +585,27 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-031 Repository-as-Skill Mesh
 
-- Status: `watch`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: architecture spike
+- Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: loop guard review
 - Reason: recursive skill callのloop guardとmax traversal depthが未設計。
 - Recheck condition: callable skill entrypointとallowed I/Oを定義できた時。
 
 ### XWORLD-TODO-032 P2P Distributed Operations Spike
 
-- Status: `watch`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: design spike
+- Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: trust/moderation review
 - Reason: identity、trust、sync、conflict resolution、moderation、abuse resistanceが未定義。
 - Recheck condition: central serviceとの比較設計ができた時。
 
 ### XWORLD-TODO-033 Cloud Capacity Envelope
 
-- Status: `watch`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: cloud feasibility note
+- Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: cloud/account/cost review
 - Reason: target service、account/project、data egress、cost/quota、credentials、rollback planが未確定。
 - Recheck condition: cloud use caseが具体化した時。
