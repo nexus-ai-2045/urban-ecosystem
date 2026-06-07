@@ -5,6 +5,7 @@
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
 - Roadmap: [cross-world-operator-roadmap.md](cross-world-operator-roadmap.md)
+- Linear起票案: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - Work order: [wo-urban-019-cross-world-operator-todo.yaml](subagents/work-orders/wo-urban-019-cross-world-operator-todo.yaml)
 
 ## 目的
