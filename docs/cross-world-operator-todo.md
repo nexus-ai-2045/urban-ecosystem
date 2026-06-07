@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.4`
+- Version: `0.1.5`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -341,9 +341,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-007 Equivalent Exchange Pair
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: mechanics design work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
 - Acceptance:
   - cost、restoration、pair dependencyを抽象mechanicsとして定義する。
@@ -351,9 +351,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-008 Pillar Council Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: social hierarchy design work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
 - Acceptance:
   - guardian、council、patron-leader、corruption-prime structureを抽象化する。
@@ -361,9 +361,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-009 Unstable Power Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: instability scenario work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: safety review
 - Acceptance:
   - city-scale instability、uncontrolled power、containment dynamicsをtoy scenarioで表す。
@@ -371,9 +371,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-010 Boundary War Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: boundary scenario work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
 - Acceptance:
   - wall/boundary logic、external-world pressure、protector、strategist、elite interventionを抽象化する。
@@ -381,9 +381,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-011 Fighter Archetype Set
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: training/event scenario work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
 - Acceptance:
   - discipline、rivalry、precision、training、event-duelを抽象scenario patternにする。
@@ -391,9 +391,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-012 Social-Tech Mirror Lab
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: assessment scenario work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: social-risk review
 - Acceptance:
   - technologyがhuman behavior、identity、trustを歪めるshort scenarioを定義する。
@@ -401,9 +401,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-013 Judgment Game Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: adversarial reasoning work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: safety review
 - Acceptance:
   - judgment、surveillance、inference、counter-inferenceを抽象化する。
@@ -411,9 +411,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-014 Ecological Mediation Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: ecology scenario work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: world packet review
 - Acceptance:
   - environmental negotiation、swarm intelligence、non-human agencyを扱う。
@@ -421,9 +421,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-015 Pilot Sync Arc
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: sync-threshold design work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
 - Acceptance:
   - synchronization thresholdとbio-machine pressureを抽象mechanicsにする。
@@ -463,9 +463,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-019 Next Motif Expansion Slot
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `project-hypothesis`
-- Next artifact: intake policy work order
+- Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: human review
 - Acceptance:
   - new motifがarchetype guaranteeとworld guaranteeを満たす。
