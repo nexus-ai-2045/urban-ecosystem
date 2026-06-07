@@ -4,6 +4,9 @@
 - Owner: `manager`
 - Updated: `2026-06-08`
 - 詳細表示: [cross-world-operator-roadmap.html](cross-world-operator-roadmap.html)
+- 未実装TODO: [cross-world-operator-todo.md](cross-world-operator-todo.md)
+- TODO HTML: [cross-world-operator-todo.html](cross-world-operator-todo.html)
+- Linear起票案: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - Work order: [wo-urban-018-cross-world-operator-roadmap.yaml](subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml)
 
 ## 目的
@@ -74,9 +77,9 @@ agent を一時的に観測・操作・案内するための構想です。
 人物名ではなく、代償、評議会、暴走、境界、訓練、社会技術、監視、環境交渉、同期などの
 world / behavior pattern として扱います。
 
-### Phase 3: Evaluation / World Layers
+### Phase 3: Assessment / World Layers
 
-- `Human/AI Evaluation Lab`
+- `Human/AI Assessment Lab`
 - `Three-world Layer`
 - `Event + Music Layer`
 - `Next Motif Expansion Slot`
@@ -103,7 +106,7 @@ benchmark を扱います。
 - `Cloud Capacity Envelope`
 - `Worldbuilding Extraction Pipeline`
 
-過去対話・Obsidian由来の候補を public-safe benchmark に変換し、
+過去対話・private note由来の候補を public-safe benchmark に変換し、
 3 AI branches + meta-user oversight layer の fractal decision を FDE で扱います。
 
 ## 拡張保証
@@ -111,7 +114,7 @@ benchmark を扱います。
 新しい motif を roadmap に採用するには、必ず次の2つを満たします。
 
 - **Archetype guarantee**:
-  agent selection、operator guidance、conflict、evaluation、replay explanation のいずれかに
+  agent selection、operator guidance、conflict、assessment、replay explanation のいずれかに
   登場できる actor / role archetype がある。
 - **World guarantee**:
   world rule、pressure、layer、institution、ecology、machine system、boundary condition の
@@ -168,7 +171,7 @@ Discord chat から GitHub docs / issue / PR へ auto-write しません。
 
 - fictional characters の再現
 - protected lines / catchphrases の public code hard-code
-- private Obsidian path / voice-chat transcript / private chat phrase の公開
+- private note path / voice-chat transcript / private chat phrase の公開
 - current labs / models の ranking
 - dangerous-capability live test
 - P2P network implementation
@@ -244,7 +247,7 @@ GitHub docs / issues / PRs が public source of truth です。
 - `UE-XWORLD-012 Judgment Game arc`
 - `UE-XWORLD-013 Ecological Mediation arc`
 - `UE-XWORLD-014 Pilot Sync arc`
-- `UE-XWORLD-015 Human/AI evaluation lab`
+- `UE-XWORLD-015 Human/AI assessment lab`
 - `UE-XWORLD-016 Three-world and 8bit event layer`
 - `UE-XWORLD-017 Next motif expansion slot`
 - `UE-XWORLD-018 Local dialogue candidate benchmarks`

@@ -1,0 +1,88 @@
+id: wo-urban-019-cross-world-operator-todo
+title: "Cross-world Operator Mode TODO and context coverage"
+status: draft
+owner_role: manager
+support_roles:
+  - scenario-designer
+  - quality-gate
+
+goal: >
+  Cross-world Operator Mode roadmap の未実装分を、公開安全な TODO 正本と HTML preview に整理し、
+  context idea coverage guarantee を追加する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/type1-public-pr-gate.md
+  references:
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-roadmap.html
+    - docs/subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml
+
+scope:
+  allowed_write_paths:
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-todo.html
+    - docs/subagents/work-orders/wo-urban-019-cross-world-operator-todo.yaml
+  read_only_paths:
+    - app/
+    - tools/
+    - tests/
+    - docs/subagents/contracts/
+  out_of_scope:
+    - "実装コード、data contract、generated docs、テストコードはこの work order では変更しない。"
+    - "GitHub issue、Linear issue、Discord投稿、public branch push、PR作成は人間レビュー前に行わない。"
+    - "外部作品名・キャラクター名を public implementation ID として使わない。"
+    - "private path、private note path、voice-chat transcript、外部post本文を public docs に出さない。"
+    - "cloud command、external API、secret、credential、billing、quota変更は行わない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-018-cross-world-operator-roadmap
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python tools/docs_sync_check.py --check"
+    - "python -m pytest tests/ -q -p no:cacheprovider"
+  optional: []
+
+acceptance:
+  - "`docs/cross-world-operator-todo.md` が追加され、未実装TODOを phase 別に列挙している。"
+  - "`docs/cross-world-operator-todo.html` が追加され、TODOとcoverage listを standalone HTML として読める。"
+  - "`docs/cross-world-operator-roadmap.md` から TODO MD / HTML へリンクしている。"
+  - "Context Idea Coverage Guarantee を明記し、accepted / parking-lot / watch / rejected-out-of-scope の分類ルールを説明している。"
+  - "accepted idea は TODO ID を持ち、parking-lot / watch / rejected-out-of-scope には理由または再確認条件がある。"
+  - "public docs に private path、外部post本文、作品名・キャラクター名を実装IDとして出していない。"
+  - "GitHub issue、Linear issue、Discord投稿、cloud/API実行は行っていない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この work order は TODO 正本化専用。実装着手は別 work order で扱う。"
