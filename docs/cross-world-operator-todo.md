@@ -36,9 +36,26 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 - `accepted` ideaは必ずTODO IDを持つ。
 - `parking-lot` / `watch` は理由と再確認条件を持つ。
 - `rejected/out-of-scope` は公開安全・実装範囲・法務/権利・外部アクション境界の理由を持つ。
+- docs、PR本文、Linear draft、review handoffは日本語を基本にする。
 - public docsには私的path、外部投稿本文、作品名・キャラクター名を実装IDとして出さない。
 - source categoryが未設定のTODOは不可。
 - `Minimum World Packet` を満たさない実装TODOは、`parking-lot` または `watch` に置く。
+
+## 日本語優先保証
+
+このroadmap系docsでは、日本語を正本言語にします。
+
+英語を使ってよい範囲:
+
+- 既存ID、ファイル名、コマンド、コード識別子。
+- public-safe nameとして定義済みの抽象名。
+- `Status` / `Gate` / `Acceptance` などの短い運用label。
+
+日本語で書く範囲:
+
+- PR本文、Linear起票案、handoff、レビュー説明。
+- goal、acceptance、gate、not doing、next conditionの説明。
+- contextで出た論点の扱いと保留理由。
 
 ## Coverage一覧
 
