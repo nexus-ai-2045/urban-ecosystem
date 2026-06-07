@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.1.3`
+- Version: `0.1.4`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -306,9 +306,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-004 Guide / Partner
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: archetype design work order
+- Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: public-safe naming review
 - Acceptance:
   - operator向け案内roleが定義されている。
@@ -317,9 +317,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-005 Agent Roster
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: roster expansion work order
+- Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: public-safe naming review
 - Acceptance:
   - monitoring / pursuit / intervention archetypeが抽象名で定義されている。
@@ -328,9 +328,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-006 Cyber-ops Milestones
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: milestone split proposal
+- Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: scope review
 - Acceptance:
   - cross-world operation、field support、supervisor roleを分けて説明できる。
