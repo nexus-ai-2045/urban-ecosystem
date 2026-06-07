@@ -1,0 +1,111 @@
+id: wo-urban-018-cross-world-operator-roadmap
+title: "Cross-world Operator Mode roadmap"
+status: draft
+owner_role: manager
+support_roles:
+  - scenario-designer
+  - quality-gate
+
+goal: >
+  Cross-world Operator Mode を、公開可能な抽象 archetype と milestone に分解し、
+  最初の PR では docs-only のロードマップとして固定する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/type1-public-pr-gate.md
+  references:
+    - docs/cross-world-operator-roadmap.md
+    - docs/ai-ecosystem-tool-spec.md
+    - docs/public-collaboration-status.md
+
+scope:
+  allowed_write_paths:
+    - docs/cross-world-operator-roadmap.md
+    - docs/subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml
+  read_only_paths:
+    - docs/subagents/contracts/
+    - app/
+    - environments/
+    - tools/
+    - tests/
+  out_of_scope:
+    - "実装コード、data contract、generated docs、テストコードはこの work order では変更しない。"
+    - "公開 docs で作品名・キャラクター名を実装 ID として使わない。"
+    - "内部の発想メモを public docs / issue / PR 本文へそのまま貼らない。"
+    - "Discord chat から GitHub docs / issue / PR へ自動で書き込まない。追加リクエストは人間レビュー済み draft として扱う。"
+    - "すべての提案モチーフを実装タスク化すること、孤児ゼロを保証すること、stale 判定を自動で公開反映することはしない。"
+    - "シンギュラリティ後の現実を予測・断定する simulation として扱わない。扱う場合は仮説 world-rule test に限定する。"
+    - "AI トップ層 benchmark を現行 lab / model のランキング、非公開能力の推定、危険能力の live test、悪用手順の公開として扱わない。"
+    - "Obsidian や過去対話由来の内部発想メモを、private path、voice-chat transcript、未レビュー引用、個人情報つきで public docs に出さない。"
+    - "第4の権力/外部監視としてのユーザーを、内部 agent の一種として扱わない。ユーザーは公開判断と異議申し立ての最終監視者として分離する。"
+    - "三権分立・合議制・repo-as-skill mesh・recursive skill call・P2P 分散は、この docs-only PR では実装しない。設計 spike / benchmark として扱う。"
+    - "P2P は identity、trust、sync、conflict resolution、moderation、abuse resistance が定義されるまでネットワーク実装に入らない。"
+    - "Google Cloud / gcloud は将来の capacity envelope として記述できるが、この work order ではコマンド実行、resource 作成、secret 使用、billing / quota 変更をしない。"
+    - "GitHub issue / PR / comment 作成、public branch push、Linear 実起票は人間レビュー前に行わない。"
+    - "外部 API、Google Cloud、Vertex AI、Google Maps、Google Places、Discord、Webhook、Secret は実行しない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-017-social-simulation-evaluation
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python tools/docs_sync_check.py --check"
+    - "python -m pytest tests/ -q -p no:cacheprovider"
+  optional: []
+
+acceptance:
+  - "`docs/cross-world-operator-roadmap.md` が追加され、Cross-world Operator Mode の目的、公開命名境界、ロードマップ、Linear issue draft、初回 PR scope を説明している。"
+  - "`docs/subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml` が allowed write paths、human gates、acceptance、out_of_scope を明記している。"
+  - "公開 docs では作品名・キャラクター名を実装 ID として使わず、抽象 archetype / milestone に変換している。"
+  - "次のモチーフを採用するための拡張枠を残し、今後の追加は archetype guarantee と world guarantee の両方を満たす。"
+  - "GitHub または Discord の「追加して」相当のリクエストを、公開安全な抽象名・archetype guarantee・world guarantee・人間レビューつきで GitHub roadmap に載せる intake ルールを明記している。"
+  - "人物だけの追加を避けるため、place/environment、rules、social fabric、resources/power、history/memory、daily life signal、change pressure を含む minimum world packet を保証している。"
+  - "やらないこと、孤児 idea の許容しきい値、stale の自己申告制、heartbeat の read-only / draft-only 境界を明記している。"
+  - "先行分が external-practice / public-policy / project-hypothesis / creative-hypothesis のどれかをレビューできるよう、根拠区分とレビュー観点を明記している。"
+  - "シンギュラリティ後 simulation は予測ではなく、前提・不確実性・失敗条件を明示した bounded scenario family として扱う境界を明記している。"
+  - "three-body dynamics を公開安全な chaotic world benchmark として扱い、長期予測ではなく初期条件感度・安定窓・局所政策評価のベンチマークとして明記している。"
+  - "Frontier AI Capability Layer Benchmark を追加し、長期自律性、tool use、cyber/CBRN-adjacent risk、manipulation、loss of control、self-improvement、governance gate を公開安全な評価軸として明記している。"
+  - "Obsidian / 過去対話由来の採用候補を、Future-Known frame、Human Time-Sense Boundary、Numeric Operating Protocol、FDE Packet Router、Agent Harness Layer などの公開安全な benchmark に変換している。"
+  - "ユーザーを第4の権力/外部監視として規定し、proposal / review / execution / user oversight の分離を明記している。"
+  - "フラクタル意思決定の基本形を 3 AI branches + meta-user oversight layer として明記し、FDE を entry / packet / evidence / decision / closure の採用プロトコルとして扱う。"
+  - "repo-as-skill mesh と recursive skill call は将来候補として、entrypoint、input/output、dependency、caller、evidence、closure、loop guard、max traversal depth をレビュー観点にする。"
+  - "P2P 分散は identity、trust、sync、conflict resolution、offline behavior、moderation、abuse resistance の設計 spike を先行させる。"
+  - "cloud / gcloud は将来の capacity envelope として、target service、account/project、external data、cost/quota、credentials、rollback plan を人間ゲート前提で扱う。"
+  - "台詞や起動フレーズは public code にハードコードせず、必要な場合は抽象 trigger class と人間レビュー済みの外部設定で扱う。"
+  - "Linear は Nexus 内部管理、GitHub docs / issues / PRs は公開正本として分離している。"
+  - "既存の Urban Ecosystem data contract、アプリ実装、生成 docs、テストは変更しない。"
+  - "TYPE1 public PR gate に従い、人間レビュー前に public PR 作成、public branch push、GitHub 書き込み、Linear 実起票を行わない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この work order はロードマップ PR 専用。Sentinel MVP 以降の実装は別 work order で扱う。"
+  - "内部発想元の固有名詞は公開識別子にしない。必要な場合は人間レビュー済みの内部メモで管理する。"
