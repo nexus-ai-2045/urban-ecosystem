@@ -1,6 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
+- Version: `0.1.1`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -271,9 +272,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-001 Cross-world Operator Mode
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: implementation work order
+- Next artifact: [MVP-001 Sentinel Operator Entry 実装前仕様](cross-world-operator-mvp-001-sentinel-entry.md)
 - Gate: human review before implementation
 - Acceptance:
   - operatorがtoy/public-safe scenarioでagentを選択できる。
@@ -283,9 +284,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-002 Sentinel MVP
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `creative-hypothesis`
-- Next artifact: implementation work order
+- Next artifact: [MVP-001 Sentinel Operator Entry 実装前仕様](cross-world-operator-mvp-001-sentinel-entry.md)
 - Gate: human review before implementation
 - Acceptance:
   - 最小operator modeの範囲が決まっている。
@@ -664,9 +665,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-039 Operator-entry Trigger Boundary
 
-- Status: `not_started`
+- Status: `drafted`
 - Source category: `public-policy`
-- Next artifact: trigger policy work order
+- Next artifact: [MVP-001 Sentinel Operator Entry 実装前仕様](cross-world-operator-mvp-001-sentinel-entry.md)
 - Gate: public-safety review
 - Acceptance:
   - public codeにprotected phraseをhard-codeしない。

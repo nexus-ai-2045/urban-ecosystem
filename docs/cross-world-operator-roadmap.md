@@ -1,6 +1,7 @@
 # Cross-world Operator Mode ロードマップ
 
 - Status: `draft`
+- Version: `0.1.1`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - 詳細表示: [cross-world-operator-roadmap.html](cross-world-operator-roadmap.html)
@@ -24,6 +25,16 @@ agent を一時的に観測・操作・案内するための構想です。
 - tests
 - cloud resources
 - Discord / Linear / GitHub issue などの外部 write action
+
+## Versioning
+
+Cross-world Operator Mode のdocs package versionは、意味単位で自動更新します。
+
+- `MAJOR`: public data contract、主要API、operator state modelに破壊的変更がある時。
+- `MINOR`: 新しいMVP、world layer、archetype set、governance modelを追加する時。
+- `PATCH`: docs正本、work order、MVP実装前仕様、review handoffを追加・整理する時。
+
+現在の `0.1.1` は、MVP-001 Sentinel Operator Entry の実装前仕様を追加したPATCH更新です。Urban Ecosystem data contract はこのPRでは変更しません。
 
 ## 公開命名方針
 
