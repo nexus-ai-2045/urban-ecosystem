@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -46,6 +46,18 @@ from .data_loader import (
     load_agent_profiles,
 )
 from .models import Activity, ActivityPlan, POI, AgentProfile
+from .models import (
+    MATRIX_EVIDENCE_TYPE_VALUES,
+    MATRIX_EXIT_REASON_VALUES,
+    MATRIX_HUMAN_GATE_ACTION_VALUES,
+    MATRIX_HUMAN_GATE_STATUS_VALUES,
+    MATRIX_ROLE_VALUES,
+    MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
+    MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
+    MATRIX_SWARM_STATUS_VALUES,
+    WORLD_LAYER_MODEL,
+    WORLD_LAYER_VALUES,
+)
 from .road_graph import RoadGraph
 
 if TYPE_CHECKING:
@@ -137,6 +149,27 @@ class Simulation:
         activity_plans: Optional[list[ActivityPlan]] = None,
         llm_provider: Optional[Any] = None,
         enable_summaries: bool = True,
+        matrix_mode: bool = False,
+        matrix_role: str = "sentinel_mvp",
+        matrix_agent_id: Optional[int] = None,
+        matrix_ttl_ticks: int = 1,
+        matrix_trigger_id: str = "assume_sentinel",
+        matrix_transition_tick: Optional[int] = None,
+        matrix_source_layer: str = "real",
+        matrix_target_layer: str = "virtual",
+        matrix_evidence_type: str = "matrix_event",
+        matrix_evidence_ref: str = "matrix_events.jsonl",
+        matrix_guide_tick: Optional[int] = None,
+        matrix_guide_layer: str = "real",
+        matrix_human_gate_tick: Optional[int] = None,
+        matrix_gate_action: str = "public_pr",
+        matrix_gate_status: str = "requires_human",
+        matrix_gate_reason: str = "operator_agent_human_gate",
+        matrix_swarm_heartbeat_tick: Optional[int] = None,
+        matrix_swarm_stale_tick: Optional[int] = None,
+        matrix_swarm_stale_after_ticks: int = MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
+        matrix_swarm_orphan_tolerance: int = MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
+        matrix_swarm_heartbeat_interval_ticks: int = 1,
     ) -> None:
         """シミュレーション初期化。
 
@@ -158,6 +191,28 @@ class Simulation:
                 RuleBasedProvider 経路では決定論が保たれる (byte 一致 §13.3.2)。
             enable_summaries: True (既定) で interaction summary を生成する。
                 False にすると summary は空文字になり、LLM 呼び出しをスキップする。
+            matrix_mode: True の場合だけ MATRIX Mode Event JSONL を生成する。
+                既定 False では `matrix_events.jsonl` を出力しない。
+            matrix_role: 公開 alias。保護されたキャラクター名は使わない。
+            matrix_agent_id: takeover 対象の既存 agent id。None の場合は最小 id。
+            matrix_ttl_ticks: takeover の TTL tick 数。1 以上。
+            matrix_trigger_id: 起動 trigger id。公開 UI コピーではなく内部識別子。
+            matrix_transition_tick: 指定時だけ `world_transition` を追加する。
+            matrix_source_layer: transition 元 layer。
+            matrix_target_layer: transition 先 layer。
+            matrix_evidence_type: transition の根拠種別。
+            matrix_evidence_ref: transition 根拠への短い参照。
+            matrix_guide_tick: 指定時だけ `guide_agent` heartbeat を追加する。
+            matrix_guide_layer: guide が説明する現在 layer。
+            matrix_human_gate_tick: 指定時だけ `operator_agent` human_gate を追加する。
+            matrix_gate_action: gate 対象の高リスク action。
+            matrix_gate_status: gate 状態。MVP 既定は requires_human。
+            matrix_gate_reason: gate 理由。
+            matrix_swarm_heartbeat_tick: 指定時だけ `sentinel_swarm` heartbeat を追加する。
+            matrix_swarm_stale_tick: 指定時だけ `sentinel_swarm` stale_report を追加する。
+            matrix_swarm_stale_after_ticks: stale 判定までの heartbeat 欠落 tick 数。
+            matrix_swarm_orphan_tolerance: orphan sentinel の許容数。MVP 既定は 0。
+            matrix_swarm_heartbeat_interval_ticks: heartbeat 期待間隔。
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
@@ -191,6 +246,29 @@ class Simulation:
         self._poi_by_id: dict[str, POI] = {p.id: p for p in pois}
         self._profile_ids = frozenset(p.id for p in profiles)
         self.rng = random.Random(seed)
+        self.matrix_mode = matrix_mode
+        self.matrix_role = matrix_role
+        self.matrix_agent_id = matrix_agent_id
+        self.matrix_ttl_ticks = matrix_ttl_ticks
+        self.matrix_trigger_id = matrix_trigger_id
+        self.matrix_transition_tick = matrix_transition_tick
+        self.matrix_source_layer = matrix_source_layer
+        self.matrix_target_layer = matrix_target_layer
+        self.matrix_evidence_type = matrix_evidence_type
+        self.matrix_evidence_ref = matrix_evidence_ref
+        self.matrix_guide_tick = matrix_guide_tick
+        self.matrix_guide_layer = matrix_guide_layer
+        self.matrix_human_gate_tick = matrix_human_gate_tick
+        self.matrix_gate_action = matrix_gate_action
+        self.matrix_gate_status = matrix_gate_status
+        self.matrix_gate_reason = matrix_gate_reason
+        self.matrix_swarm_heartbeat_tick = matrix_swarm_heartbeat_tick
+        self.matrix_swarm_stale_tick = matrix_swarm_stale_tick
+        self.matrix_swarm_stale_after_ticks = matrix_swarm_stale_after_ticks
+        self.matrix_swarm_orphan_tolerance = matrix_swarm_orphan_tolerance
+        self.matrix_swarm_heartbeat_interval_ticks = matrix_swarm_heartbeat_interval_ticks
+        if self.matrix_mode:
+            self._validate_matrix_config()
 
         # エージェント id → 表示名 の lookup (#2 苗字)
         # AgentProfile.name (例: "清水優斗") に "さん" を付けて使う。
@@ -212,6 +290,7 @@ class Simulation:
         self.agent_states: list[dict[str, Any]] = []
         self.visit_records: list[dict[str, Any]] = []
         self.interaction_events: list[dict[str, Any]] = []
+        self.matrix_events: list[dict[str, Any]] = []
 
         # bbox (§13.3.3 invariant 用 / 出力には使わない)
         self.bbox = self._compute_bbox(pois, profiles)
@@ -224,6 +303,70 @@ class Simulation:
             from app.llm_provider import RuleBasedProvider
             self._llm_provider = RuleBasedProvider()
         return self._llm_provider
+
+    def _validate_matrix_config(self) -> None:
+        """MATRIXモード設定を public alias と既存 agent id に限定する。"""
+        if self.matrix_role not in MATRIX_ROLE_VALUES:
+            allowed = ", ".join(sorted(MATRIX_ROLE_VALUES))
+            raise ValueError(f"matrix_role は {allowed} のいずれかが必要")
+        if self.matrix_ttl_ticks < 1:
+            raise ValueError("matrix_ttl_ticks は 1 以上が必要")
+        if self.matrix_agent_id is not None and self.matrix_agent_id not in self._profile_ids:
+            raise ValueError(f"matrix_agent_id が profiles に存在しません: {self.matrix_agent_id}")
+        if self.matrix_transition_tick is not None:
+            if self.matrix_transition_tick < 0 or self.matrix_transition_tick >= self.ticks:
+                raise ValueError("matrix_transition_tick は 0 以上 ticks 未満が必要")
+            if self.matrix_source_layer not in WORLD_LAYER_VALUES:
+                raise ValueError(f"matrix_source_layer が不正です: {self.matrix_source_layer}")
+            if self.matrix_target_layer not in WORLD_LAYER_VALUES:
+                raise ValueError(f"matrix_target_layer が不正です: {self.matrix_target_layer}")
+            if self.matrix_source_layer == self.matrix_target_layer:
+                raise ValueError("matrix_source_layer と matrix_target_layer は異なる必要があります")
+            source_model = WORLD_LAYER_MODEL[self.matrix_source_layer]
+            if self.matrix_target_layer not in source_model["exit_layers"]:
+                raise ValueError(
+                    f"matrix_target_layer は {self.matrix_source_layer} から遷移できません: "
+                    f"{self.matrix_target_layer}"
+                )
+            target_model = WORLD_LAYER_MODEL[self.matrix_target_layer]
+            if self.matrix_evidence_type not in MATRIX_EVIDENCE_TYPE_VALUES:
+                raise ValueError(f"matrix_evidence_type が不正です: {self.matrix_evidence_type}")
+            if self.matrix_evidence_type not in target_model["evidence_types"]:
+                raise ValueError(
+                    f"matrix_evidence_type は {self.matrix_target_layer} の evidence ではありません: "
+                    f"{self.matrix_evidence_type}"
+                )
+        if self.matrix_guide_tick is not None:
+            if self.matrix_guide_tick < 0 or self.matrix_guide_tick >= self.ticks:
+                raise ValueError("matrix_guide_tick は 0 以上 ticks 未満が必要")
+            if self.matrix_guide_layer not in WORLD_LAYER_VALUES:
+                raise ValueError(f"matrix_guide_layer が不正です: {self.matrix_guide_layer}")
+        if self.matrix_human_gate_tick is not None:
+            if self.matrix_human_gate_tick < 0 or self.matrix_human_gate_tick >= self.ticks:
+                raise ValueError("matrix_human_gate_tick は 0 以上 ticks 未満が必要")
+            if self.matrix_gate_action not in MATRIX_HUMAN_GATE_ACTION_VALUES:
+                raise ValueError(f"matrix_gate_action が不正です: {self.matrix_gate_action}")
+            if self.matrix_gate_status not in MATRIX_HUMAN_GATE_STATUS_VALUES:
+                raise ValueError(f"matrix_gate_status が不正です: {self.matrix_gate_status}")
+        if self.matrix_swarm_stale_after_ticks < 1:
+            raise ValueError("matrix_swarm_stale_after_ticks は 1 以上が必要")
+        if self.matrix_swarm_orphan_tolerance < 0:
+            raise ValueError("matrix_swarm_orphan_tolerance は 0 以上が必要")
+        if self.matrix_swarm_heartbeat_interval_ticks < 1:
+            raise ValueError("matrix_swarm_heartbeat_interval_ticks は 1 以上が必要")
+        if self.matrix_swarm_heartbeat_tick is not None:
+            if self.matrix_swarm_heartbeat_tick < 0 or self.matrix_swarm_heartbeat_tick >= self.ticks:
+                raise ValueError("matrix_swarm_heartbeat_tick は 0 以上 ticks 未満が必要")
+        if self.matrix_swarm_stale_tick is not None:
+            if self.matrix_swarm_stale_tick < 0 or self.matrix_swarm_stale_tick >= self.ticks:
+                raise ValueError("matrix_swarm_stale_tick は 0 以上 ticks 未満が必要")
+            last_heartbeat_tick = self._matrix_swarm_last_heartbeat_tick()
+            stale_ready_tick = last_heartbeat_tick + self.matrix_swarm_stale_after_ticks
+            if self.matrix_swarm_stale_tick < stale_ready_tick:
+                raise ValueError(
+                    "matrix_swarm_stale_tick は last heartbeat から "
+                    "matrix_swarm_stale_after_ticks 以上後が必要"
+                )
 
     # ── 初期化補助 ──────────────────────────────────────────────────────────
 
@@ -1119,6 +1262,7 @@ class Simulation:
             )
 
         for tick in range(self.ticks):
+            self._append_matrix_events_for_tick(tick)
             # §9.10: tick 冒頭で POI presence 逆引き index を作る
             poi_presence = self._build_poi_presence(runtimes)
             # agent_id 昇順で 1 体ずつ処理 (rng 消費順固定)
@@ -1138,6 +1282,168 @@ class Simulation:
             self.interaction_events.extend(events)
 
         return self._build_summary()
+
+    def _append_matrix_events_for_tick(self, tick: int) -> None:
+        """MATRIXモード有効時だけ takeover lifecycle event を追加する。"""
+        if not self.matrix_mode:
+            return
+
+        agent_id = (
+            self.matrix_agent_id
+            if self.matrix_agent_id is not None
+            else self.profiles[0].id
+        )
+        day, time_str = tick_to_day_time(tick)
+        end_tick = min(self.ticks - 1, self.matrix_ttl_ticks - 1)
+
+        if tick == 0:
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "takeover_start",
+                "agent_id": agent_id,
+                "matrix_role": self.matrix_role,
+                "ttl_ticks": self.matrix_ttl_ticks,
+                "trigger_id": self.matrix_trigger_id,
+                "source_layer": "real",
+                "target_layer": "virtual",
+                "world_layer": "virtual",
+                "reason": "sentinel_mvp_attach",
+            })
+        if tick == end_tick:
+            exit_reason = "ttl_expired"
+            if exit_reason not in MATRIX_EXIT_REASON_VALUES:
+                raise ValueError(f"unsupported matrix exit_reason: {exit_reason}")
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "takeover_end",
+                "agent_id": agent_id,
+                "matrix_role": self.matrix_role,
+                "exit_reason": exit_reason,
+                "trigger_id": self.matrix_trigger_id,
+                "source_layer": "virtual",
+                "target_layer": "real",
+                "world_layer": "real",
+                "reason": "sentinel_mvp_release",
+            })
+        if tick == self.matrix_transition_tick:
+            transition_cost = WORLD_LAYER_MODEL[
+                self.matrix_source_layer
+            ]["transition_cost"][self.matrix_target_layer]
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "world_transition",
+                "agent_id": agent_id,
+                "matrix_role": "bridge_agent",
+                "trigger_id": self.matrix_trigger_id,
+                "source_layer": self.matrix_source_layer,
+                "target_layer": self.matrix_target_layer,
+                "world_layer": self.matrix_target_layer,
+                "transition_cost": transition_cost,
+                "evidence_type": self.matrix_evidence_type,
+                "evidence_ref": self.matrix_evidence_ref,
+                "reason": "bridge_agent_transition",
+            })
+        if tick == self.matrix_guide_tick:
+            candidates = self._matrix_candidate_transitions(self.matrix_guide_layer)
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "heartbeat",
+                "agent_id": agent_id,
+                "matrix_role": "guide_agent",
+                "trigger_id": self.matrix_trigger_id,
+                "world_layer": self.matrix_guide_layer,
+                "guide_summary": (
+                    f"{self.matrix_guide_layer} から選べる transition は "
+                    f"{len(candidates)} 件です。"
+                ),
+                "candidate_transitions": candidates,
+                "reason": "guide_agent_options",
+            })
+        if tick == self.matrix_human_gate_tick:
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "human_gate",
+                "agent_id": agent_id,
+                "matrix_role": "operator_agent",
+                "trigger_id": self.matrix_trigger_id,
+                "world_layer": "liminal",
+                "gate_action": self.matrix_gate_action,
+                "gate_status": self.matrix_gate_status,
+                "gate_reason": self.matrix_gate_reason,
+                "evidence_type": "human_gate",
+                "evidence_ref": "human_gate",
+                "reason": "operator_agent_requires_human",
+            })
+        if tick == self.matrix_swarm_heartbeat_tick:
+            status = "alive"
+            if status not in MATRIX_SWARM_STATUS_VALUES:
+                raise ValueError(f"unsupported matrix swarm_status: {status}")
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "heartbeat",
+                "agent_id": agent_id,
+                "matrix_role": "sentinel_swarm",
+                "trigger_id": self.matrix_trigger_id,
+                "world_layer": "virtual",
+                "swarm_status": status,
+                "heartbeat_interval_ticks": self.matrix_swarm_heartbeat_interval_ticks,
+                "stale_after_ticks": self.matrix_swarm_stale_after_ticks,
+                "orphan_tolerance": self.matrix_swarm_orphan_tolerance,
+                "reason": "sentinel_swarm_heartbeat",
+            })
+        if tick == self.matrix_swarm_stale_tick:
+            status = "stale"
+            if status not in MATRIX_SWARM_STATUS_VALUES:
+                raise ValueError(f"unsupported matrix swarm_status: {status}")
+            last_heartbeat_tick = self._matrix_swarm_last_heartbeat_tick()
+            self.matrix_events.append({
+                "tick": tick,
+                "day": day,
+                "time": time_str,
+                "type": "stale_report",
+                "agent_id": agent_id,
+                "matrix_role": "sentinel_swarm",
+                "trigger_id": self.matrix_trigger_id,
+                "world_layer": "virtual",
+                "swarm_status": status,
+                "stale_after_ticks": self.matrix_swarm_stale_after_ticks,
+                "orphan_tolerance": self.matrix_swarm_orphan_tolerance,
+                "last_heartbeat_tick": last_heartbeat_tick,
+                "missed_heartbeats": tick - last_heartbeat_tick,
+                "reason": "sentinel_swarm_stale",
+            })
+
+    def _matrix_candidate_transitions(self, source_layer: str) -> list[dict[str, Any]]:
+        """guide_agent 用の rule-based transition 候補を返す。"""
+        model = WORLD_LAYER_MODEL[source_layer]
+        candidates: list[dict[str, Any]] = []
+        for target_layer in model["exit_layers"]:
+            target_model = WORLD_LAYER_MODEL[target_layer]
+            candidates.append({
+                "source_layer": source_layer,
+                "target_layer": target_layer,
+                "transition_cost": model["transition_cost"][target_layer],
+                "evidence_types": list(target_model["evidence_types"]),
+            })
+        return candidates
+
+    def _matrix_swarm_last_heartbeat_tick(self) -> int:
+        """sentinel_swarm stale 判定用の最終 heartbeat tick を返す。"""
+        if self.matrix_swarm_heartbeat_tick is None:
+            return 0
+        return self.matrix_swarm_heartbeat_tick
 
     def _build_summary(self) -> dict[str, Any]:
         """summary.json dict を作る (data-contract §Summary JSON)。"""
@@ -1274,6 +1580,8 @@ class Simulation:
         _write_jsonl(out / "agent_states.jsonl", self.agent_states)
         _write_jsonl(out / "poi_visit_records.jsonl", self.visit_records)
         _write_jsonl(out / "interaction_events.jsonl", self.interaction_events)
+        if self.matrix_mode:
+            _write_jsonl(out / "matrix_events.jsonl", self.matrix_events)
         _write_json(out / "summary.json", summary)
         _write_json(out / "metrics.json", metrics)
         return summary

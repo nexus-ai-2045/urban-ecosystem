@@ -1626,9 +1626,9 @@ class TestViewerHTML:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestAllowedFiles:
-    def test_allowed_files_count_is_11(self):
-        """許可ファイルは contract §21.3.1 の 11 件であること。"""
-        assert len(ALLOWED_FILES) == 11
+    def test_allowed_files_count_is_12(self):
+        """許可ファイルは data-contract §File Names の 12 件であること。"""
+        assert len(ALLOWED_FILES) == 12
 
     @pytest.mark.parametrize("filename", [
         "pois.geojson",
@@ -1640,11 +1640,12 @@ class TestAllowedFiles:
         "poi_visit_records.jsonl",
         "interaction_events.jsonl",
         "relationships.jsonl",
+        "matrix_events.jsonl",
         "summary.json",
         "metrics.json",
     ])
     def test_expected_files_in_allowlist(self, filename):
-        """contract で定義された 11 ファイルがすべて許可リストにある。"""
+        """contract で定義された 12 ファイルがすべて許可リストにある。"""
         assert filename in ALLOWED_FILES, f"{filename!r} が許可リストにない"
 
     @pytest.mark.parametrize("filename", [
@@ -2038,6 +2039,17 @@ class TestLoadStatusDomElement:
             "index.html に id='load-status' 要素が存在しない (gap §5.2: ロード結果表示)"
         )
 
+    def test_html_has_matrix_panel_element(self, client_no_key):
+        """HTML レスポンスに MATRIX 状態表示パネルが含まれる。"""
+        res = client_no_key.get("/")
+        assert res.status_code == 200
+        assert 'id="matrix-panel"' in res.text
+        assert "この run には MATRIX イベントがありません" in res.text
+        assert "現在のworld layer" in res.text
+        assert "matrix-world-chip" in res.text
+        assert 'id="btn-audio-cue"' in res.text
+        assert "8-bit cue off" in res.text
+
 
 class TestInterpolationLogic:
     """§5.1.4 線形補間: 隣接 tick 間 lat/lon 補間のロジック検証 (Python 等価実装)。
@@ -2352,3 +2364,27 @@ class TestViewerAppRobustLoad:
     def test_slider_index_is_clamped(self, app_js):
         assert "_clampTickIndex" in app_js
         assert "Math.max(0, Math.min(maxIndex, idx))" in app_js
+
+    def test_matrix_events_are_loaded_as_optional_viewer_input(self, app_js):
+        assert 'fetchRunFile(runId, "matrix_events.jsonl")' in app_js
+        assert "matrixEventsByTick" in app_js
+        assert "updateMatrixPanel" in app_js
+        assert "optional: true" in app_js
+
+    def test_matrix_snapshot_uses_takeover_ttl(self, app_js):
+        assert "function _getMatrixSnapshot(tick)" in app_js
+        assert 'ev.type !== "takeover_start"' in app_js
+        assert "ev.ttl_ticks" in app_js
+
+    def test_matrix_snapshot_resolves_current_world_layer(self, app_js):
+        assert "function _getCurrentWorldLayer(tick, events)" in app_js
+        assert "currentWorldLayer" in app_js
+        assert 'ev.world_layer || ev.target_layer' in app_js
+        assert 'layer: "real"' in app_js
+
+    def test_matrix_audio_cue_is_generated_and_opt_in(self, app_js):
+        assert "function toggleAudioCue()" in app_js
+        assert "function playGeneratedSquareCue(eventType)" in app_js
+        assert "window.AudioContext || window.webkitAudioContext" in app_js
+        assert 'osc.type = "square"' in app_js
+        assert "audioCueState.enabled" in app_js

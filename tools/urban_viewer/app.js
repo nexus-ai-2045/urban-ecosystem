@@ -20,6 +20,7 @@ import {
     updateAgentDetail,
     updateLoadStatus,
     updateLivePanel,
+    updateMatrixPanel,
     updateMapStatus,
     updateOperatorModePanel,
     updateWorldBridgePanel,
@@ -67,8 +68,8 @@ const RUN_CREATE_LIMITS = {
 
 /**
  * @typedef {Object} ViewerState
- * @property {{ pois:Object[], aois:Object[], roads:Object[], profiles:Object[], visitRecords:Object[] }} data
- * @property {{ ticks:number[], tickIndex:number, playing:boolean, speed:1|2|5, statesByTick:Map<number,Object[]> }} replay
+ * @property {{ pois:Object[], aois:Object[], roads:Object[], profiles:Object[], visitRecords:Object[], matrixEvents:Object[] }} data
+ * @property {{ ticks:number[], tickIndex:number, playing:boolean, speed:1|2|5, statesByTick:Map<number,Object[]>, matrixEventsByTick:Map<number,Object[]> }} replay
  * @property {{ agentId:number|null }} selection
  * @property {{ poi:boolean, aoi:boolean, road:boolean, agent:boolean }} layerVisible
  * @property {Map<number,Object>} profileMapCache - loadRun 時に 1 度だけ構築して再利用する profileMap (#5)
@@ -83,6 +84,8 @@ const state = {
         profiles:     [],
         /** poi_visit_records.jsonl のレコード一覧 (§5.2 / §5.5) */
         visitRecords: [],
+        /** matrix_events.jsonl のレコード一覧 (optional / MATRIXモード) */
+        matrixEvents: [],
     },
     replay: {
         ticks:       [],
@@ -90,6 +93,7 @@ const state = {
         playing:     false,
         speed:       1,
         statesByTick: new Map(),
+        matrixEventsByTick: new Map(),
     },
     runtime: {
         runId:      "",
@@ -207,6 +211,7 @@ const loadStatusEl  = document.getElementById("load-status");
 const timeEl        = document.getElementById("time-display");
 const playBtn       = document.getElementById("btn-play");
 const stepBtn       = document.getElementById("btn-step");
+const audioCueBtn   = document.getElementById("btn-audio-cue");
 const speedSel      = document.getElementById("speed-select");
 const sliderEl      = document.getElementById("time-slider");
 const runSel        = document.getElementById("run-select");
@@ -308,6 +313,13 @@ const liveEls = {
     movingCount:   document.getElementById("live-moving-count"),
     selectedAgent: document.getElementById("live-selected-agent"),
     activityList:  document.getElementById("live-activity-list"),
+};
+const matrixPanelEl = document.getElementById("matrix-panel");
+
+const audioCueState = {
+    enabled: false,
+    context: null,
+    lastKey: "",
 };
 
 const operatorEls = {
@@ -906,13 +918,14 @@ async function loadRun(runId) {
     let profilesFileFallbackUsed = false;
 
     // 並列ロード (poi_visit_records.jsonl は任意 / §5.2)
-    let [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw] = await Promise.all([
+    let [poisData, aoisData, roadsData, profilesData, statesRaw, visitRecordsRaw, matrixEventsRaw] = await Promise.all([
         fetchRunFile(runId, "pois.geojson"),
         fetchRunFile(runId, "aois.geojson"),
         fetchRunFile(runId, "roadnet.geojson"),
         fetchRunFile(runId, profilesFile),
         fetchRunFile(runId, "agent_states.jsonl"),
         fetchRunFile(runId, "poi_visit_records.jsonl"),
+        fetchRunFile(runId, "matrix_events.jsonl"),
     ]);
     if (!Array.isArray(profilesData) && profilesFile !== "agent_profiles_N100.json") {
         const fallbackProfilesData = await fetchRunFile(runId, "agent_profiles_N100.json");
@@ -934,6 +947,8 @@ async function loadRun(runId) {
     state.data.profiles     = Array.isArray(profilesData) ? profilesData : [];
     /** poi_visit_records.jsonl: 任意ファイル。null (ロード失敗) の場合は空配列にフォールバック */
     state.data.visitRecords = Array.isArray(visitRecordsRaw) ? visitRecordsRaw : [];
+    /** matrix_events.jsonl: 任意ファイル。null の場合は MATRIX off として扱う */
+    state.data.matrixEvents = Array.isArray(matrixEventsRaw) ? matrixEventsRaw : [];
 
     // profileMap を loadRun 時に 1 度だけ構築してキャッシュする (#5)
     // _renderInterpolated (RAF 60fps) と renderCurrentTick の両方がこれを参照する
@@ -945,9 +960,15 @@ async function loadRun(runId) {
         if (!statesByTick.has(s.tick)) statesByTick.set(s.tick, []);
         statesByTick.get(s.tick).push(s);
     }
+    const matrixEventsByTick = new Map();
+    for (const ev of state.data.matrixEvents) {
+        if (!matrixEventsByTick.has(ev.tick)) matrixEventsByTick.set(ev.tick, []);
+        matrixEventsByTick.get(ev.tick).push(ev);
+    }
     const ticks = [...statesByTick.keys()].sort((a, b) => a - b);
 
     state.replay.statesByTick = statesByTick;
+    state.replay.matrixEventsByTick = matrixEventsByTick;
     state.replay.ticks        = ticks;
     state.replay.tickIndex    = 0;
     state.replay.playing      = false;
@@ -989,6 +1010,13 @@ async function loadRun(runId) {
             // 任意ファイル: ロード失敗 (null) と 0 件を区別するため visitRecordsRaw で判定
             count:  visitRecordsRaw !== null ? state.data.visitRecords.length : null,
             errors: 0,
+            optional: true,
+        },
+        {
+            file:   "matrix_events.jsonl",
+            count:  matrixEventsRaw !== null ? state.data.matrixEvents.length : null,
+            errors: 0,
+            optional: true,
         },
         {
             file:   "agent_states.jsonl",
@@ -1767,6 +1795,125 @@ function updateLiveRuntimePanel(agentStates = null) {
         selectedAgentId: state.selection.agentId,
         recentVisits:    _getRecentVisits(representative?.day ?? 0, representative?.time || "08:00:00"),
     });
+    const matrixSnapshot = _getMatrixSnapshot(tick);
+    updateMatrixPanel(matrixPanelEl, matrixSnapshot);
+    playMatrixAudioCue(tick, matrixSnapshot);
+}
+
+function _getMatrixSnapshot(tick) {
+    const events = Array.isArray(state.data.matrixEvents) ? state.data.matrixEvents : [];
+    if (events.length === 0) {
+        return {
+            enabled: false,
+            activeTakeovers: [],
+            currentEvents: [],
+            currentWorldLayer: "real",
+            worldLayerReason: "matrix_off",
+        };
+    }
+
+    const currentEvents = state.replay.matrixEventsByTick.get(tick) || [];
+    const layerState = _getCurrentWorldLayer(tick, events);
+    const activeTakeovers = events.filter((ev) => {
+        if (ev.type !== "takeover_start") return false;
+        const ttl = Number.isInteger(ev.ttl_ticks) && ev.ttl_ticks > 0 ? ev.ttl_ticks : 1;
+        const startTick = ev.tick ?? 0;
+        const endTick = startTick + ttl - 1;
+        return tick >= startTick && tick <= endTick;
+    });
+    return {
+        enabled: true,
+        activeTakeovers,
+        currentEvents,
+        currentWorldLayer: layerState.layer,
+        worldLayerReason: layerState.reason,
+    };
+}
+
+function _getCurrentWorldLayer(tick, events) {
+    let latest = null;
+    for (const ev of events) {
+        if (!Number.isInteger(ev.tick) || ev.tick > tick) continue;
+        const layer = ev.world_layer || ev.target_layer;
+        if (!layer) continue;
+        if (latest === null || ev.tick >= latest.tick) {
+            latest = {
+                tick: ev.tick,
+                layer,
+                reason: ev.type || "matrix_event",
+            };
+        }
+    }
+    if (!latest) {
+        return { layer: "real", reason: "default_real" };
+    }
+    return {
+        layer: latest.layer,
+        reason: `${latest.reason}@${latest.tick}`,
+    };
+}
+
+function toggleAudioCue() {
+    audioCueState.enabled = !audioCueState.enabled;
+    updateAudioCueButton();
+    if (audioCueState.enabled) {
+        ensureAudioContext();
+    }
+}
+
+function updateAudioCueButton() {
+    if (!audioCueBtn) return;
+    audioCueBtn.textContent = audioCueState.enabled ? "音 on" : "音 off";
+    audioCueBtn.setAttribute("aria-label", audioCueState.enabled ? "8-bit cue on" : "8-bit cue off");
+    audioCueBtn.setAttribute("aria-pressed", String(audioCueState.enabled));
+    audioCueBtn.classList.toggle("audio-cue-btn--on", audioCueState.enabled);
+}
+
+function ensureAudioContext() {
+    if (audioCueState.context) return audioCueState.context;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    audioCueState.context = new AudioCtx();
+    return audioCueState.context;
+}
+
+function playMatrixAudioCue(tick, snapshot) {
+    if (!audioCueState.enabled || !snapshot.enabled) return;
+    const events = Array.isArray(snapshot.currentEvents) ? snapshot.currentEvents : [];
+    if (events.length === 0) return;
+    const key = `${tick}:${events.map(ev => ev.type || "event").join("|")}`;
+    if (audioCueState.lastKey === key) return;
+    audioCueState.lastKey = key;
+    const eventType = events.find(ev => ev.type !== "takeover_start")?.type || events[0]?.type || "event";
+    playGeneratedSquareCue(eventType);
+}
+
+function playGeneratedSquareCue(eventType) {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const baseFreq = {
+        takeover_start: 523.25,
+        takeover_end: 392.00,
+        world_transition: 659.25,
+        heartbeat: 587.33,
+        stale_report: 196.00,
+        human_gate: 329.63,
+    }[eventType] || 440.00;
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    gain.connect(ctx.destination);
+
+    for (const [idx, ratio] of [1, 1.5].entries()) {
+        const osc = ctx.createOscillator();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(baseFreq * ratio, now + idx * 0.055);
+        osc.connect(gain);
+        osc.start(now + idx * 0.055);
+        osc.stop(now + 0.16);
+    }
 }
 
 /**
@@ -1970,6 +2117,10 @@ function wireEvents() {
             stopPlay();
             stepTick();
         });
+    }
+    if (audioCueBtn) {
+        audioCueBtn.addEventListener("click", toggleAudioCue);
+        updateAudioCueButton();
     }
 
     // 速度

@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -42,6 +42,60 @@ RELATIONSHIP_STATE_VALUES = frozenset({
 })
 
 AGENT_ROLE_VALUES = frozenset({"office_worker", "student", "other"})
+
+MATRIX_EVENT_TYPE_VALUES = frozenset({
+    "takeover_start", "takeover_end", "world_transition", "heartbeat",
+    "stale_report", "human_gate",
+})
+
+MATRIX_ROLE_VALUES = frozenset({
+    "sentinel_mvp", "bridge_agent", "guide_agent", "operator_agent", "sentinel_swarm",
+})
+
+WORLD_LAYER_VALUES = frozenset({"real", "virtual", "liminal"})
+
+MATRIX_EXIT_REASON_VALUES = frozenset({
+    "ttl_expired", "manual_release", "world_transition", "simulation_end", "error",
+})
+
+MATRIX_EVIDENCE_TYPE_VALUES = frozenset({
+    "replay_state", "matrix_event", "human_gate", "derived_metric",
+})
+
+MATRIX_HUMAN_GATE_ACTION_VALUES = frozenset({
+    "public_pr", "git_push", "cloud_run_deploy", "external_api",
+    "secret_access", "cost_spend",
+})
+
+MATRIX_HUMAN_GATE_STATUS_VALUES = frozenset({
+    "requires_human", "approved", "rejected",
+})
+
+MATRIX_SWARM_STATUS_VALUES = frozenset({"alive", "stale"})
+
+MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT = 3
+MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT = 0
+
+WORLD_LAYER_MODEL = {
+    "real": {
+        "entry_events": ("takeover_end", "world_transition"),
+        "exit_layers": ("virtual", "liminal"),
+        "transition_cost": {"virtual": 1, "liminal": 1},
+        "evidence_types": ("replay_state", "matrix_event"),
+    },
+    "virtual": {
+        "entry_events": ("takeover_start", "world_transition"),
+        "exit_layers": ("real", "liminal"),
+        "transition_cost": {"real": 1, "liminal": 1},
+        "evidence_types": ("matrix_event", "derived_metric"),
+    },
+    "liminal": {
+        "entry_events": ("world_transition",),
+        "exit_layers": ("real", "virtual"),
+        "transition_cost": {"real": 2, "virtual": 2},
+        "evidence_types": ("matrix_event", "human_gate"),
+    },
+}
 
 # ── time フォーマット ────────────────────────────────────────────────────────
 
@@ -207,6 +261,49 @@ class InteractionEvent:
     summary: str
     location_poi_id: Optional[str] = None
     relationship_delta: Optional[dict[str, str]] = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class MatrixEvent:
+    """MATRIX Mode Event JSONL の 1 行。
+
+    contract §MATRIX Mode Event JSONL:
+      Required: tick, day, time, type, agent_id, matrix_role
+      Optional: ttl_ticks, exit_reason, trigger_id, source_layer, target_layer,
+                world_layer, transition_cost, evidence_type, evidence_ref,
+                guide_summary, candidate_transitions, gate_action, gate_status,
+                gate_reason, swarm_status, heartbeat_interval_ticks,
+                stale_after_ticks, orphan_tolerance, last_heartbeat_tick,
+                missed_heartbeats, reason
+    """
+    tick: int
+    day: int
+    time: str
+    type: str
+    agent_id: int
+    matrix_role: str
+    ttl_ticks: Optional[int] = None
+    exit_reason: Optional[str] = None
+    trigger_id: Optional[str] = None
+    source_layer: Optional[str] = None
+    target_layer: Optional[str] = None
+    world_layer: Optional[str] = None
+    transition_cost: Optional[int] = None
+    evidence_type: Optional[str] = None
+    evidence_ref: Optional[str] = None
+    guide_summary: Optional[str] = None
+    candidate_transitions: Optional[tuple[dict[str, Any], ...]] = None
+    gate_action: Optional[str] = None
+    gate_status: Optional[str] = None
+    gate_reason: Optional[str] = None
+    swarm_status: Optional[str] = None
+    heartbeat_interval_ticks: Optional[int] = None
+    stale_after_ticks: Optional[int] = None
+    orphan_tolerance: Optional[int] = None
+    last_heartbeat_tick: Optional[int] = None
+    missed_heartbeats: Optional[int] = None
+    reason: Optional[str] = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 

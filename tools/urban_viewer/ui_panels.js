@@ -477,6 +477,97 @@ export function updateLivePanel(els, snapshot) {
 }
 
 /**
+ * MATRIXモードの現在 tick 表示を更新する。
+ * @param {HTMLElement} panelEl
+ * @param {{ enabled:boolean, activeTakeovers?:Object[], currentEvents?:Object[], currentWorldLayer?:string, worldLayerReason?:string }} snapshot
+ */
+export function updateMatrixPanel(panelEl, snapshot) {
+    if (!panelEl) return;
+
+    while (panelEl.firstChild) panelEl.removeChild(panelEl.firstChild);
+
+    const header = document.createElement("div");
+    header.className = "matrix-panel-header";
+    const title = document.createElement("span");
+    title.textContent = "MATRIX";
+    const pill = document.createElement("span");
+    pill.className = "status-pill";
+    pill.classList.add(snapshot.enabled ? "status-pill--ok" : "status-pill--muted");
+    pill.textContent = snapshot.enabled ? "on" : "off";
+    header.appendChild(title);
+    header.appendChild(pill);
+    panelEl.appendChild(header);
+
+    const active = Array.isArray(snapshot.activeTakeovers) ? snapshot.activeTakeovers : [];
+    const current = Array.isArray(snapshot.currentEvents) ? snapshot.currentEvents : [];
+    appendWorldLayerSummary(panelEl, snapshot);
+
+    if (!snapshot.enabled) {
+        const empty = document.createElement("div");
+        empty.className = "matrix-panel-empty";
+        empty.textContent = "この run には MATRIX イベントがありません";
+        panelEl.appendChild(empty);
+        return;
+    }
+
+    if (active.length === 0 && current.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "matrix-panel-empty";
+        empty.textContent = "現在 tick の takeover はありません";
+        panelEl.appendChild(empty);
+        return;
+    }
+
+    const list = document.createElement("ul");
+    list.className = "matrix-event-list";
+    for (const item of active.slice(0, 3)) {
+        const row = document.createElement("li");
+        const role = item.matrix_role || "matrix";
+        const agent = item.agent_id != null ? `A${item.agent_id}` : "Agent";
+        row.textContent = `${role} -> ${agent}`;
+        list.appendChild(row);
+    }
+    for (const event of current.slice(0, 3)) {
+        if (event.type === "takeover_start") continue;
+        const row = document.createElement("li");
+        const role = event.matrix_role || "matrix";
+        const agent = event.agent_id != null ? `A${event.agent_id}` : "Agent";
+        row.textContent = `${event.type || "event"} / ${role} / ${agent}`;
+        list.appendChild(row);
+    }
+    panelEl.appendChild(list);
+}
+
+function appendWorldLayerSummary(panelEl, snapshot) {
+    const currentLayer = snapshot.currentWorldLayer || "real";
+    const wrap = document.createElement("div");
+    wrap.className = "matrix-world";
+
+    const label = document.createElement("div");
+    label.className = "matrix-world-label";
+    label.textContent = "World layer";
+    wrap.appendChild(label);
+
+    const chips = document.createElement("div");
+    chips.className = "matrix-world-chips";
+    for (const layer of ["real", "virtual", "liminal"]) {
+        const chip = document.createElement("span");
+        chip.className = "matrix-world-chip";
+        chip.classList.toggle("matrix-world-chip--active", layer === currentLayer);
+        chip.textContent = layer;
+        chips.appendChild(chip);
+    }
+    wrap.appendChild(chips);
+
+    const reason = document.createElement("div");
+    reason.className = "matrix-world-reason";
+    reason.textContent = snapshot.worldLayerReason || "default_real";
+    wrap.appendChild(reason);
+
+    panelEl.appendChild(wrap);
+}
+
+/**
  * ライブパネルの直近の動きを更新する。
  * @param {HTMLElement} listEl
  * @param {Object[]} visits
@@ -826,9 +917,14 @@ export function updateLoadStatus(statusEl, results) {
         status.className = "load-status-result";
 
         if (r.count === null) {
-            // ロード失敗
-            status.textContent    = "読込失敗";
-            status.classList.add("load-status--error");
+            if (r.optional) {
+                status.textContent = "任意: なし";
+                status.classList.add("load-status--ok");
+            } else {
+                // ロード失敗
+                status.textContent    = "読込失敗";
+                status.classList.add("load-status--error");
+            }
         } else {
             // 成功: 件数とエラー件数を表示
             const errPart = r.errors > 0 ? ` / エラー: ${r.errors}` : "";

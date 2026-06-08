@@ -1,7 +1,7 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.5.0
+version: 0.6.4
 owner: manager
 updated: 2026-06-04
 
@@ -24,6 +24,7 @@ updated: 2026-06-04
 | `poi_visit_records.jsonl` | output/input | no | 訪問履歴 (詳細パネル補助表示)。 |
 | `interaction_events.jsonl` | output | yes | 会話・出会い・別れ・喧嘩などの社会イベント。 |
 | `relationships.jsonl` | output | no | 関係性スナップショット (任意 / §Relationship Snapshot)。 |
+| `matrix_events.jsonl` | output/input | no | MATRIXモードの role takeover / world transition イベント (任意 / §MATRIX Mode Event JSONL)。 |
 | `summary.json` | output | yes | run の件数と集計指標。 |
 | `metrics.json` | output | yes | Individual / Scenario / Society Simulation 評価指標。 |
 
@@ -79,6 +80,13 @@ updated: 2026-06-04
 | InteractionEvent.`type` | `meeting`, `conversation`, `conflict`, `farewell` | 出会い / 会話 / 喧嘩 / 別れ (spec §9.8)。 |
 | relationship `state` | `rival`, `stranger`, `acquaintance`, `friend`, `close_friend` | score しきい値で算出 (spec §9.9)。 |
 | Agent `role` | `office_worker`, `student`, `other` (既定) | profile に role が無い場合は `other` 扱い。将来 role 追加可。 |
+| MatrixEvent.`type` | `takeover_start`, `takeover_end`, `world_transition`, `heartbeat`, `stale_report`, `human_gate` | MATRIXモード専用。MATRIXモード off の既存 run では出力しない。 |
+| MatrixEvent.`matrix_role` | `sentinel_mvp`, `bridge_agent`, `guide_agent`, `operator_agent`, `sentinel_swarm` | 公開実装 alias。保護されたキャラクター名は使わない。 |
+| MatrixEvent.`world_layer` / `source_layer` / `target_layer` | `real`, `virtual`, `liminal` | Three Worlds の最小 triad。 |
+| MatrixEvent.`evidence_type` | `replay_state`, `matrix_event`, `human_gate`, `derived_metric` | world transition の根拠種別。外部秘密や保護表現は入れない。 |
+| MatrixEvent.`gate_action` | `public_pr`, `git_push`, `cloud_run_deploy`, `external_api`, `secret_access`, `cost_spend` | `operator_agent` human gate の対象 action。 |
+| MatrixEvent.`gate_status` | `requires_human`, `approved`, `rejected` | MVP は `requires_human` を出力し、実行はしない。 |
+| MatrixEvent.`swarm_status` | `alive`, `stale` | `sentinel_swarm` の heartbeat / stale self-report 状態。 |
 
 ## POI Feature
 
@@ -268,6 +276,117 @@ Optional: `location_poi_id` (既存 POI id), `relationship_delta` (`{from, to}` 
 
 Required (出力する場合): `tick`, `agent_ids` (`[min_id, max_id]`), `score` (integer), `state` (§Enumerations)。
 
+## MATRIX Mode Event JSONL (optional)
+
+`matrix_events.jsonl` は MATRIXモードが有効な run だけが出力する任意イベントログである。MATRIXモードは既定 off であり、このファイルが無い既存 run は従来通り replay できる。
+
+M1-001 で takeover event を固定し、M1-002/M1-003 で `sentinel_mvp` runtime MVP と viewer 表示を実装した。M2-001 では `bridge_agent` の world layer model を固定する。
+
+```json
+{
+  "tick": 12,
+  "day": 0,
+  "time": "09:00:00",
+  "type": "takeover_start",
+  "agent_id": 26,
+  "matrix_role": "sentinel_mvp",
+  "ttl_ticks": 3,
+  "trigger_id": "assume_sentinel",
+  "reason": "MATRIXモードの最小 takeover smoke"
+}
+```
+
+Required: `tick`, `day`, `time`, `type` (§Enumerations), `agent_id` (既存 agent), `matrix_role` (§Enumerations)。
+
+Optional:
+
+- `ttl_ticks` (integer >= 1): takeover が有効な最大 tick 数。`takeover_start` では指定を推奨する。
+- `exit_reason` (`ttl_expired`, `manual_release`, `world_transition`, `simulation_end`, `error`): `takeover_end` の終了理由。M1-001 では自由文字列ではなくこの集合から選ぶ。
+- `trigger_id` (string): `wake_matrix`, `enter_bridge`, `assume_sentinel` などのオリジナル trigger id。保護された短い台詞は保存しない。
+- `source_layer`, `target_layer`, `world_layer` (§Enumerations): `world_transition` と heartbeat/stale 報告で使う。
+- `transition_cost` (integer >= 0): layer 移動のコスト。MVP では実時間・課金・token 消費ではなく、replay 比較用の抽象コスト。
+- `evidence_type` (§Enumerations): transition の根拠種別。
+- `evidence_ref` (string): 根拠への短い参照。file path、event id、human gate id など。secret、個人情報、保護された台詞は入れない。
+- `guide_summary` (string): `guide_agent` が rule-based fallback で生成する短い説明。LLM 生成を必須にしない。
+- `candidate_transitions` (array): `guide_agent` が提示する候補。各要素は `source_layer`, `target_layer`, `transition_cost`, `evidence_types` を持つ。
+- `gate_action` (§Enumerations): `operator_agent` が human gate へ送る高リスク action。
+- `gate_status` (§Enumerations): gate 状態。MVP runtime は `requires_human` を出力する。
+- `gate_reason` (string): gate 理由。secret、個人情報、外部認証情報は入れない。
+- `swarm_status` (§Enumerations): `sentinel_swarm` の状態。heartbeat は `alive`、stale report は `stale` を使う。
+- `heartbeat_interval_ticks` (integer >= 1): `sentinel_swarm` が期待する heartbeat 間隔。
+- `stale_after_ticks` (integer >= 1): heartbeat 欠落を stale とみなす tick 数。MVP 既定は `3`。
+- `orphan_tolerance` (integer >= 0): orphan sentinel の許容数。MVP 初期値は `0`。
+- `last_heartbeat_tick` (integer >= 0): stale 判定で参照した最後の heartbeat tick。
+- `missed_heartbeats` (integer >= 0): 最後の heartbeat から stale_report までの tick 差。
+- `reason` (string): 人間可読な説明。LLM 生成を必須にしない。
+
+Rules:
+
+- `takeover_start` は同じ `agent_id` に対して同一 tick で 1 件まで。
+- `takeover_start` した takeover は、`ttl_ticks` 経過、`takeover_end`、または run 終了で必ず閉じる。
+- 同一 seed・同一入力・RuleBasedProvider 経路では `matrix_events.jsonl` も byte 一致対象に含める。
+- MATRIXモード off の場合、simulation は `matrix_events.jsonl` を出力しない。
+- `matrix_role` と `trigger_id` に保護されたキャラクター名・引用を入れない。
+
+### World Layer Model (`bridge_agent`)
+
+`bridge_agent` は `real`、`virtual`、`liminal` の間を移動する抽象 role である。これは特定作品の人物コピーではなく、世界層をまたぐ能力を replay 可能な event として扱うための公開 alias である。
+
+| layer | 意味 | entry events | exit layers | transition cost | evidence types |
+| --- | --- | --- | --- | --- | --- |
+| `real` | replay の観測状態。agent_states / visits / interactions が一次証拠になる層。 | `takeover_end`, `world_transition` | `virtual`, `liminal` | `virtual`: 1, `liminal`: 1 | `replay_state`, `matrix_event` |
+| `virtual` | MATRIX event が agent に role / transition を重ねる層。 | `takeover_start`, `world_transition` | `real`, `liminal` | `real`: 1, `liminal`: 1 | `matrix_event`, `derived_metric` |
+| `liminal` | real と virtual の間で human gate や不確実性を保持する層。 | `world_transition` | `real`, `virtual` | `real`: 2, `virtual`: 2 | `matrix_event`, `human_gate` |
+
+Rules:
+
+- `world_transition` は `matrix_role="bridge_agent"` を推奨する。
+- `world_transition` は `source_layer` と `target_layer` を必ず持つ。両者は異なる値にする。
+- `transition_cost` は `WORLD_LAYER_MODEL[source_layer].transition_cost[target_layer]` に一致させる。
+- `evidence_type` は `WORLD_LAYER_MODEL[target_layer].evidence_types` のいずれかを使う。
+- `liminal` から出る transition は cost 2 とし、human gate または明示的な matrix event を evidence として残す。
+- world layer model は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+
+### Guide Agent Fallback (`guide_agent`)
+
+`guide_agent` は現在 layer のルールと移動候補を説明する。MVP では LLM を必須にせず、`WORLD_LAYER_MODEL` だけから決定論的に `heartbeat` event を生成する。
+
+Rules:
+
+- `guide_agent` は `type="heartbeat"`、`matrix_role="guide_agent"` を使う。
+- `guide_summary` は現在 layer と候補数を短く説明する。
+- `candidate_transitions` は `WORLD_LAYER_MODEL[current_layer].exit_layers` から決定論的に生成する。
+- `candidate_transitions[*].transition_cost` は `WORLD_LAYER_MODEL[source_layer].transition_cost[target_layer]` と一致する。
+- `guide_agent` は提案だけを行い、secret、外部 API、Cloud Run、GitHub push、public PR 作成などの高リスク action を実行しない。
+- LLM を将来使う場合も、RuleBasedProvider 経路では同一 seed・同一入力で byte 一致する fallback を維持する。
+
+### Operator Human Gate (`operator_agent`)
+
+`operator_agent` は高信頼 operator role だが、MVP では高リスク action を直接実行しない。実行が必要そうな場面を `human_gate` event として記録し、人間が明示承認するまで停止する。
+
+Rules:
+
+- `operator_agent` は `type="human_gate"`、`matrix_role="operator_agent"` を使う。
+- `gate_status="requires_human"` は「実行していない」ことを意味する。
+- `gate_action` は `public_pr`, `git_push`, `cloud_run_deploy`, `external_api`, `secret_access`, `cost_spend` のいずれかに限定する。
+- `human_gate` event は secret、API key、認証 token、個人情報を保存しない。
+- `approved` / `rejected` は将来の監査ログ用に予約する。MVP runtime は承認操作そのものを実行しない。
+- `human_gate` は `world_layer="liminal"` を使い、real action と virtual plan の間で止める。
+
+### Sentinel Swarm Heartbeat (`sentinel_swarm`)
+
+`sentinel_swarm` は複数 monitor の協調を表す公開 alias である。MVP では実際の分散処理や外部監視を起動せず、heartbeat と stale self-report を replay 可能な MATRIX event として記録する。
+
+Rules:
+
+- `sentinel_swarm` は通常確認に `type="heartbeat"`、期限切れ自己申告に `type="stale_report"` を使う。
+- heartbeat event は `swarm_status="alive"`、`heartbeat_interval_ticks`、`stale_after_ticks`、`orphan_tolerance` を持つ。
+- stale_report event は `swarm_status="stale"`、`last_heartbeat_tick`、`missed_heartbeats`、`stale_after_ticks`、`orphan_tolerance` を持つ。
+- stale threshold は heartbeat が `3` simulation tick 連続で欠落した状態とする。
+- orphan tolerance の MVP 初期値は `0`。孤児 sentinel を許容しない前提で検証し、将来の分散実装で明示的に増やす。
+- `sentinel_swarm` は secret、外部 API、GitHub push、Cloud Run deploy、production DB 操作を実行しない。
+- `matrix_role`、`trigger_id`、`reason` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
+
 ## Summary JSON
 
 ```json
@@ -341,3 +460,8 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.4.1 (WO-URBAN-017): `metrics.json` を required output として追加。Individual / Scenario / Society Simulation の三層評価を replay-derived metrics として出力し、`summary.json` と違って実行時刻を含めないため RuleBasedProvider 経路の byte 一致対象に含める。
 - 0.4.2 (WO-URBAN-017 follow-up): AgentState optional `route_mode` を追加。`metrics.json` の Society Simulation に `arrival_rate` / `trip_count_by_action` / `route_mode_count` / `route_fallback_rate` を追加し、地域データ差し替え時の到着・移動・fallback 品質を replay-derived に比較できるようにした。
 - 0.5.0 (WO-URBAN-015): `activity_plans.jsonl` を optional input として追加。plan が無い場合は既存 rule-driven simulation の byte 再現性を維持し、plan がある場合だけ active activity を destination selection に優先適用する。
+- 0.6.0 (MATRIX M1-001): `matrix_events.jsonl` を optional output/input として追加。`takeover_start` / `takeover_end` / `world_transition` / `heartbeat` / `stale_report`、public alias (`sentinel_mvp` 等)、Three Worlds (`real` / `virtual` / `liminal`) を contract 化した。MATRIXモードは既定 off、保護された名前・引用は保存しない、RuleBasedProvider 経路では byte 一致対象とする。
+- 0.6.1 (MATRIX M2-001): `bridge_agent` の World Layer Model を追加。`real` / `virtual` / `liminal` の entry events、exit layers、transition cost、evidence types を contract 化した。`transition_cost` / `evidence_type` / `evidence_ref` を `MatrixEvent` optional fields として追加した。
+- 0.6.2 (MATRIX M3-001): `guide_agent` の RuleBased fallback を追加。`guide_summary` / `candidate_transitions` を `MatrixEvent` optional fields とし、`heartbeat` event で現在 layer の説明と transition 候補を出せるようにした。
+- 0.6.3 (MATRIX M4-001): `operator_agent` の human gate を追加。`human_gate` event、`gate_action` / `gate_status` / `gate_reason` を contract 化し、MVP runtime では高リスク action を実行せず `requires_human` として記録する。
+- 0.6.4 (MATRIX M5-001): `sentinel_swarm` の heartbeat / stale self-report を追加。`swarm_status`、`heartbeat_interval_ticks`、`stale_after_ticks`、`orphan_tolerance`、`last_heartbeat_tick`、`missed_heartbeats` を contract 化し、stale は 3 simulation tick 欠落、orphan tolerance は初期 `0` とした。

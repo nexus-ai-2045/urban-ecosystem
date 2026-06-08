@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MATRIXモード ロードマップ - urban-ecosystem</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b0a;
+      --panel: #101411;
+      --panel-2: #151b17;
+      --ink: #e7f0df;
+      --muted: #9daf95;
+      --grid: rgba(128, 255, 148, 0.16);
+      --line: rgba(168, 220, 157, 0.22);
+      --green: #7cff8d;
+      --amber: #ffd166;
+      --cyan: #66e3ff;
+      --red: #ff6b6b;
+      --shadow: rgba(0, 0, 0, 0.45);
+      --mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      --sans: "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+      --serif: "Iowan Old Style", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, transparent 31px, var(--grid) 32px),
+        linear-gradient(180deg, transparent 31px, var(--grid) 32px),
+        radial-gradient(circle at 78% 12%, rgba(102, 227, 255, 0.12), transparent 28rem),
+        radial-gradient(circle at 12% 82%, rgba(255, 209, 102, 0.09), transparent 24rem),
+        var(--bg);
+      background-size: 32px 32px, 32px 32px, auto, auto, auto;
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--cyan);
+    }
+
+    .scanline {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 100% 4px;
+      mix-blend-mode: overlay;
+      opacity: 0.38;
+    }
+
+    header {
+      min-height: 86vh;
+      display: grid;
+      align-items: end;
+      padding: 56px clamp(20px, 5vw, 72px) 44px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: "wake_matrix / sentinel_mvp / bridge_agent / guide_agent / operator_agent / sentinel_swarm";
+      position: absolute;
+      top: 24px;
+      left: 0;
+      right: 0;
+      font-family: var(--mono);
+      color: rgba(124, 255, 141, 0.22);
+      white-space: nowrap;
+      animation: ticker 26s linear infinite;
+    }
+
+    @keyframes ticker {
+      from { transform: translateX(100%); }
+      to { transform: translateX(-100%); }
+    }
+
+    .kicker {
+      font-family: var(--mono);
+      color: var(--green);
+      letter-spacing: 0;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(3rem, 9vw, 8.5rem);
+      line-height: 0.9;
+      max-width: 980px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      max-width: 780px;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      margin: 26px 0 0;
+    }
+
+    main {
+      padding: 42px clamp(20px, 5vw, 72px) 72px;
+    }
+
+    .band {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+      gap: clamp(20px, 4vw, 48px);
+      align-items: start;
+      padding: 52px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 1;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: var(--green);
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
+    .console {
+      background: linear-gradient(180deg, rgba(21, 27, 23, 0.94), rgba(11, 14, 12, 0.94));
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 60px var(--shadow);
+      padding: 22px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      color: var(--green);
+      overflow-x: auto;
+    }
+
+    .console span {
+      display: block;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: rgba(16, 20, 17, 0.88);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      min-height: 154px;
+    }
+
+    .card strong {
+      display: block;
+      color: var(--ink);
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      display: inline-block;
+      border: 1px solid rgba(124, 255, 141, 0.36);
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 3px 7px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .phase {
+      font-family: var(--mono);
+      color: var(--amber);
+      font-size: 0.88rem;
+    }
+
+    .step b {
+      color: var(--ink);
+      font-size: 1.08rem;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(16, 20, 17, 0.82);
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix-table th {
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      background: rgba(124, 255, 141, 0.06);
+    }
+
+    .matrix-table td {
+      color: var(--muted);
+    }
+
+    .matrix-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .worlds {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .world {
+      min-height: 210px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(145deg, rgba(124, 255, 141, 0.08), rgba(102, 227, 255, 0.04)),
+        rgba(16, 20, 17, 0.9);
+    }
+
+    .world:nth-child(2) {
+      background:
+        linear-gradient(145deg, rgba(102, 227, 255, 0.09), rgba(255, 209, 102, 0.05)),
+        rgba(16, 20, 17, 0.9);
+    }
+
+    .world:nth-child(3) {
+      background:
+        linear-gradient(145deg, rgba(255, 209, 102, 0.1), rgba(255, 107, 107, 0.05)),
+        rgba(16, 20, 17, 0.9);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 7px;
+    }
+
+    .danger {
+      border-color: rgba(255, 107, 107, 0.35);
+    }
+
+    .danger h3 {
+      color: var(--red);
+    }
+
+    footer {
+      padding: 36px clamp(20px, 5vw, 72px) 52px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        min-height: 76vh;
+      }
+
+      .band,
+      .grid,
+      .worlds {
+        grid-template-columns: 1fr;
+      }
+
+      .step {
+        grid-template-columns: 54px minmax(0, 1fr);
+      }
+
+      .matrix-table th,
+      .matrix-table td {
+        padding: 10px 8px;
+        overflow-wrap: anywhere;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="scanline"></div>
+  <header>
+    <div>
+      <div class="kicker">urban-ecosystem / implementation-ready roadmap / public-safe aliases</div>
+      <h1>MATRIXモード ロードマップ</h1>
+      <p class="subtitle">役割切り替え、三層世界、governance、motif intake、heartbeat check、future simulation pack のためのクロスワールド型エージェント構想。</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="band">
+      <div>
+        <h2>現状</h2>
+        <p>M1-M5 の runtime primitive は optional MATRIX event として実装済みです。既存プロダクトの通常 replay は、決定論的サンプルデータ、fallback map viewer、FastAPI service、後段の optional LLM integration を持つ渋谷 urban-agent replay system のままです。</p>
+      </div>
+      <div class="console" aria-label="ロードマップ状態">
+        MATRIX_MODE_STATUS=implementation_ready_draft
+        <span>runtime_behavior=unchanged</span>
+        <span>public_names=original_aliases_only</span>
+        <span>local_slice=M1-M10_complete</span>
+        <span>operation_gate=public_pr_pending</span>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>Aliasレイヤー</h2>
+        <p>作品名やキャラクター名は議論の参照元にできますが、公開実装ではオリジナル alias を使います。これにより、public repository としてレビュー可能で拡張しやすい状態を保ちます。</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Alias</th><th>機能</th><th>最初の根拠</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sentinel_mvp</code></td><td>実行時 role takeover と containment pressure。</td><td>Role event、TTL、exit reason。</td></tr>
+          <tr><td><code>bridge_agent</code></td><td><code>virtual</code>、<code>real</code>、<code>liminal</code> の world layer 間を移動する。</td><td>World-layer transition log。</td></tr>
+          <tr><td><code>guide_agent</code></td><td>ルールを説明し、transition を提案する。</td><td>Fallback 付き rule explanation。</td></tr>
+          <tr><td><code>operator_agent</code></td><td>高信頼実行と rescue path を扱う。</td><td>Human gate を意識した action log。</td></tr>
+          <tr><td><code>sentinel_swarm</code></td><td>協調 monitoring と stale reporting を行う。</td><td>Heartbeat と orphan threshold。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>ロードマップ</h2>
+        <p>当初 docs-only PR から始め、現在は決定論的な runtime primitive、viewer affordance、motif docs、skill drift gate までを1つの reviewable slice にまとめています。</p>
+      </div>
+      <div class="timeline">
+        <div class="step"><div class="phase">00</div><div><b>Safety and Intake</b><p>アイデアの奔流を alias、boundary、reviewable packet として整理する。</p></div></div>
+        <div class="step"><div class="phase">01</div><div><b>sentinel_mvp</b><p>決定論的 takeover event を持つ最初の attachable runtime role。</p></div></div>
+        <div class="step"><div class="phase">02</div><div><b>bridge_agent</b><p>1体の agent が layered world を移動し、transition を観測可能にする。</p></div></div>
+        <div class="step"><div class="phase">03</div><div><b>guide_agent</b><p>unsafe execution なしでルールを説明し、選択肢を提示する。</p></div></div>
+        <div class="step"><div class="phase">04</div><div><b>operator_agent</b><p>高信頼 action、rollback semantics、human gate を扱う。</p></div></div>
+        <div class="step"><div class="phase">05</div><div><b>sentinel_swarm</b><p>複数 monitor、heartbeat check、stale self-reporting を導入する。</p></div></div>
+        <div class="step"><div class="phase">06</div><div><b>Cross-world Packs</b><p>Cybernetic governance、Turing bench、tri-world design、motif intake を追加する。</p></div></div>
+        <div class="step"><div class="phase">10</div><div><b>Recursive Repo Skills</b><p>GitHub を public source of truth に保ちつつ、docs を bounded callable operating packet にする。</p></div></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>三つの世界</h2>
+        <p>すべての transition は entry condition、exit condition、cost、replay evidence を持つ必要があります。</p>
+      </div>
+      <div class="worlds">
+        <div class="world">
+          <span class="tag">real</span>
+          <h3>接地レイヤー</h3>
+          <p>Visible map state、deterministic replay、public demo behavior、data contract を扱う層。</p>
+        </div>
+        <div class="world">
+          <span class="tag">virtual</span>
+          <h3>シミュレーションレイヤー</h3>
+          <p>Rule game、generated scenario、role takeover、alternate run、benchmark を扱う層。</p>
+        </div>
+        <div class="world">
+          <span class="tag">liminal</span>
+          <h3>境界レイヤー</h3>
+          <p>Hidden memory、transition state、夢的な解釈、uncertain identity を扱う境界層。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>Motif Intake</h2>
+        <p>今後の inspiration は小さな packet として受け入れます。各 packet は、採用するもの、除外するもの、reviewer が検証できる条件を宣言します。</p>
+      </div>
+      <div class="grid">
+        <div class="card"><strong>Exchange Pair</strong><p>Transformation、cost、不可逆な tradeoff。</p></div>
+        <div class="card"><strong>Oath Corps</strong><p>Hierarchy、duty、command、threat containment。</p></div>
+        <div class="card"><strong>Unstable City Core</strong><p>Power growth、collapse risk、reconstruction。</p></div>
+        <div class="card"><strong>Walled Society</strong><p>Boundary、outside knowledge、social fracture。</p></div>
+        <div class="card"><strong>Duel School</strong><p>Mastery loop、rival、skill tree。</p></div>
+        <div class="card"><strong>Spore Forest</strong><p>Ecology、non-human agent、toxic boundary。</p></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>Governance</h2>
+        <p>三つの内部権限と external observer により、システムが未レビューの空想や unsafe automation へ流れることを防ぎます。</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>権限</th><th>Role</th><th>責務</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Proposal</td><td><code>guide_agent</code></td><td>選択肢を説明し、candidate plan を作る。</td></tr>
+          <tr><td>Execution</td><td><code>operator_agent</code></td><td>bounded change を実装する。</td></tr>
+          <tr><td>Review</td><td><code>sentinel_mvp</code></td><td>drift、stale state、unsafe expansion を検出する。</td></tr>
+          <tr><td>External observation</td><td>User / GitHub review</td><td>public direction と high-risk change を承認する。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>Context Drop</h2>
+        <p>チャット断片、motif、worker 出力は、実装へ進める前に全体ロードマップへ落とします。原文の勢いを public alias、Motif packet、TODO、検証証拠へ変換してから扱います。</p>
+      </div>
+      <div class="grid">
+        <div class="card"><strong>1. 意図抽出</strong><p>要望の核だけを読み、保護された名前や台詞を実装名にしない。</p></div>
+        <div class="card"><strong>2. Packet化</strong><p>採用するもの / 採用しないもの / risk / testable acceptance に分ける。</p></div>
+        <div class="card"><strong>3. TODO反映</strong><p>ID、Status、完了条件、証拠を roadmap に残す。</p></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>並列分担</h2>
+        <p>main agent は orchestrator として統合、採否、Type1 / secret / cost / deployment gate を保持します。ClaudeCode / Grok は並列実装、AGI / agy は review / research / quality gate に寄せます。</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Lane</th><th>担当候補</th><th>成果物</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Contract実装</td><td>ClaudeCode</td><td>data contract / type / contract tests</td></tr>
+          <tr><td>Runtime実装</td><td>ClaudeCode</td><td><code>sentinel_mvp</code> attach / deterministic tests</td></tr>
+          <tr><td>Viewer実装</td><td>Grok</td><td>fallback viewer / E2E / screenshot</td></tr>
+          <tr><td>並列feature実装</td><td>Grok</td><td><code>bridge_agent</code> / heartbeat / 8-bit cue candidates</td></tr>
+          <tr><td>Research</td><td>AGI / agy</td><td>motif packet / source notes / risk notes</td></tr>
+          <tr><td>Review</td><td>AGI / agy</td><td>diff review / docs drift / 残務ゼロ判定</td></tr>
+          <tr><td>Governance</td><td>main + reviewer</td><td>heartbeat / stale / orphan / human gate</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>保証ゲート</h2>
+        <p>「残務ゼロ」「実装完了」「運用保証」は、current evidence で確認できる場合だけ Yes です。1つでも未確認なら No とし、対応 TODO に落とします。</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>判定</th><th>現状</th><th>理由</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>残務ゼロ？</td><td>No</td><td>local 実装 TODO、Browser 1280/390 表示確認、外部 worker review は完了。PR 作成と human review が operation gate として未完了。</td></tr>
+          <tr><td>実装完了？</td><td>Yes</td><td>M1-M5 runtime primitive、M6 docs packet、M7 benchmark spec、M8 Three Worlds UI、M9 audio cue、M10 Recursive Repo Skills が完了。</td></tr>
+          <tr><td>運用保証？</td><td>No</td><td>local checks と Browser 1280/390 表示確認は通過。public PR と human review が未完了。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>実装TODO</h2>
+        <p>Status は「未着手 / 進行中 / 完了 / 保留」に固定します。ロードマップ本文の TODO 表を進捗正本にし、HTML は全体像の確認用にします。</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Status</th><th>項目</th><th>証拠</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>完了</td><td>roadmap 正本と視覚版</td><td>Markdown / HTML</td></tr>
+          <tr><td>完了</td><td>TODO・進捗運用の正本化</td><td>TODO表 / 報告テンプレート</td></tr>
+          <tr><td>完了</td><td>GitHub issue intake</td><td><code>matrix_mode_influence.md</code></td></tr>
+          <tr><td>完了</td><td><code>sentinel_mvp</code> takeover event design</td><td>data contract v0.6.0 / <code>MatrixEvent</code></td></tr>
+          <tr><td>完了</td><td><code>sentinel_mvp</code> implementation</td><td><code>test_matrix_mode_*</code> / CLI smoke</td></tr>
+          <tr><td>完了</td><td><code>sentinel_mvp</code> viewer display</td><td>Browser 1280/390 / optional file tests</td></tr>
+          <tr><td>完了</td><td><code>bridge_agent</code> world layer model</td><td>data contract v0.6.1 / <code>WORLD_LAYER_MODEL</code></td></tr>
+          <tr><td>完了</td><td>world transition event</td><td>deterministic tests / CLI</td></tr>
+          <tr><td>完了</td><td><code>guide_agent</code> fallback explanation</td><td>data contract v0.6.2 / guide tests</td></tr>
+          <tr><td>完了</td><td><code>operator_agent</code> human gate</td><td>data contract v0.6.3 / human gate tests</td></tr>
+          <tr><td>完了</td><td><code>sentinel_swarm</code> heartbeat</td><td>data contract v0.6.4 / swarm tests</td></tr>
+          <tr><td>完了</td><td>IP-safe motif packet format</td><td>Motif packet template</td></tr>
+          <tr><td>完了</td><td>Cross-world Pack 1</td><td><code>matrix-mode-motif-packets.md</code></td></tr>
+          <tr><td>完了</td><td>Turing Bench</td><td><code>matrix-mode-turing-bench.md</code></td></tr>
+          <tr><td>完了</td><td>Three Worlds UI</td><td><code>matrix-world</code> viewer panel</td></tr>
+          <tr><td>完了</td><td>8-bit audio cue</td><td><code>matrix-mode-audio-cues.md</code> / <code>btn-audio-cue</code></td></tr>
+          <tr><td>完了</td><td>Recursive Repo Skills</td><td><code>matrix-mode-skill-index.md</code> / drift check</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>進捗報告運用</h2>
+        <p>作業開始時にTODOを確認し、キリの良い単位で status と証拠を更新します。各作業セクションの終わりに「今回の進捗」「確認できたこと」「次の予定」を残します。</p>
+      </div>
+      <div class="grid">
+        <div class="card"><strong>開始時</strong><p>今回触る TODO を <code>進行中</code> にし、依存関係と stop 条件を確認する。</p></div>
+        <div class="card"><strong>更新時</strong><p><code>完了</code> / <code>保留</code> の理由と証拠を roadmap または issue に残す。</p></div>
+        <div class="card"><strong>報告時</strong><p>実装内容、変更ファイル、検証、未完了項目、次の推奨作業をまとめる。</p></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div>
+        <h2>やらないこと</h2>
+        <p>創造性は残します。ただし、公開実装には明確な停止線を置きます。</p>
+      </div>
+      <div class="card danger">
+        <h3>停止線</h3>
+        <ul>
+          <li>保護されたキャラクター名を code identifier にコピーしない。</li>
+          <li>保護された引用を trigger として保存しない。</li>
+          <li>lookalike art、voice、music、official-looking asset を生成しない。</li>
+          <li>real-person impersonation を実装しない。</li>
+          <li>human review なしで public PR、deployment、secret change、costly cloud run を行わない。</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    正本: docs/matrix-mode-roadmap.md。視覚版: docs/matrix-mode-roadmap.html。MATRIX runtime primitive は opt-in で、既定 replay は変更しない。
+  </footer>
+</body>
+</html>

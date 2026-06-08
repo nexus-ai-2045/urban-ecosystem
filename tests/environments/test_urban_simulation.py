@@ -3,7 +3,7 @@ test_urban_simulation.py — §13.3 シミュレーション検証の機械化�
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
 
 カバレッジ:
   - §13.3.1 完走・出力: 100 体 × 24 tick / 3 jsonl + summary + metrics
@@ -40,8 +40,16 @@ from environments.urban_2d.models import (
     ACTION_VALUES,
     AGENT_STATUS_VALUES,
     INTERACTION_TYPE_VALUES,
+    MATRIX_EVIDENCE_TYPE_VALUES,
+    MATRIX_HUMAN_GATE_ACTION_VALUES,
+    MATRIX_HUMAN_GATE_STATUS_VALUES,
+    MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
+    MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
+    MATRIX_SWARM_STATUS_VALUES,
     POI,
     RELATIONSHIP_STATE_VALUES,
+    WORLD_LAYER_MODEL,
+    WORLD_LAYER_VALUES,
     Activity,
     ActivityPlan,
     AgentProfile,
@@ -155,6 +163,330 @@ def test_emits_replay_summary_and_metrics(sample_inputs, tmp_path):
     assert metrics["society_simulation"]["route_mode_count"]["linear_fallback"] > 0
     assert metrics["society_simulation"]["route_mode_count"].get("roadnet", 0) == 0
     assert metrics["society_simulation"]["route_fallback_rate"] == 1.0
+
+
+def test_matrix_mode_off_does_not_emit_matrix_events(sample_inputs, tmp_path):
+    """MATRIXモード既定 off では optional matrix_events.jsonl を出力しない。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_off"
+
+    sim = Simulation(pois, profiles, seed=42, ticks=2, run_id="matrix_off")
+    sim.run(out)
+
+    assert sim.matrix_events == []
+    assert not (out / "matrix_events.jsonl").exists()
+
+
+def test_matrix_mode_emits_sentinel_takeover_events(sample_inputs, tmp_path):
+    """MATRIXモード on で既存 agent id に sentinel_mvp takeover lifecycle を出力する。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_on"
+    target_agent_id = profiles[3].id
+
+    sim = Simulation(
+        pois,
+        profiles,
+        seed=42,
+        ticks=4,
+        run_id="matrix_on",
+        matrix_mode=True,
+        matrix_role="sentinel_mvp",
+        matrix_agent_id=target_agent_id,
+        matrix_ttl_ticks=2,
+        matrix_trigger_id="assume_sentinel",
+    )
+    sim.run(out)
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert [row["type"] for row in rows] == ["takeover_start", "takeover_end"]
+    assert {row["agent_id"] for row in rows} == {target_agent_id}
+    assert {row["matrix_role"] for row in rows} == {"sentinel_mvp"}
+    assert rows[0]["tick"] == 0
+    assert rows[0]["ttl_ticks"] == 2
+    assert rows[0]["trigger_id"] == "assume_sentinel"
+    assert rows[0]["source_layer"] == "real"
+    assert rows[0]["target_layer"] == "virtual"
+    assert rows[1]["tick"] == 1
+    assert rows[1]["exit_reason"] == "ttl_expired"
+    assert rows[1]["source_layer"] == "virtual"
+    assert rows[1]["target_layer"] == "real"
+
+
+def test_matrix_mode_output_is_byte_identical(sample_inputs, tmp_path):
+    """MATRIXモード on でも同一 seed・同一入力では matrix_events.jsonl が byte 一致する。"""
+    pois, profiles, _ = sample_inputs
+    out_a = tmp_path / "matrix_a"
+    out_b = tmp_path / "matrix_b"
+
+    for out in (out_a, out_b):
+        Simulation(
+            pois,
+            profiles,
+            seed=42,
+            ticks=4,
+            run_id="same_matrix_run",
+            matrix_mode=True,
+            matrix_role="sentinel_mvp",
+            matrix_agent_id=profiles[0].id,
+            matrix_ttl_ticks=3,
+        ).run(out)
+
+    assert filecmp.cmp(
+        out_a / "matrix_events.jsonl",
+        out_b / "matrix_events.jsonl",
+        shallow=False,
+    )
+
+
+def test_world_layer_model_defines_bridge_agent_contract():
+    """M2-001: real / virtual / liminal の entry/exit/cost/evidence を固定する。"""
+    assert set(WORLD_LAYER_MODEL) == set(WORLD_LAYER_VALUES)
+
+    for layer, spec in WORLD_LAYER_MODEL.items():
+        assert spec["entry_events"], f"{layer} に entry_events がない"
+        assert spec["exit_layers"], f"{layer} に exit_layers がない"
+        assert spec["transition_cost"], f"{layer} に transition_cost がない"
+        assert spec["evidence_types"], f"{layer} に evidence_types がない"
+
+        for target in spec["exit_layers"]:
+            assert target in WORLD_LAYER_VALUES
+            assert target != layer
+            assert spec["transition_cost"][target] >= 0
+        for evidence_type in spec["evidence_types"]:
+            assert evidence_type in MATRIX_EVIDENCE_TYPE_VALUES
+
+    assert WORLD_LAYER_MODEL["liminal"]["transition_cost"]["real"] == 2
+    assert "human_gate" in WORLD_LAYER_MODEL["liminal"]["evidence_types"]
+
+
+def test_matrix_mode_emits_bridge_world_transition(sample_inputs, tmp_path):
+    """M2-002: bridge_agent の world_transition を replay 可能に出力する。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_bridge"
+
+    Simulation(
+        pois,
+        profiles,
+        seed=42,
+        ticks=4,
+        run_id="matrix_bridge",
+        matrix_mode=True,
+        matrix_role="sentinel_mvp",
+        matrix_agent_id=profiles[0].id,
+        matrix_ttl_ticks=3,
+        matrix_trigger_id="enter_bridge",
+        matrix_transition_tick=1,
+        matrix_source_layer="real",
+        matrix_target_layer="virtual",
+        matrix_evidence_type="matrix_event",
+        matrix_evidence_ref="matrix_events.jsonl",
+    ).run(out)
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    transition = [row for row in rows if row["type"] == "world_transition"]
+    assert len(transition) == 1
+    event = transition[0]
+    assert event["tick"] == 1
+    assert event["agent_id"] == profiles[0].id
+    assert event["matrix_role"] == "bridge_agent"
+    assert event["source_layer"] == "real"
+    assert event["target_layer"] == "virtual"
+    assert event["world_layer"] == "virtual"
+    assert event["transition_cost"] == WORLD_LAYER_MODEL["real"]["transition_cost"]["virtual"]
+    assert event["evidence_type"] == "matrix_event"
+    assert event["evidence_ref"] == "matrix_events.jsonl"
+
+
+def test_matrix_world_transition_rejects_invalid_layer(sample_inputs):
+    """M2-002: source と target が同じ transition は readable error にする。"""
+    pois, profiles, _ = sample_inputs
+
+    with pytest.raises(ValueError, match="異なる必要があります"):
+        Simulation(
+            pois,
+            profiles,
+            seed=42,
+            ticks=4,
+            matrix_mode=True,
+            matrix_transition_tick=1,
+            matrix_source_layer="real",
+            matrix_target_layer="real",
+        )
+
+
+def test_matrix_mode_emits_guide_agent_fallback_options(sample_inputs, tmp_path):
+    """M3-001: guide_agent が rule-based fallback で transition 候補を説明する。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_guide"
+
+    Simulation(
+        pois,
+        profiles,
+        seed=42,
+        ticks=4,
+        run_id="matrix_guide",
+        matrix_mode=True,
+        matrix_agent_id=profiles[0].id,
+        matrix_guide_tick=1,
+        matrix_guide_layer="real",
+    ).run(out)
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    guide_events = [
+        row for row in rows
+        if row["matrix_role"] == "guide_agent" and row["type"] == "heartbeat"
+    ]
+    assert len(guide_events) == 1
+    event = guide_events[0]
+    assert event["tick"] == 1
+    assert event["world_layer"] == "real"
+    assert "real" in event["guide_summary"]
+    candidates = event["candidate_transitions"]
+    assert {c["target_layer"] for c in candidates} == set(WORLD_LAYER_MODEL["real"]["exit_layers"])
+    for candidate in candidates:
+        assert candidate["source_layer"] == "real"
+        assert candidate["transition_cost"] == WORLD_LAYER_MODEL["real"]["transition_cost"][
+            candidate["target_layer"]
+        ]
+        assert candidate["evidence_types"]
+
+
+def test_matrix_guide_rejects_invalid_tick(sample_inputs):
+    """M3-001: guide tick が範囲外なら readable error にする。"""
+    pois, profiles, _ = sample_inputs
+
+    with pytest.raises(ValueError, match="matrix_guide_tick"):
+        Simulation(
+            pois,
+            profiles,
+            seed=42,
+            ticks=2,
+            matrix_mode=True,
+            matrix_guide_tick=2,
+        )
+
+
+def test_matrix_mode_emits_operator_human_gate(sample_inputs, tmp_path):
+    """M4-001: operator_agent は高リスク action を実行せず human_gate に止める。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_operator"
+
+    Simulation(
+        pois,
+        profiles,
+        seed=42,
+        ticks=4,
+        run_id="matrix_operator",
+        matrix_mode=True,
+        matrix_agent_id=profiles[0].id,
+        matrix_human_gate_tick=1,
+        matrix_gate_action="public_pr",
+        matrix_gate_status="requires_human",
+        matrix_gate_reason="review_before_public_pr",
+    ).run(out)
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    gate_events = [
+        row for row in rows
+        if row["matrix_role"] == "operator_agent" and row["type"] == "human_gate"
+    ]
+    assert len(gate_events) == 1
+    event = gate_events[0]
+    assert event["tick"] == 1
+    assert event["gate_action"] == "public_pr"
+    assert event["gate_status"] == "requires_human"
+    assert event["gate_reason"] == "review_before_public_pr"
+    assert event["world_layer"] == "liminal"
+    assert event["evidence_type"] == "human_gate"
+    assert event["gate_action"] in MATRIX_HUMAN_GATE_ACTION_VALUES
+    assert event["gate_status"] in MATRIX_HUMAN_GATE_STATUS_VALUES
+
+
+def test_matrix_human_gate_rejects_invalid_action(sample_inputs):
+    """M4-001: 未定義 gate_action は readable error にする。"""
+    pois, profiles, _ = sample_inputs
+
+    with pytest.raises(ValueError, match="matrix_gate_action"):
+        Simulation(
+            pois,
+            profiles,
+            seed=42,
+            ticks=2,
+            matrix_mode=True,
+            matrix_human_gate_tick=1,
+            matrix_gate_action="auto_post",
+        )
+
+
+def test_matrix_mode_emits_sentinel_swarm_heartbeat_and_stale_report(sample_inputs, tmp_path):
+    """M5-001: sentinel_swarm が heartbeat と stale self-report を出力する。"""
+    pois, profiles, _ = sample_inputs
+    out = tmp_path / "matrix_swarm"
+
+    Simulation(
+        pois,
+        profiles,
+        seed=42,
+        ticks=5,
+        run_id="matrix_swarm",
+        matrix_mode=True,
+        matrix_agent_id=profiles[0].id,
+        matrix_swarm_heartbeat_tick=1,
+        matrix_swarm_stale_tick=4,
+    ).run(out)
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    swarm_events = [
+        row for row in rows
+        if row["matrix_role"] == "sentinel_swarm"
+    ]
+    assert [row["type"] for row in swarm_events] == ["heartbeat", "stale_report"]
+
+    heartbeat, stale = swarm_events
+    assert heartbeat["tick"] == 1
+    assert heartbeat["swarm_status"] == "alive"
+    assert heartbeat["heartbeat_interval_ticks"] == 1
+    assert heartbeat["stale_after_ticks"] == MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT
+    assert heartbeat["orphan_tolerance"] == MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT
+
+    assert stale["tick"] == 4
+    assert stale["swarm_status"] == "stale"
+    assert stale["last_heartbeat_tick"] == 1
+    assert stale["missed_heartbeats"] == 3
+    assert stale["orphan_tolerance"] == 0
+    assert heartbeat["swarm_status"] in MATRIX_SWARM_STATUS_VALUES
+    assert stale["swarm_status"] in MATRIX_SWARM_STATUS_VALUES
+
+
+def test_matrix_sentinel_swarm_rejects_too_early_stale_tick(sample_inputs):
+    """M5-001: 3 tick 欠落前の stale_report は readable error にする。"""
+    pois, profiles, _ = sample_inputs
+
+    with pytest.raises(ValueError, match="matrix_swarm_stale_tick"):
+        Simulation(
+            pois,
+            profiles,
+            seed=42,
+            ticks=4,
+            matrix_mode=True,
+            matrix_swarm_heartbeat_tick=1,
+            matrix_swarm_stale_tick=3,
+        )
 
 
 def test_simulation_rejects_empty_pois(sample_inputs):
@@ -560,6 +892,171 @@ def test_cli_accepts_activity_plans_optional_input(sample_inputs, tmp_path):
     assert agent0[0]["target_poi_id"] == "poi_001"
     metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
     assert "lunch" in metrics["individual_simulation"]["action_count_by_type"]
+
+
+def test_cli_matrix_mode_emits_optional_matrix_events(tmp_path):
+    """CLI --matrix-mode が optional matrix_events.jsonl を出力する。"""
+    out = tmp_path / "cli_matrix_run"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run", "--sample",
+            "--agents", "5", "--sample-pois", "10",
+            "--ticks", "3", "--seed", "42",
+            "--matrix-mode",
+            "--matrix-agent-id", "0",
+            "--matrix-ttl-ticks", "2",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"CLI 失敗: {result.stderr}"
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    assert [row["type"] for row in rows] == ["takeover_start", "takeover_end"]
+    assert {row["agent_id"] for row in rows} == {0}
+    assert rows[0]["matrix_role"] == "sentinel_mvp"
+
+
+def test_cli_matrix_mode_emits_world_transition(tmp_path):
+    """CLI --matrix-transition-tick が bridge_agent world_transition を出力する。"""
+    out = tmp_path / "cli_matrix_bridge_run"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run", "--sample",
+            "--agents", "5", "--sample-pois", "10",
+            "--ticks", "4", "--seed", "42",
+            "--matrix-mode",
+            "--matrix-agent-id", "0",
+            "--matrix-ttl-ticks", "3",
+            "--matrix-trigger-id", "enter_bridge",
+            "--matrix-transition-tick", "1",
+            "--matrix-source-layer", "real",
+            "--matrix-target-layer", "virtual",
+            "--matrix-evidence-type", "matrix_event",
+            "--matrix-evidence-ref", "matrix_events.jsonl",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"CLI 失敗: {result.stderr}"
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    transition = [row for row in rows if row["type"] == "world_transition"]
+    assert len(transition) == 1
+    assert transition[0]["matrix_role"] == "bridge_agent"
+    assert transition[0]["source_layer"] == "real"
+    assert transition[0]["target_layer"] == "virtual"
+    assert transition[0]["transition_cost"] == 1
+
+
+def test_cli_matrix_mode_emits_guide_agent_options(tmp_path):
+    """CLI --matrix-guide-tick が guide_agent fallback options を出力する。"""
+    out = tmp_path / "cli_matrix_guide_run"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run", "--sample",
+            "--agents", "5", "--sample-pois", "10",
+            "--ticks", "4", "--seed", "42",
+            "--matrix-mode",
+            "--matrix-agent-id", "0",
+            "--matrix-guide-tick", "1",
+            "--matrix-guide-layer", "real",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"CLI 失敗: {result.stderr}"
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    guide = [
+        row for row in rows
+        if row["type"] == "heartbeat" and row["matrix_role"] == "guide_agent"
+    ]
+    assert len(guide) == 1
+    assert guide[0]["world_layer"] == "real"
+    assert guide[0]["candidate_transitions"]
+
+
+def test_cli_matrix_mode_emits_operator_human_gate(tmp_path):
+    """CLI --matrix-human-gate-tick が operator_agent human_gate を出力する。"""
+    out = tmp_path / "cli_matrix_operator_run"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run", "--sample",
+            "--agents", "5", "--sample-pois", "10",
+            "--ticks", "4", "--seed", "42",
+            "--matrix-mode",
+            "--matrix-agent-id", "0",
+            "--matrix-human-gate-tick", "1",
+            "--matrix-gate-action", "public_pr",
+            "--matrix-gate-status", "requires_human",
+            "--matrix-gate-reason", "review_before_public_pr",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"CLI 失敗: {result.stderr}"
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    gates = [
+        row for row in rows
+        if row["type"] == "human_gate" and row["matrix_role"] == "operator_agent"
+    ]
+    assert len(gates) == 1
+    assert gates[0]["gate_action"] == "public_pr"
+    assert gates[0]["gate_status"] == "requires_human"
+
+
+def test_cli_matrix_mode_emits_sentinel_swarm_events(tmp_path):
+    """CLI swarm flags が sentinel_swarm heartbeat/stale_report を出力する。"""
+    out = tmp_path / "cli_matrix_swarm_run"
+    result = subprocess.run(
+        [
+            sys.executable, str(_CLI), "run", "--sample",
+            "--agents", "5", "--sample-pois", "10",
+            "--ticks", "5", "--seed", "42",
+            "--matrix-mode",
+            "--matrix-agent-id", "0",
+            "--matrix-swarm-heartbeat-tick", "1",
+            "--matrix-swarm-stale-tick", "4",
+            "--matrix-swarm-stale-after-ticks", "3",
+            "--matrix-swarm-orphan-tolerance", "0",
+            "--out", str(out),
+        ],
+        capture_output=True, text=True, cwd=str(_PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"CLI 失敗: {result.stderr}"
+
+    rows = [
+        json.loads(line)
+        for line in (out / "matrix_events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    swarm_events = [
+        row for row in rows
+        if row["matrix_role"] == "sentinel_swarm"
+    ]
+    assert [row["type"] for row in swarm_events] == ["heartbeat", "stale_report"]
+    assert swarm_events[0]["swarm_status"] == "alive"
+    assert swarm_events[1]["swarm_status"] == "stale"
+    assert swarm_events[1]["missed_heartbeats"] == 3
+    assert swarm_events[1]["orphan_tolerance"] == 0
 
 
 class TestActivityPlans:
