@@ -243,7 +243,8 @@ body {
 }
 
 /* ─── Operator mode (MVP-001) ───────────────────────────────────────── */
-.operator-panel {
+.operator-panel,
+.world-bridge-panel {
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
@@ -274,7 +275,26 @@ body {
     gap: 8px;
 }
 
-.operator-actions button {
+.world-bridge-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 8px;
+    margin: 4px 0 8px;
+}
+
+.world-bridge-actions select {
+    min-width: 0;
+    height: 34px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.operator-actions button,
+.world-bridge-actions button {
     min-height: 34px;
     padding: 7px 8px;
     border: 1px solid var(--border-color);
@@ -286,15 +306,22 @@ body {
     cursor: pointer;
 }
 
-.operator-actions button:hover:not(:disabled) {
+.operator-actions button:hover:not(:disabled),
+.world-bridge-actions button:hover:not(:disabled) {
     border-color: var(--accent);
     background: var(--accent-soft);
 }
 
-.operator-actions button:disabled {
+.operator-actions button:disabled,
+.world-bridge-actions button:disabled {
     color: var(--text-muted);
     cursor: not-allowed;
     opacity: 0.7;
+}
+
+.world-bridge-agent-context {
+    margin: 4px 0 6px;
+    padding-left: 0;
 }
 
 /* レイヤートグル (改善版) */

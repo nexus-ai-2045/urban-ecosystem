@@ -100,6 +100,53 @@ export function updateOperatorModePanel(els, snapshot) {
 }
 
 /**
+ * MVP-002 World Bridge panel を更新する。
+ * @param {Object} els
+ * @param {{ currentLayer:string, status:string, failureState:string, message:string, packetReady:boolean, packetCount:number, signalStatus:string, availableLayers?:Object[] }} snapshot
+ */
+export function updateWorldBridgePanel(els, snapshot) {
+    if (!els) return;
+    const layer = snapshot.currentLayer || "simulated";
+    const blocked = Boolean(snapshot.failureState);
+    const isLiminal = layer === "liminal";
+    if (els.layer) {
+        els.layer.textContent = layer;
+        els.layer.classList.toggle("status-pill--ok", !blocked && !isLiminal);
+        els.layer.classList.toggle("status-pill--warning", blocked || isLiminal);
+        els.layer.classList.toggle("status-pill--muted", false);
+    }
+    if (els.packet) {
+        const count = Number.isFinite(snapshot.packetCount) ? snapshot.packetCount : 0;
+        els.packet.textContent = snapshot.packetReady ? `${count}/7 ready` : `${count}/7 missing`;
+    }
+    if (els.signal) {
+        els.signal.textContent = snapshot.signalStatus || "planned_signal";
+    }
+    if (els.targetSelect && Array.isArray(snapshot.availableLayers) && snapshot.availableLayers.length > 0) {
+        const currentValue = els.targetSelect.value || layer;
+        els.targetSelect.innerHTML = "";
+        for (const item of snapshot.availableLayers) {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.id;
+            els.targetSelect.appendChild(option);
+        }
+        els.targetSelect.value = snapshot.availableLayers.some((item) => item.id === currentValue)
+            ? currentValue
+            : layer;
+    }
+    if (els.message) {
+        els.message.className = blocked
+            ? "settings-status settings-status--error"
+            : "settings-status";
+        els.message.textContent = snapshot.message || "world bridge ready";
+    }
+    if (els.transitionButton) {
+        els.transitionButton.disabled = !snapshot.packetReady;
+    }
+}
+
+/**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
  * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot

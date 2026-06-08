@@ -22,6 +22,7 @@ import {
     updateLivePanel,
     updateMapStatus,
     updateOperatorModePanel,
+    updateWorldBridgePanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -102,6 +103,17 @@ const state = {
         failureState: "",
         message: "replay viewpoint",
     },
+    worldBridge: {
+        currentLayer: "simulated",
+        previousLayer: "",
+        status: "ready",
+        failureState: "",
+        message: "simulated layer",
+        availableLayers: [],
+        packetReady: false,
+        packetCount: 0,
+        signalStatus: "planned_signal",
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -169,6 +181,13 @@ const operatorStatusEl = document.getElementById("operator-status");
 const operatorMessageEl = document.getElementById("operator-message");
 const operatorEntryBtn = document.getElementById("btn-operator-entry");
 const operatorReturnBtn = document.getElementById("btn-operator-return");
+const worldBridgeLayerEl = document.getElementById("world-bridge-layer");
+const worldBridgePacketEl = document.getElementById("world-bridge-packet");
+const worldBridgeSignalEl = document.getElementById("world-bridge-signal");
+const worldBridgeTargetSel = document.getElementById("world-bridge-target-select");
+const worldBridgeTransitionBtn = document.getElementById("btn-world-bridge-transition");
+const worldBridgeAgentContextInput = document.getElementById("world-bridge-agent-context");
+const worldBridgeMessageEl = document.getElementById("world-bridge-message");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -197,6 +216,16 @@ const operatorEls = {
     message: operatorMessageEl,
     entryButton: operatorEntryBtn,
     returnButton: operatorReturnBtn,
+};
+
+const worldBridgeEls = {
+    layer: worldBridgeLayerEl,
+    packet: worldBridgePacketEl,
+    signal: worldBridgeSignalEl,
+    targetSelect: worldBridgeTargetSel,
+    transitionButton: worldBridgeTransitionBtn,
+    agentContextInput: worldBridgeAgentContextInput,
+    message: worldBridgeMessageEl,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -237,6 +266,7 @@ async function main() {
     await refreshSettingsStatus();
     await refreshHealthStatus();
     await refreshOperatorMode();
+    await refreshWorldBridge();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -305,6 +335,17 @@ async function refreshOperatorMode() {
         _setOperatorModeState(json);
     } catch {
         updateOperatorRuntimePanel();
+    }
+}
+
+async function refreshWorldBridge() {
+    try {
+        const res = await fetch(`${API_BASE}/api/world-bridge`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setWorldBridgeState(json);
+    } catch {
+        updateWorldBridgeRuntimePanel();
     }
 }
 
@@ -848,6 +889,27 @@ function updateOperatorRuntimePanel() {
     });
 }
 
+function _setWorldBridgeState(json) {
+    const fields = json.minimum_world_packet?.fields || {};
+    const readyCount = Object.values(fields).filter((field) => field && field.ready).length;
+    state.worldBridge = {
+        currentLayer: json.current_layer || "simulated",
+        previousLayer: json.previous_layer || "",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "simulated layer",
+        availableLayers: Array.isArray(json.available_layers) ? json.available_layers : [],
+        packetReady: Boolean(json.minimum_world_packet?.ready),
+        packetCount: readyCount,
+        signalStatus: json.event_music_signal?.status || "planned_signal",
+    };
+    updateWorldBridgeRuntimePanel();
+}
+
+function updateWorldBridgeRuntimePanel() {
+    updateWorldBridgePanel(worldBridgeEls, state.worldBridge);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -900,6 +962,42 @@ async function returnOperatorMode(updatePanel = true) {
         _setOperatorModeState(json);
     } catch {
         if (updatePanel) updateOperatorRuntimePanel();
+    }
+}
+
+async function transitionWorldBridge() {
+    const targetLayer = worldBridgeTargetSel?.value || "simulated";
+    const requiresAgentContext = Boolean(worldBridgeAgentContextInput?.checked);
+    try {
+        const res = await fetch(`${API_BASE}/api/world-bridge/transition`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                target_layer: targetLayer,
+                reason_class: "operator_intent",
+                requires_agent_context: requiresAgentContext,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setWorldBridgeState(detail.world_bridge || {
+                current_layer: state.worldBridge.currentLayer,
+                status: "blocked",
+                failure_state: detail.failure_state || "transition_not_allowed",
+                message: detail.message || "transition failed",
+            });
+            return;
+        }
+        _setWorldBridgeState(json);
+    } catch (error) {
+        state.worldBridge = {
+            ...state.worldBridge,
+            status: "blocked",
+            failureState: "transition_not_allowed",
+            message: String(error.message || error),
+        };
+        updateWorldBridgeRuntimePanel();
     }
 }
 
@@ -1279,6 +1377,11 @@ function wireEvents() {
     if (operatorReturnBtn) {
         operatorReturnBtn.addEventListener("click", async () => {
             await returnOperatorMode();
+        });
+    }
+    if (worldBridgeTransitionBtn) {
+        worldBridgeTransitionBtn.addEventListener("click", async () => {
+            await transitionWorldBridge();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

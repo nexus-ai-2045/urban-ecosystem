@@ -1,0 +1,18 @@
+# Local development artifacts
+.git/
+.gitignore
+.gcloudignore
+tmp/
+
+# Python / test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local secrets and operator-only notes
+.env
+.env.local
+.env.*.local
+docs/drafts/
+docs/local/
+docs/private/

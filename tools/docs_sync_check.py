@@ -293,8 +293,10 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
     required_linear_links = [
         "cross-world-operator-mvp-001-sentinel-entry.md",
         "wo-urban-020-cross-world-sentinel-entry.yaml",
+        "wo-urban-028-cross-world-sentinel-entry-prototype.yaml",
         "cross-world-operator-mvp-002-world-bridge.md",
         "wo-urban-021-cross-world-bridge-state-model.yaml",
+        "wo-urban-029-cross-world-world-bridge-prototype.yaml",
         "cross-world-operator-mvp-003-guide-agent-roster.md",
         "wo-urban-022-cross-world-guide-agent-roster.yaml",
         "cross-world-operator-mvp-004-motif-arc-pack.md",
@@ -330,6 +332,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-026-cross-world-repo-skill-distributed-ops.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-028-cross-world-sentinel-entry-prototype.yaml",
+        project_root / "docs" / "subagents" / "work-orders" / "wo-urban-029-cross-world-world-bridge-prototype.yaml",
     ]
     for path in scan_paths:
         text = _read(path)
