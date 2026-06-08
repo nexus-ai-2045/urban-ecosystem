@@ -315,6 +315,28 @@
         </div>
         <div id="motif-arc-core" class="settings-status">motif gateを確認します。</div>
       </div>
+      <div id="assessment-lab-panel" class="assessment-lab-panel" aria-label="Assessment lab" aria-live="polite">
+        <div class="operator-header">
+          <span>Assessment</span>
+          <span id="assessment-lab-status" class="status-pill status-pill--muted">ready</span>
+        </div>
+        <label class="field-label" for="assessment-lab-select">benchmark category</label>
+        <div class="world-bridge-actions">
+          <select id="assessment-lab-select" aria-label="Assessment category"></select>
+          <button id="btn-assessment-lab-evaluate" type="button">評価</button>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Input</span>
+            <span id="assessment-lab-input" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">Output</span>
+            <span id="assessment-lab-output" class="live-value">確認中</span>
+          </div>
+        </div>
+        <div id="assessment-lab-fail" class="settings-status">不合格条件を確認します。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

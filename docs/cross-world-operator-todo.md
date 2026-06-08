@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.5.0`
+- Version: `0.6.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -433,7 +433,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-016 Human/AI Assessment Lab
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: ethics/safety review
@@ -473,7 +473,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-020 Post-Singularity Scenario Boundary
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: speculative claim review
@@ -483,7 +483,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-021 Chaotic Three-Body World Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `external-practice`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: public-safe benchmark review
@@ -493,7 +493,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-022 Frontier AI Capability Layer Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `external-practice`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: safety review
@@ -503,7 +503,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-023 Scale-Simplification Simulation Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `external-practice`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: source abstraction review
@@ -555,7 +555,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-028 Agent Harness Layer Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-005 Assessment And Benchmark Lab 実装前仕様](cross-world-operator-mvp-005-assessment-benchmark-lab.md)
 - Gate: implementation boundary review

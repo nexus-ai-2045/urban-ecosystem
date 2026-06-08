@@ -53,6 +53,7 @@ from tools.urban_viewer_server import (
     _set_world_bridge_simulated,
     _set_agent_roster_guide,
     _set_motif_arc_default,
+    _set_assessment_lab_default,
 )
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
@@ -285,6 +286,7 @@ def client_no_key(sample_run_dir, monkeypatch):
     _set_world_bridge_simulated()
     _set_agent_roster_guide()
     _set_motif_arc_default()
+    _set_assessment_lab_default()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -299,6 +301,7 @@ def client_with_key(sample_run_dir, monkeypatch):
     _set_world_bridge_simulated()
     _set_agent_roster_guide()
     _set_motif_arc_default()
+    _set_assessment_lab_default()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -782,6 +785,104 @@ class TestMotifArcs:
         active = res.json()["active"]
         assert active["accepted"] is True
         assert active["next_classification_required"] is True
+
+
+class TestAssessmentLab:
+    def test_assessment_lab_returns_benchmark_categories(self, client_no_key):
+        """MVP-005: 6つの評価カテゴリと境界条件を返す。"""
+        res = client_no_key.get("/api/assessment-lab")
+
+        assert res.status_code == 200
+        body = res.json()
+        category_ids = [category["category_id"] for category in body["categories"]]
+        assert category_ids == [
+            "human-ai-assessment-lab",
+            "post-singularity-scenario-boundary",
+            "chaotic-three-body-world-benchmark",
+            "frontier-ai-capability-layer-benchmark",
+            "scale-simplification-simulation-benchmark",
+            "agent-harness-layer-benchmark",
+        ]
+        assert body["active_category_id"] == "human-ai-assessment-lab"
+        assert body["runtime_only"] is True
+        assert "harness" in body["boundaries"]
+
+    def test_assessment_lab_evaluate_accepts_harness_category(self, client_no_key):
+        """既知benchmark categoryは公開安全なassessment cardへ進める。"""
+        res = client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={"category_id": "agent-harness-layer-benchmark"},
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_category_id"] == "agent-harness-layer-benchmark"
+        assert body["active"]["accepted"] is True
+        assert "harness assessment card" in body["active"]["output"]
+
+    def test_assessment_lab_evaluate_does_not_change_default_get_state(self, client_no_key):
+        """公開runtimeでユーザー間共有にならないよう、POSTはGETの既定状態を変えない。"""
+        client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={"category_id": "agent-harness-layer-benchmark"},
+        )
+        body = client_no_key.get("/api/assessment-lab").json()
+
+        assert body["active_category_id"] == "human-ai-assessment-lab"
+        assert body["failure_state"] == ""
+
+    def test_assessment_lab_rejects_unknown_category(self, client_no_key):
+        """未定義categoryはscenario_unboundedで拒否する。"""
+        res = client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={"category_id": "raw-external-test"},
+        )
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "scenario_unbounded"
+
+    def test_assessment_lab_rejects_dangerous_live_test(self, client_no_key):
+        """危険なlive testフラグは実行前に拒否する。"""
+        res = client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={
+                "category_id": "human-ai-assessment-lab",
+                "dangerous_live_test": True,
+            },
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "unsafe_live_test"
+
+    def test_assessment_lab_rejects_external_body(self, client_no_key):
+        """外部投稿本文を評価payloadに含めることを拒否する。"""
+        res = client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={
+                "category_id": "scale-simplification-simulation-benchmark",
+                "external_body_included": True,
+            },
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "source_body_leak"
+
+    def test_assessment_lab_rejects_model_ranking(self, client_no_key):
+        """未確認のlab/model rankingはcapability claimとして拒否する。"""
+        res = client_no_key.post(
+            "/api/assessment-lab/evaluate",
+            json={
+                "category_id": "frontier-ai-capability-layer-benchmark",
+                "model_ranking": True,
+            },
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "capability_claim_unverified"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
