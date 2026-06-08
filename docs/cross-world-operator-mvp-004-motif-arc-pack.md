@@ -1,24 +1,25 @@
-# MVP-004 Motif Arc Pack 実装前仕様
+# MVP-004 Motif Arc Pack prototype
 
-- Status: `draft`
-- Version: `0.1.5`
+- Status: `implemented`
+- Version: `0.5.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - Linear draft: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - TODO正本: [cross-world-operator-todo.md](cross-world-operator-todo.md)
 - Work order: [wo-urban-023-cross-world-motif-arc-pack.yaml](subagents/work-orders/wo-urban-023-cross-world-motif-arc-pack.yaml)
+- Prototype work order: [wo-urban-031-cross-world-motif-arc-prototype.yaml](subagents/work-orders/wo-urban-031-cross-world-motif-arc-prototype.yaml)
 
 ## 目的
 
-`UE-XWORLD-MVP-004 Motif Arc Pack` は、追加motifを人物名や作品名ではなく、world structure、behavior pattern、pressure、gateとして受け入れるための実装前仕様です。
+`UE-XWORLD-MVP-004 Motif Arc Pack` は、追加motifを人物名や作品名ではなく、world structure、behavior pattern、pressure、gateとして受け入れるためのtoy prototypeです。
 
-このPRでは実装コードとdata contractを変更しません。MVP-001からMVP-003で定義したoperator entry、world bridge、role setに対して、motifを安全に接続できるかを判断する基準を固定します。
+このPRではdata contractを変更しません。MVP-001からMVP-003で定義したoperator entry、world bridge、role setに対して、motifを安全に接続できるかをviewer APIとUIで確認できるようにします。
 
 ## Versioning
 
-この仕様追加は、Cross-world Operator Mode docs package の `0.1.5` PATCH更新です。
+このprototype追加は、Cross-world Operator Mode docs package の `0.5.0` MINOR更新です。
 
-data contract、主要API、runtime実装は含まないため、Urban Ecosystem data contract `0.5.0` は変更しません。
+Urban Ecosystem data contract `0.5.0` は変更しません。
 
 ## 対象TODO
 
@@ -94,6 +95,21 @@ motifはMinimum World Packetに接続できる必要があります。
 | `Ecological Mediation Arc` | environmental negotiation、swarm intelligence、non-human agency | place and environment、social fabric、history and memory | world packet review |
 | `Pilot Sync Arc` | synchronization threshold、bio-machine pressure、identity strain | rules of possibility、relationship pattern、failure mode | public-safe naming review |
 | `Next Motif Expansion Slot` | future motif intake with TODO or classification | Minimum World Packet coverage | human review |
+
+## Prototype API
+
+- `GET /api/motif-arcs`
+  - public-safe motif arc pack、active motif、Archetype guarantee、World guarantee、public-safe gateを返す。
+- `POST /api/motif-arcs/evaluate`
+  - `motif_id` を受け取り、定義済みpublic-safe motifだけを評価する。
+  - 未定義motifや生の固有名っぽい入力は `motif_name_not_safe` で拒否する。
+  - `Next Motif Expansion Slot` は、次の採用候補にTODO IDまたは分類が必要であることを返す。
+
+## Prototype UI
+
+- 右パネルに `Motif Arc` を追加する。
+- operatorはpublic-safe motifを選び、Archetype ready / World ready / coreを確認できる。
+- motifはsimulation stateを変更せず、MVP-005以降のassessment候補として保持する。
 
 ## Next Motif Expansion Slot
 

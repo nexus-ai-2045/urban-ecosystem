@@ -24,6 +24,7 @@ import {
     updateOperatorModePanel,
     updateWorldBridgePanel,
     updateAgentRosterPanel,
+    updateMotifArcPanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -124,6 +125,14 @@ const state = {
         active: null,
         operatorBoundary: "",
     },
+    motifArcs: {
+        activeMotifId: "equivalent-exchange-pair",
+        status: "ready",
+        failureState: "",
+        message: "motif arc ready",
+        motifs: [],
+        active: null,
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -204,6 +213,12 @@ const agentRosterSelectBtn = document.getElementById("btn-agent-roster-select");
 const agentRosterLayerEl = document.getElementById("agent-roster-layer");
 const agentRosterBoundaryEl = document.getElementById("agent-roster-boundary");
 const agentRosterGuidanceEl = document.getElementById("agent-roster-guidance");
+const motifArcStatusEl = document.getElementById("motif-arc-status");
+const motifArcSelectEl = document.getElementById("motif-arc-select");
+const motifArcEvaluateBtn = document.getElementById("btn-motif-arc-evaluate");
+const motifArcArchetypeEl = document.getElementById("motif-arc-archetype");
+const motifArcWorldEl = document.getElementById("motif-arc-world");
+const motifArcCoreEl = document.getElementById("motif-arc-core");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -253,6 +268,15 @@ const agentRosterEls = {
     guidance: agentRosterGuidanceEl,
 };
 
+const motifArcEls = {
+    status: motifArcStatusEl,
+    select: motifArcSelectEl,
+    evaluateButton: motifArcEvaluateBtn,
+    archetype: motifArcArchetypeEl,
+    world: motifArcWorldEl,
+    core: motifArcCoreEl,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,6 +317,7 @@ async function main() {
     await refreshOperatorMode();
     await refreshWorldBridge();
     await refreshAgentRoster();
+    await refreshMotifArcs();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -383,6 +408,17 @@ async function refreshAgentRoster() {
         _setAgentRosterState(json);
     } catch {
         updateAgentRosterRuntimePanel();
+    }
+}
+
+async function refreshMotifArcs() {
+    try {
+        const res = await fetch(`${API_BASE}/api/motif-arcs`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setMotifArcState(json);
+    } catch {
+        updateMotifArcRuntimePanel();
     }
 }
 
@@ -964,6 +1000,22 @@ function updateAgentRosterRuntimePanel() {
     updateAgentRosterPanel(agentRosterEls, state.agentRoster);
 }
 
+function _setMotifArcState(json) {
+    state.motifArcs = {
+        activeMotifId: json.active_motif_id || "equivalent-exchange-pair",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "motif arc ready",
+        motifs: Array.isArray(json.motifs) ? json.motifs : [],
+        active: json.active || null,
+    };
+    updateMotifArcRuntimePanel();
+}
+
+function updateMotifArcRuntimePanel() {
+    updateMotifArcPanel(motifArcEls, state.motifArcs);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -1083,6 +1135,37 @@ async function selectAgentRosterRole() {
             message: String(error.message || error),
         };
         updateAgentRosterRuntimePanel();
+    }
+}
+
+async function evaluateMotifArc() {
+    const motifId = motifArcSelectEl?.value || "equivalent-exchange-pair";
+    try {
+        const res = await fetch(`${API_BASE}/api/motif-arcs/evaluate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ motif_id: motifId }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setMotifArcState(detail.motif_arcs || {
+                active_motif_id: state.motifArcs.activeMotifId,
+                status: "blocked",
+                failure_state: detail.failure_state || "motif_name_not_safe",
+                message: detail.message || "motif evaluation failed",
+            });
+            return;
+        }
+        _setMotifArcState(json);
+    } catch (error) {
+        state.motifArcs = {
+            ...state.motifArcs,
+            status: "blocked",
+            failureState: "motif_name_not_safe",
+            message: String(error.message || error),
+        };
+        updateMotifArcRuntimePanel();
     }
 }
 
@@ -1472,6 +1555,11 @@ function wireEvents() {
     if (agentRosterSelectBtn) {
         agentRosterSelectBtn.addEventListener("click", async () => {
             await selectAgentRosterRole();
+        });
+    }
+    if (motifArcEvaluateBtn) {
+        motifArcEvaluateBtn.addEventListener("click", async () => {
+            await evaluateMotifArc();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

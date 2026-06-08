@@ -16,6 +16,8 @@ urban_viewer_server.py — Urban Ecosystem リプレイビューア FastAPI サ�
   POST /api/world-bridge/transition world layer を移動する
   GET /api/agent-roster         guide / partner などの抽象role state
   POST /api/agent-roster/select active role を選択する
+  GET /api/motif-arcs           public-safe motif arc pack
+  POST /api/motif-arcs/evaluate motif arc の受け入れ条件を確認する
   GET /api/settings     ランタイム設定状態 (秘密値は返さない)
   POST /api/settings    ランタイム設定更新 (process-local / 永続保存なし)
   GET /api/data/{run_id}/{file}  データファイル配信 (許可リスト 11 件)
@@ -208,6 +210,98 @@ _AGENT_ROSTER_STATE: dict[str, object] = {
     "status": "ready",
     "failure_state": "",
     "message": "guide role ready",
+}
+
+# MVP-004 Motif Arc Pack: public-safe motif の受け入れ判定。
+MOTIF_ARC_IDS: tuple[str, ...] = (
+    "equivalent-exchange-pair",
+    "pillar-council-arc",
+    "unstable-power-arc",
+    "boundary-war-arc",
+    "fighter-archetype-set",
+    "social-tech-mirror-lab",
+    "judgment-game-arc",
+    "ecological-mediation-arc",
+    "pilot-sync-arc",
+    "next-motif-expansion-slot",
+)
+_MOTIF_ARCS: dict[str, dict[str, object]] = {
+    "equivalent-exchange-pair": {
+        "name": "Equivalent Exchange Pair",
+        "core": "cost、restoration、pair dependency",
+        "archetypes": ["relationship pattern", "pressure source", "recovery path"],
+        "world_fields": ["rules_of_possibility", "resources_and_power", "history_and_memory"],
+        "gate": "public-safe naming review",
+    },
+    "pillar-council-arc": {
+        "name": "Pillar Council Arc",
+        "core": "guardian、council、patron、corruption-prime structure",
+        "archetypes": ["actor role", "relationship pattern", "pressure source"],
+        "world_fields": ["social_fabric", "resources_and_power", "change_pressure"],
+        "gate": "public-safe naming review",
+    },
+    "unstable-power-arc": {
+        "name": "Unstable Power Arc",
+        "core": "city-scale instability、uncontrolled power、containment dynamics",
+        "archetypes": ["pressure source", "failure mode", "transition path"],
+        "world_fields": ["place_and_environment", "rules_of_possibility", "change_pressure"],
+        "gate": "safety review",
+    },
+    "boundary-war-arc": {
+        "name": "Boundary War Arc",
+        "core": "boundary logic、external pressure、protector、strategist、elite intervention",
+        "archetypes": ["actor role", "pressure source", "relationship pattern"],
+        "world_fields": ["place_and_environment", "social_fabric", "history_and_memory"],
+        "gate": "public-safe naming review",
+    },
+    "fighter-archetype-set": {
+        "name": "Fighter Archetype Set",
+        "core": "discipline、rivalry、precision、training、event-duel",
+        "archetypes": ["actor role", "relationship pattern", "recovery path"],
+        "world_fields": ["daily_life_signal", "rules_of_possibility", "change_pressure"],
+        "gate": "public-safe naming review",
+    },
+    "social-tech-mirror-lab": {
+        "name": "Social-Tech Mirror Lab",
+        "core": "technology distortion、identity、trust、short scenario",
+        "archetypes": ["pressure source", "failure mode", "relationship pattern"],
+        "world_fields": ["social_fabric", "daily_life_signal", "change_pressure"],
+        "gate": "social-risk review",
+    },
+    "judgment-game-arc": {
+        "name": "Judgment Game Arc",
+        "core": "judgment、surveillance、inference、counter-inference",
+        "archetypes": ["actor role", "pressure source", "failure mode"],
+        "world_fields": ["rules_of_possibility", "social_fabric", "resources_and_power"],
+        "gate": "safety review",
+    },
+    "ecological-mediation-arc": {
+        "name": "Ecological Mediation Arc",
+        "core": "environmental negotiation、swarm intelligence、non-human agency",
+        "archetypes": ["actor role", "relationship pattern", "transition path"],
+        "world_fields": ["place_and_environment", "social_fabric", "history_and_memory"],
+        "gate": "world packet review",
+    },
+    "pilot-sync-arc": {
+        "name": "Pilot Sync Arc",
+        "core": "synchronization threshold、bio-machine pressure、identity strain",
+        "archetypes": ["relationship pattern", "pressure source", "failure mode"],
+        "world_fields": ["rules_of_possibility", "social_fabric", "change_pressure"],
+        "gate": "public-safe naming review",
+    },
+    "next-motif-expansion-slot": {
+        "name": "Next Motif Expansion Slot",
+        "core": "future motif intake with TODO or explicit classification",
+        "archetypes": ["transition path", "pressure source", "recovery path"],
+        "world_fields": list(MINIMUM_WORLD_PACKET_FIELDS),
+        "gate": "human review",
+    },
+}
+_MOTIF_ARC_STATE: dict[str, object] = {
+    "active_motif_id": "equivalent-exchange-pair",
+    "status": "ready",
+    "failure_state": "",
+    "message": "motif arc ready",
 }
 
 # run_id バリデーション正規表現 (§21.1)
@@ -876,6 +970,87 @@ def _agent_roster_error(status_code: int, failure_state: str, message: str) -> H
     })
 
 
+def _motif_arc_evaluation(motif_id: str) -> dict[str, object]:
+    """motifがArchetype/World guaranteeを満たすか評価する。"""
+    motif = _MOTIF_ARCS[motif_id]
+    archetypes = motif["archetypes"]
+    world_fields = motif["world_fields"]
+    missing_world_fields = [
+        field for field in MINIMUM_WORLD_PACKET_FIELDS
+        if field not in world_fields and motif_id == "next-motif-expansion-slot"
+    ]
+    archetype_ready = isinstance(archetypes, list) and len(archetypes) > 0
+    world_ready = isinstance(world_fields, list) and len(world_fields) > 0 and not missing_world_fields
+    public_safe_ready = motif_id in MOTIF_ARC_IDS
+    return {
+        "motif_id": motif_id,
+        "public_safe_name": motif["name"],
+        "core": motif["core"],
+        "gate": motif["gate"],
+        "archetypes": archetypes,
+        "world_fields": world_fields,
+        "archetype_ready": archetype_ready,
+        "world_ready": world_ready,
+        "public_safe_ready": public_safe_ready,
+        "accepted": archetype_ready and world_ready and public_safe_ready,
+        "missing_world_fields": missing_world_fields,
+        "next_classification_required": motif_id == "next-motif-expansion-slot",
+    }
+
+
+def _safe_motif_arc_state() -> dict[str, object]:
+    """motif arc state をレスポンス用にコピーする。"""
+    active_id = str(_MOTIF_ARC_STATE["active_motif_id"])
+    motifs = [_motif_arc_evaluation(motif_id) for motif_id in MOTIF_ARC_IDS]
+    return {
+        "active_motif_id": active_id,
+        "status": _MOTIF_ARC_STATE["status"],
+        "failure_state": _MOTIF_ARC_STATE["failure_state"],
+        "message": _MOTIF_ARC_STATE["message"],
+        "motifs": motifs,
+        "active": _motif_arc_evaluation(active_id),
+        "guarantees": {
+            "archetype": "actor role、relationship pattern、pressure source、failure mode、recovery or transition pathのいずれかを要求する。",
+            "world": "Minimum World Packetに接続できるworld fieldを要求する。",
+            "public_safe": "作品名、キャラクター名、引用、私的path、外部投稿本文をimplementation IDにしない。",
+        },
+        "operator_mode": _safe_operator_state(),
+        "world_bridge": {
+            "current_layer": _WORLD_BRIDGE_STATE["current_layer"],
+            "minimum_world_packet_ready": _world_packet_ready(),
+        },
+        "agent_roster": {
+            "active_role": _AGENT_ROSTER_STATE["active_role"],
+        },
+        "runtime_only": True,
+    }
+
+
+def _set_motif_arc_default(message: str = "motif arc ready") -> dict[str, object]:
+    """テスト用に motif arc を初期状態へ戻す。"""
+    _MOTIF_ARC_STATE.update({
+        "active_motif_id": "equivalent-exchange-pair",
+        "status": "ready",
+        "failure_state": "",
+        "message": message,
+    })
+    return _safe_motif_arc_state()
+
+
+def _motif_arc_error(status_code: int, failure_state: str, message: str) -> HTTPException:
+    """失敗状態を保存しつつ、active motif を維持する HTTPException を返す。"""
+    _MOTIF_ARC_STATE.update({
+        "status": "blocked",
+        "failure_state": failure_state,
+        "message": message,
+    })
+    return HTTPException(status_code=status_code, detail={
+        "failure_state": failure_state,
+        "message": message,
+        "motif_arcs": _safe_motif_arc_state(),
+    })
+
+
 def _read_summary(run_id: str) -> dict:
     """operator entry 用に summary.json を読み込む。"""
     try:
@@ -1257,6 +1432,39 @@ async def select_agent_roster_role(request: Request) -> JSONResponse:
         "message": f"{role_id} role selected",
     })
     return JSONResponse(_safe_agent_roster_state())
+
+
+@app.get("/api/motif-arcs")
+async def get_motif_arcs() -> JSONResponse:
+    """MVP-004: public-safe motif arc packを返す。"""
+    return JSONResponse(_safe_motif_arc_state())
+
+
+@app.post("/api/motif-arcs/evaluate")
+async def evaluate_motif_arc(request: Request) -> JSONResponse:
+    """MVP-004: motif arc のArchetype / World guaranteeを確認する。"""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError as exc:
+        raise _motif_arc_error(400, "motif_name_not_safe", "invalid json") from exc
+    if not isinstance(body, dict):
+        raise _motif_arc_error(400, "motif_name_not_safe", "request body must be an object")
+    motif_id = body.get("motif_id")
+    if not isinstance(motif_id, str) or motif_id not in MOTIF_ARC_IDS:
+        raise _motif_arc_error(404, "motif_name_not_safe", "motif_id is not public-safe or is not defined")
+
+    evaluation = _motif_arc_evaluation(motif_id)
+    if not evaluation["archetype_ready"]:
+        raise _motif_arc_error(400, "archetype_missing", "motif has no archetype guarantee")
+    if not evaluation["world_ready"]:
+        raise _motif_arc_error(400, "world_packet_incomplete", "motif has no world guarantee")
+    _MOTIF_ARC_STATE.update({
+        "active_motif_id": motif_id,
+        "status": "ready",
+        "failure_state": "",
+        "message": f"{motif_id} accepted by motif gate",
+    })
+    return JSONResponse(_safe_motif_arc_state())
 
 
 @app.get("/api/labels")

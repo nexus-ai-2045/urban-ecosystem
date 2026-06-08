@@ -52,6 +52,7 @@ from tools.urban_viewer_server import (
     _set_operator_replay,
     _set_world_bridge_simulated,
     _set_agent_roster_guide,
+    _set_motif_arc_default,
 )
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
@@ -283,6 +284,7 @@ def client_no_key(sample_run_dir, monkeypatch):
     _set_operator_replay()
     _set_world_bridge_simulated()
     _set_agent_roster_guide()
+    _set_motif_arc_default()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -296,6 +298,7 @@ def client_with_key(sample_run_dir, monkeypatch):
     _set_operator_replay()
     _set_world_bridge_simulated()
     _set_agent_roster_guide()
+    _set_motif_arc_default()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -716,6 +719,69 @@ class TestAgentRoster:
         body = res.json()
         assert body["active_role"] == "partner"
         assert "Agent 0" in body["active"]["guidance"]
+
+
+class TestMotifArcs:
+    def test_motif_arcs_returns_public_safe_pack(self, client_no_key):
+        """MVP-004: public-safe motif packと保証条件を返す。"""
+        res = client_no_key.get("/api/motif-arcs")
+
+        assert res.status_code == 200
+        body = res.json()
+        motif_ids = [motif["motif_id"] for motif in body["motifs"]]
+        assert motif_ids == [
+            "equivalent-exchange-pair",
+            "pillar-council-arc",
+            "unstable-power-arc",
+            "boundary-war-arc",
+            "fighter-archetype-set",
+            "social-tech-mirror-lab",
+            "judgment-game-arc",
+            "ecological-mediation-arc",
+            "pilot-sync-arc",
+            "next-motif-expansion-slot",
+        ]
+        assert body["active_motif_id"] == "equivalent-exchange-pair"
+        assert body["runtime_only"] is True
+        assert "public_safe" in body["guarantees"]
+
+    def test_motif_arc_evaluate_accepts_known_motif(self, client_no_key):
+        """既知motifはArchetype/World guaranteeを満たしてacceptedになる。"""
+        res = client_no_key.post(
+            "/api/motif-arcs/evaluate",
+            json={"motif_id": "ecological-mediation-arc"},
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_motif_id"] == "ecological-mediation-arc"
+        assert body["active"]["accepted"] is True
+        assert body["active"]["archetype_ready"] is True
+        assert body["active"]["world_ready"] is True
+
+    def test_motif_arc_rejects_unknown_or_raw_name(self, client_no_key):
+        """未定義/生名っぽいmotifは motif_name_not_safe。"""
+        res = client_no_key.post(
+            "/api/motif-arcs/evaluate",
+            json={"motif_id": "raw-character-name"},
+        )
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "motif_name_not_safe"
+        assert body["motif_arcs"]["active_motif_id"] == "equivalent-exchange-pair"
+
+    def test_next_motif_slot_requires_classification_signal(self, client_no_key):
+        """Next slotはTODOまたは分類を要求する印を返す。"""
+        res = client_no_key.post(
+            "/api/motif-arcs/evaluate",
+            json={"motif_id": "next-motif-expansion-slot"},
+        )
+
+        assert res.status_code == 200
+        active = res.json()["active"]
+        assert active["accepted"] is True
+        assert active["next_classification_required"] is True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
