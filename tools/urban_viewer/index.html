@@ -385,6 +385,32 @@
         </div>
         <div id="repo-skill-mesh-guard" class="settings-status">guardを確認します。</div>
       </div>
+      <div id="intake-lifecycle-panel" class="intake-lifecycle-panel" aria-label="Intake lifecycle" aria-live="polite">
+        <div class="operator-header">
+          <span>Intake</span>
+          <span id="intake-lifecycle-status" class="status-pill status-pill--muted">ready</span>
+        </div>
+        <label class="field-label" for="intake-lifecycle-class-select">request class</label>
+        <div class="world-bridge-actions">
+          <select id="intake-lifecycle-class-select" aria-label="Intake request class"></select>
+          <button id="btn-intake-lifecycle-draft" type="button">Draft</button>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Source</span>
+            <span id="intake-lifecycle-source" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">World</span>
+            <span id="intake-lifecycle-world" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">Lifecycle</span>
+            <span id="intake-lifecycle-lifecycle" class="live-value">確認中</span>
+          </div>
+        </div>
+        <div id="intake-lifecycle-candidate" class="settings-status">draft candidateを確認します。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

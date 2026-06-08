@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.8.0`
+- Version: `0.9.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -612,9 +612,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-034 Worldbuilding Extraction Pipeline
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
-- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline 実装前仕様](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
+- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline Prototype](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
 - Gate: private-source containment review
 - Acceptance:
   - source article -> section -> world layer -> claim candidate -> concept vocabulary -> link validation -> orchestration reportのpipelineをtoy inputで検証する。
@@ -624,9 +624,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-035 Public-safe Naming Validator
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `public-policy`
-- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline 実装前仕様](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
+- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline Prototype](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
 - Gate: quality-gate review
 - Acceptance:
   - protected names、private paths、external post body、secret-like stringsを検出できる。
@@ -644,9 +644,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-037 Add Request Intake Draft Flow
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `public-policy`
-- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline 実装前仕様](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
+- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline Prototype](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
 - Gate: TYPE1 public gate
 - Acceptance:
   - GitHub/Discordの「追加して」をdraft candidateに変換できる。
@@ -654,9 +654,9 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-038 Orphan / Stale / Heartbeat Tracking
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
-- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline 実装前仕様](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
+- Next artifact: [MVP-008 Intake Lifecycle And Worldbuilding Pipeline Prototype](cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md)
 - Gate: draft-only automation review
 - Acceptance:
   - orphan thresholdを追跡できる。
