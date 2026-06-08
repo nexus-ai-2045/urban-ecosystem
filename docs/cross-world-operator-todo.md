@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.4.0`
+- Version: `0.5.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -341,7 +341,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-007 Equivalent Exchange Pair
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
@@ -351,7 +351,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-008 Pillar Council Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
@@ -361,7 +361,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-009 Unstable Power Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: safety review
@@ -371,7 +371,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-010 Boundary War Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
@@ -381,7 +381,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-011 Fighter Archetype Set
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
@@ -391,7 +391,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-012 Social-Tech Mirror Lab
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: social-risk review
@@ -401,7 +401,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-013 Judgment Game Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: safety review
@@ -411,7 +411,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-014 Ecological Mediation Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: world packet review
@@ -421,7 +421,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-015 Pilot Sync Arc
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: public-safe naming review
@@ -463,7 +463,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-019 Next Motif Expansion Slot
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-004 Motif Arc Pack 実装前仕様](cross-world-operator-mvp-004-motif-arc-pack.md)
 - Gate: human review

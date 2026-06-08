@@ -193,6 +193,51 @@ export function updateAgentRosterPanel(els, snapshot) {
 }
 
 /**
+ * MVP-004 Motif Arc panel を更新する。
+ * @param {Object} els
+ * @param {{ activeMotifId:string, status:string, failureState:string, message:string, active:Object|null, motifs?:Object[] }} snapshot
+ */
+export function updateMotifArcPanel(els, snapshot) {
+    if (!els) return;
+    const active = snapshot.active || {};
+    const blocked = Boolean(snapshot.failureState);
+    if (els.status) {
+        els.status.textContent = blocked ? snapshot.failureState : (snapshot.status || "ready");
+        els.status.classList.toggle("status-pill--ok", !blocked);
+        els.status.classList.toggle("status-pill--warning", blocked);
+        els.status.classList.toggle("status-pill--muted", false);
+    }
+    if (els.select && Array.isArray(snapshot.motifs) && snapshot.motifs.length > 0) {
+        const currentValue = els.select.value || snapshot.activeMotifId;
+        els.select.innerHTML = "";
+        for (const motif of snapshot.motifs) {
+            const option = document.createElement("option");
+            option.value = motif.motif_id;
+            option.textContent = motif.public_safe_name;
+            els.select.appendChild(option);
+        }
+        els.select.value = snapshot.motifs.some((motif) => motif.motif_id === currentValue)
+            ? currentValue
+            : snapshot.activeMotifId;
+    }
+    if (els.archetype) {
+        els.archetype.textContent = active.archetype_ready ? "ready" : "missing";
+    }
+    if (els.world) {
+        els.world.textContent = active.world_ready ? "ready" : "missing";
+    }
+    if (els.core) {
+        els.core.className = blocked
+            ? "settings-status settings-status--error"
+            : "settings-status";
+        els.core.textContent = active.core || snapshot.message || "motif gate ready";
+    }
+    if (els.evaluateButton) {
+        els.evaluateButton.disabled = false;
+    }
+}
+
+/**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
  * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot

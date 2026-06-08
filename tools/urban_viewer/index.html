@@ -293,6 +293,28 @@
         </div>
         <div id="agent-roster-guidance" class="settings-status">現在状態を説明します。</div>
       </div>
+      <div id="motif-arc-panel" class="motif-arc-panel" aria-label="Motif arc pack" aria-live="polite">
+        <div class="operator-header">
+          <span>Motif Arc</span>
+          <span id="motif-arc-status" class="status-pill status-pill--muted">ready</span>
+        </div>
+        <label class="field-label" for="motif-arc-select">public-safe motif</label>
+        <div class="world-bridge-actions">
+          <select id="motif-arc-select" aria-label="Motif arc"></select>
+          <button id="btn-motif-arc-evaluate" type="button">評価</button>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Archetype</span>
+            <span id="motif-arc-archetype" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">World</span>
+            <span id="motif-arc-world" class="live-value">確認中</span>
+          </div>
+        </div>
+        <div id="motif-arc-core" class="settings-status">motif gateを確認します。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>
