@@ -25,6 +25,7 @@ import {
     updateWorldBridgePanel,
     updateAgentRosterPanel,
     updateMotifArcPanel,
+    updateAssessmentLabPanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -133,6 +134,14 @@ const state = {
         motifs: [],
         active: null,
     },
+    assessmentLab: {
+        activeCategoryId: "human-ai-assessment-lab",
+        status: "ready",
+        failureState: "",
+        message: "assessment lab ready",
+        categories: [],
+        active: null,
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -219,6 +228,12 @@ const motifArcEvaluateBtn = document.getElementById("btn-motif-arc-evaluate");
 const motifArcArchetypeEl = document.getElementById("motif-arc-archetype");
 const motifArcWorldEl = document.getElementById("motif-arc-world");
 const motifArcCoreEl = document.getElementById("motif-arc-core");
+const assessmentLabStatusEl = document.getElementById("assessment-lab-status");
+const assessmentLabSelectEl = document.getElementById("assessment-lab-select");
+const assessmentLabEvaluateBtn = document.getElementById("btn-assessment-lab-evaluate");
+const assessmentLabInputEl = document.getElementById("assessment-lab-input");
+const assessmentLabOutputEl = document.getElementById("assessment-lab-output");
+const assessmentLabFailEl = document.getElementById("assessment-lab-fail");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -277,6 +292,15 @@ const motifArcEls = {
     core: motifArcCoreEl,
 };
 
+const assessmentLabEls = {
+    status: assessmentLabStatusEl,
+    select: assessmentLabSelectEl,
+    evaluateButton: assessmentLabEvaluateBtn,
+    input: assessmentLabInputEl,
+    output: assessmentLabOutputEl,
+    fail: assessmentLabFailEl,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
 // ─────────────────────────────────────────────────────────────────────────────
@@ -318,6 +342,7 @@ async function main() {
     await refreshWorldBridge();
     await refreshAgentRoster();
     await refreshMotifArcs();
+    await refreshAssessmentLab();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -419,6 +444,17 @@ async function refreshMotifArcs() {
         _setMotifArcState(json);
     } catch {
         updateMotifArcRuntimePanel();
+    }
+}
+
+async function refreshAssessmentLab() {
+    try {
+        const res = await fetch(`${API_BASE}/api/assessment-lab`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setAssessmentLabState(json);
+    } catch {
+        updateAssessmentLabRuntimePanel();
     }
 }
 
@@ -1016,6 +1052,22 @@ function updateMotifArcRuntimePanel() {
     updateMotifArcPanel(motifArcEls, state.motifArcs);
 }
 
+function _setAssessmentLabState(json) {
+    state.assessmentLab = {
+        activeCategoryId: json.active_category_id || "human-ai-assessment-lab",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "assessment lab ready",
+        categories: Array.isArray(json.categories) ? json.categories : [],
+        active: json.active || null,
+    };
+    updateAssessmentLabRuntimePanel();
+}
+
+function updateAssessmentLabRuntimePanel() {
+    updateAssessmentLabPanel(assessmentLabEls, state.assessmentLab);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -1166,6 +1218,37 @@ async function evaluateMotifArc() {
             message: String(error.message || error),
         };
         updateMotifArcRuntimePanel();
+    }
+}
+
+async function evaluateAssessmentLab() {
+    const categoryId = assessmentLabSelectEl?.value || "human-ai-assessment-lab";
+    try {
+        const res = await fetch(`${API_BASE}/api/assessment-lab/evaluate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ category_id: categoryId }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setAssessmentLabState(detail.assessment_lab || {
+                active_category_id: state.assessmentLab.activeCategoryId,
+                status: "blocked",
+                failure_state: detail.failure_state || "scenario_unbounded",
+                message: detail.message || "assessment evaluation failed",
+            });
+            return;
+        }
+        _setAssessmentLabState(json);
+    } catch (error) {
+        state.assessmentLab = {
+            ...state.assessmentLab,
+            status: "blocked",
+            failureState: "scenario_unbounded",
+            message: String(error.message || error),
+        };
+        updateAssessmentLabRuntimePanel();
     }
 }
 
@@ -1560,6 +1643,11 @@ function wireEvents() {
     if (motifArcEvaluateBtn) {
         motifArcEvaluateBtn.addEventListener("click", async () => {
             await evaluateMotifArc();
+        });
+    }
+    if (assessmentLabEvaluateBtn) {
+        assessmentLabEvaluateBtn.addEventListener("click", async () => {
+            await evaluateAssessmentLab();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

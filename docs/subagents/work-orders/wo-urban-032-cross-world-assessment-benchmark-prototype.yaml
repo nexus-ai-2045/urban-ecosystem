@@ -1,0 +1,98 @@
+id: wo-urban-032-cross-world-assessment-benchmark-prototype
+title: "MVP-005 Assessment And Benchmark Lab Prototype"
+status: draft
+cross_world_operator_version: 0.6.0
+owner_role: developer
+support_roles:
+  - scenario-designer
+  - quality-gate
+
+goal: >
+  Cross-world Operator Mode の MVP-005 実装PRとして、assessment / benchmark categoryを
+  viewer上で選択・評価できる toy prototype を追加する。
+
+context:
+  must_read:
+    - AGENTS.md
+    - docs/subagents/operating-model.md
+    - docs/subagents/human-gates.md
+    - docs/type1-public-pr-gate.md
+    - docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md
+    - docs/subagents/work-orders/wo-urban-024-cross-world-assessment-benchmark-lab.yaml
+    - docs/subagents/work-orders/wo-urban-031-cross-world-motif-arc-prototype.yaml
+
+scope:
+  allowed_write_paths:
+    - tools/urban_viewer_server.py
+    - tools/urban_viewer/app.js
+    - tools/urban_viewer/index.html
+    - tools/urban_viewer/styles.css
+    - tools/urban_viewer/ui_panels.js
+    - tests/tools/test_urban_viewer_server.py
+    - tests/tools/test_docs_sync_check.py
+    - tools/docs_sync_check.py
+    - docs/generated/current-capabilities.md
+    - docs/cross-world-operator-roadmap.md
+    - docs/cross-world-operator-roadmap.html
+    - docs/cross-world-operator-todo.md
+    - docs/cross-world-operator-todo.html
+    - docs/cross-world-operator-linear-drafts.md
+    - docs/cross-world-operator-mvp-005-assessment-benchmark-lab.md
+    - docs/subagents/work-orders/wo-urban-032-cross-world-assessment-benchmark-prototype.yaml
+  read_only_paths:
+    - docs/subagents/contracts/
+  out_of_scope:
+    - "data contract を変更しない。"
+    - "deception、dangerous live test、危険手順、real-world targetingを実装しない。"
+    - "lab/model ranking、private capability claim、未確認性能断定を行わない。"
+    - "外部投稿本文、私的path、作品名・キャラクター名・引用台詞を public implementation ID として使わない。"
+    - "cloud command、external API、Discord投稿、Linear issue作成、GitHub issue作成を行わない。"
+
+contracts:
+  consumes:
+    - id: urban-ecosystem-data-contract
+      version: 0.5.0
+  produces: []
+
+depends_on:
+  work_orders:
+    - wo-urban-024-cross-world-assessment-benchmark-lab
+    - wo-urban-031-cross-world-motif-arc-prototype
+
+human_gates:
+  before_start:
+    - G0
+  before_implementation:
+    - G1
+  before_long_run:
+    - G2
+  before_claiming_result:
+    - G3
+  before_integration:
+    - G4
+
+commands:
+  required:
+    - "python tools/docs_sync_check.py --check"
+    - "python -m pytest tests/tools/test_urban_viewer_server.py tests/tools/test_docs_sync_check.py -q -p no:cacheprovider"
+    - "python -m pytest tests/ -q -p no:cacheprovider"
+  optional: []
+
+acceptance:
+  - "`GET /api/assessment-lab` が6つのpublic-safe assessment / benchmark category、active category、boundariesを返す。"
+  - "`POST /api/assessment-lab/evaluate` が定義済みcategoryだけを評価し、未定義categoryを `scenario_unbounded` で拒否する。"
+  - "`POST /api/assessment-lab/evaluate` はレスポンス上のactive categoryだけを返し、Cloud Run上の共有process stateを変更しない。"
+  - "`dangerous_live_test`、`external_body_included`、`model_ranking` をそれぞれ安全境界違反として拒否する。"
+  - "UI から Assessment Lab panel でcategoryを選択し、input / output / fail conditionを確認できる。"
+  - "simulation state、data contract、cloud/API/Discord/Linear/GitHub issue は変更しない。"
+
+handoff:
+  required_fields:
+    - changed_files
+    - tests_run
+    - results_summary
+    - risks
+    - human_decisions_needed
+
+notes:
+  - "この prototype はstateless responseとしてcategory評価結果を返す。MVP-006のgovernance / fractal decisionへ評価結果の扱い方を渡す。"

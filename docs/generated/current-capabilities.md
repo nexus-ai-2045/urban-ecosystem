@@ -10,6 +10,8 @@
 | `GET` | `/` | `root` | ビューア HTML を返す (APIキー注入 or fallback)。 |
 | `GET` | `/api/agent-roster` | `get_agent_roster` | MVP-003: guide / partner などの抽象role stateを返す。 |
 | `POST` | `/api/agent-roster/select` | `select_agent_roster_role` | MVP-003: active roleを選択する。 |
+| `GET` | `/api/assessment-lab` | `get_assessment_lab` | MVP-005: assessment / benchmark category stateを返す。 |
+| `POST` | `/api/assessment-lab/evaluate` | `evaluate_assessment_category` | MVP-005: benchmark categoryを公開安全な範囲で評価する。 |
 | `GET` | `/api/data/{run_id}/{file}` | `get_data_file` | データファイルを配信する (§21.3)。 |
 | `GET` | `/api/health` | `health` | ヘルスチェック (§21.4)。 |
 | `GET` | `/api/labels` | `get_labels` | 日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。 |
