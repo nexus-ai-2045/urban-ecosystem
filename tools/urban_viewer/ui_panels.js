@@ -64,6 +64,42 @@ export function updateMapStatus(els, info) {
 }
 
 /**
+ * MVP-001 Operator panel を更新する。
+ * @param {Object} els
+ * @param {{ viewpoint:string, status:string, agentId:number|null, selectedAgentId:number|null, message:string, failureState:string }} snapshot
+ */
+export function updateOperatorModePanel(els, snapshot) {
+    if (!els) return;
+    const viewpoint = snapshot.viewpoint || "replay";
+    const active = viewpoint === "inspection";
+    if (els.viewpoint) {
+        els.viewpoint.textContent = viewpoint;
+        els.viewpoint.classList.toggle("status-pill--ok", active);
+        els.viewpoint.classList.toggle("status-pill--muted", !active);
+        els.viewpoint.classList.toggle("status-pill--warning", Boolean(snapshot.failureState));
+    }
+    if (els.target) {
+        const target = snapshot.agentId ?? snapshot.selectedAgentId;
+        els.target.textContent = target == null ? "未選択" : `Agent ${target}`;
+    }
+    if (els.status) {
+        els.status.textContent = snapshot.status || "idle";
+    }
+    if (els.message) {
+        els.message.className = snapshot.failureState
+            ? "settings-status settings-status--error"
+            : "settings-status";
+        els.message.textContent = snapshot.message || "replay viewpoint";
+    }
+    if (els.entryButton) {
+        els.entryButton.disabled = snapshot.selectedAgentId == null || active;
+    }
+    if (els.returnButton) {
+        els.returnButton.disabled = !active;
+    }
+}
+
+/**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
  * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot

@@ -329,6 +329,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-025-cross-world-governance-fractal-decision.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-026-cross-world-repo-skill-distributed-ops.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
+        project_root / "docs" / "subagents" / "work-orders" / "wo-urban-028-cross-world-sentinel-entry-prototype.yaml",
     ]
     for path in scan_paths:
         text = _read(path)
