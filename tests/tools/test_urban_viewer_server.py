@@ -982,6 +982,113 @@ class TestGovernanceFde:
         assert body["failure_state"] == "recursive_loop_unbounded"
 
 
+class TestRepoSkillMesh:
+    def test_repo_skill_mesh_returns_skill_families_and_guards(self, client_no_key):
+        """MVP-007: skill family、recursive guard、P2P/cloud境界を返す。"""
+        res = client_no_key.get("/api/repo-skill-mesh")
+
+        assert res.status_code == 200
+        body = res.json()
+        skill_ids = [skill["skill_id"] for skill in body["skill_families"]]
+        assert skill_ids == [
+            "operator-entry-skill",
+            "world-bridge-skill",
+            "guide-roster-skill",
+            "motif-intake-skill",
+            "assessment-skill",
+            "governance-skill",
+            "distributed-ops-skill",
+            "intake-lifecycle-skill",
+        ]
+        assert body["recursive_guard"]["maximum_depth"] == 3
+        assert body["distributed_ops"]["implementation_allowed"] is False
+        assert body["cloud_capacity"]["execution_allowed"] is False
+        assert body["external_writes_allowed"] is False
+
+    def test_repo_skill_mesh_accepts_guarded_skill_plan(self, client_no_key):
+        """allowed I/Oとloop guardがあるskill planだけ受け入れる。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={
+                "skill_id": "governance-skill",
+                "maximum_depth": 1,
+                "allowed_io": True,
+                "loop_guard": True,
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_skill_id"] == "governance-skill"
+        assert body["failure_state"] == ""
+
+    def test_repo_skill_mesh_rejects_missing_allowed_io(self, client_no_key):
+        """allowed I/O未定義のskill callを拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "governance-skill", "allowed_io": False},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "allowed_io_missing"
+
+    def test_repo_skill_mesh_rejects_missing_loop_guard(self, client_no_key):
+        """loop guardなしのrecursive planを拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "governance-skill", "loop_guard": False},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "loop_guard_missing"
+
+    def test_repo_skill_mesh_rejects_excessive_depth(self, client_no_key):
+        """maximum depth上限超過を拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "governance-skill", "maximum_depth": 4},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "recursive_depth_exceeded"
+
+    def test_repo_skill_mesh_rejects_p2p_operationalize(self, client_no_key):
+        """trust / moderationなしのP2P実運用化を拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "distributed-ops-skill", "p2p_operationalize": True},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "trust_model_missing"
+
+    def test_repo_skill_mesh_rejects_cloud_execution(self, client_no_key):
+        """capacity envelopeなしのcloud実行を拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "distributed-ops-skill", "cloud_execute": True},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "cloud_approval_missing"
+
+    def test_repo_skill_mesh_rejects_external_write(self, client_no_key):
+        """human review前の外部writeを拒否する。"""
+        res = client_no_key.post(
+            "/api/repo-skill-mesh/evaluate",
+            json={"skill_id": "intake-lifecycle-skill", "external_write": True},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "external_write_attempted"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # /api/runs テスト (§21.2)
 # ─────────────────────────────────────────────────────────────────────────────

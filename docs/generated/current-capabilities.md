@@ -22,6 +22,8 @@
 | `GET` | `/api/operator-mode` | `get_operator_mode` | MVP-001: operator viewpoint state を返す。runtime-onlyで永続化しない。 |
 | `POST` | `/api/operator-mode/entry` | `enter_operator_mode` | MVP-001: 選択agentのinspection viewpointへ入る。 |
 | `POST` | `/api/operator-mode/return` | `return_operator_mode` | MVP-001: replay viewpointへ戻る。 |
+| `GET` | `/api/repo-skill-mesh` | `get_repo_skill_mesh` | MVP-007: repo-as-skill / distributed ops guard stateを返す。 |
+| `POST` | `/api/repo-skill-mesh/evaluate` | `evaluate_repo_skill_mesh` | MVP-007: skill call / distributed ops planを公開安全な範囲で評価する。 |
 | `GET` | `/api/runs` | `list_runs` | 利用可能な run 一覧を返す (§21.2)。 |
 | `POST` | `/api/runs` | `create_run` | UI から新しい sample simulation run を作る。 |
 | `GET` | `/api/settings` | `get_settings` | ビューア設定状態を返す。API キー値は返さない。 |

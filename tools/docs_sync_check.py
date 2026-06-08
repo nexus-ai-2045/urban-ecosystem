@@ -311,6 +311,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         "wo-urban-033-cross-world-governance-fde-prototype.yaml",
         "cross-world-operator-mvp-007-repo-skill-distributed-ops.md",
         "wo-urban-026-cross-world-repo-skill-distributed-ops.yaml",
+        "wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml",
         "cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md",
         "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
     ]
@@ -336,6 +337,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-025-cross-world-governance-fractal-decision.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-033-cross-world-governance-fde-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-026-cross-world-repo-skill-distributed-ops.yaml",
+        project_root / "docs" / "subagents" / "work-orders" / "wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-028-cross-world-sentinel-entry-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-029-cross-world-world-bridge-prototype.yaml",

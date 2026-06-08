@@ -1,24 +1,25 @@
-# MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様
+# MVP-007 Repo-as-Skill And Distributed Ops Prototype
 
-- Status: `draft`
-- Version: `0.1.9`
+- Status: `implemented`
+- Version: `0.8.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - Linear draft: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - TODO正本: [cross-world-operator-todo.md](cross-world-operator-todo.md)
 - Work order: [wo-urban-026-cross-world-repo-skill-distributed-ops.yaml](subagents/work-orders/wo-urban-026-cross-world-repo-skill-distributed-ops.yaml)
+- Prototype work order: [wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml](subagents/work-orders/wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml)
 
 ## 目的
 
-`UE-XWORLD-MVP-007 Repo-as-Skill And Distributed Ops` は、Cross-world Operator Modeをrepo-as-skill mesh、recursive skill calls、distributed operations、cloud capacity envelopeへ接続する前に、loop guard、allowed I/O、identity / trust / moderation、cloud cost / account gateを固定するための実装前仕様です。
+`UE-XWORLD-MVP-007 Repo-as-Skill And Distributed Ops` は、Cross-world Operator Modeをrepo-as-skill mesh、recursive skill calls、distributed operations、cloud capacity envelopeへ接続する前に、loop guard、allowed I/O、identity / trust / moderation、cloud cost / account gateを固定するtoy prototypeです。
 
-このPRでは実装コード、data contract、cloud resource、credential、external APIを変更しません。MVP-006で明記したskill mesh + orchestration pack前提を、実装前の安全境界へ落とします。
+このprototypeではdata contract、cloud resource、credential、external APIを変更しません。MVP-006で明記したskill mesh + orchestration pack前提を、stateless API responseとUI panelへ落とします。
 
 ## Versioning
 
-この仕様追加は、Cross-world Operator Mode docs package の `0.1.9` PATCH更新です。
+このprototype追加は、Cross-world Operator Mode docs package の `0.8.0` MINOR更新です。
 
-data contract、主要API、runtime実装、cloud resourceは含まないため、Urban Ecosystem data contract `0.5.0` は変更しません。
+Urban Ecosystem data contract `0.5.0` は変更しません。
 
 ## 対象TODO
 
@@ -115,6 +116,25 @@ MVP-006のFDE packetに、次を追加して扱います。
 - `approval_state`: human gateの状態。
 - `rollback_condition`: 中断、撤回、watch戻しの条件。
 
+## Prototype API
+
+- `GET /api/repo-skill-mesh`
+  - 8つのskill family、recursive guard、P2P design-spike条件、Cloud Capacity Envelope、external write禁止状態を返す。
+- `POST /api/repo-skill-mesh/evaluate`
+  - `skill_id` が定義済みskill familyなら、guard付きskill planとして評価する。
+  - `maximum_depth` は `0..3` の範囲だけ受け入れる。
+  - `allowed_io: false` は `allowed_io_missing` で拒否する。
+  - `loop_guard: false` は `loop_guard_missing` で拒否する。
+  - `p2p_operationalize: true` は `trust_model_missing` で拒否する。
+  - `cloud_execute: true` は `cloud_approval_missing` で拒否する。
+  - `external_write: true` は `external_write_attempted` で拒否する。
+
+## Prototype UI
+
+右パネルの `Repo Skill` でskill familyを選択し、maximum depth、P2P design-spike、cloud approval boundary、guard statusを確認できます。
+
+このUIはrecursive skill call、P2P、cloudの実行エンジンではありません。外部API、cloud、Discord、GitHub issue、Linear issueへのwriteは行いません。
+
 ## 失敗状態
 
 - `recursive_depth_exceeded`: maximum depthを超えた。
@@ -127,6 +147,10 @@ MVP-006のFDE packetに、次を追加して扱います。
 ## Acceptance
 
 - repo-as-skill meshのskill familyと責任が定義されている。
+- `GET /api/repo-skill-mesh` がskill family、recursive guard、P2P/cloud境界を返す。
+- `POST /api/repo-skill-mesh/evaluate` がguard付きskill planだけを受け入れる。
+- allowed I/O不足、loop guard不足、depth超過、P2P実運用化、cloud実行、外部writeを拒否する。
+- UIからRepo Skill panelでskill family、depth、P2P、cloud、guard statusを確認できる。
 - recursive skill callにmaximum depth、allowed I/O、stop condition、loop guardがある。
 - P2Pはidentity、trust、moderation、abuse resistanceが未定義なら実装しないと明記されている。
 - Cloud Capacity Envelopeにaccount、cost、quota、billing、region、rollback、approval boundaryがある。
