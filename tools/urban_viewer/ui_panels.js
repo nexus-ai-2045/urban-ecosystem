@@ -384,6 +384,60 @@ export function updateRepoSkillMeshPanel(els, snapshot) {
 }
 
 /**
+ * MVP-008 Intake Lifecycle panel を更新する。
+ * @param {Object} els
+ * @param {{ activeClass:string, status:string, failureState:string, message:string, requestClasses?:string[], sourceCategories?:string[], minimumWorldPacket?:Object, lifecycle?:Object, draftCandidate?:Object }} snapshot
+ */
+export function updateIntakeLifecyclePanel(els, snapshot) {
+    if (!els) return;
+    const blocked = Boolean(snapshot.failureState);
+    if (els.status) {
+        els.status.textContent = blocked ? snapshot.failureState : (snapshot.status || "ready");
+        els.status.classList.toggle("status-pill--ok", !blocked);
+        els.status.classList.toggle("status-pill--warning", blocked);
+        els.status.classList.toggle("status-pill--muted", false);
+    }
+    if (els.select && Array.isArray(snapshot.requestClasses) && snapshot.requestClasses.length > 0) {
+        const currentValue = els.select.value || snapshot.activeClass;
+        els.select.innerHTML = "";
+        for (const requestClass of snapshot.requestClasses) {
+            const option = document.createElement("option");
+            option.value = requestClass;
+            option.textContent = requestClass;
+            els.select.appendChild(option);
+        }
+        els.select.value = snapshot.requestClasses.includes(currentValue) ? currentValue : snapshot.activeClass;
+    }
+    if (els.source) {
+        const categories = Array.isArray(snapshot.sourceCategories) ? snapshot.sourceCategories : [];
+        els.source.textContent = categories.length ? categories.join(" / ") : "確認中";
+    }
+    if (els.world) {
+        const packet = snapshot.minimumWorldPacket || {};
+        const fields = packet.requiredFields || packet.required_fields || [];
+        els.world.textContent = Array.isArray(fields) && fields.length ? `${fields.length} fields` : "確認中";
+    }
+    if (els.lifecycle) {
+        const lifecycle = snapshot.lifecycle || {};
+        const threshold = lifecycle.orphanThreshold ?? lifecycle.orphan_threshold ?? "?";
+        const heartbeat = lifecycle.heartbeatMode || lifecycle.heartbeat_mode || "確認中";
+        els.lifecycle.textContent = `orphan ${threshold} / ${heartbeat}`;
+    }
+    if (els.candidate) {
+        const candidate = snapshot.draftCandidate || {};
+        els.candidate.className = blocked
+            ? "settings-status settings-status--error"
+            : "settings-status";
+        els.candidate.textContent = blocked
+            ? (snapshot.message || snapshot.failureState || "intake lifecycle draft failed")
+            : (candidate.publicSafeName || candidate.public_safe_name || snapshot.message || "draft candidate ready");
+    }
+    if (els.draftButton) {
+        els.draftButton.disabled = false;
+    }
+}
+
+/**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
  * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot

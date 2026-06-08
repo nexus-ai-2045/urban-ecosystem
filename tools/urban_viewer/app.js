@@ -28,6 +28,7 @@ import {
     updateAssessmentLabPanel,
     updateGovernanceFdePanel,
     updateRepoSkillMeshPanel,
+    updateIntakeLifecyclePanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -165,6 +166,17 @@ const state = {
         distributedOps: null,
         cloudCapacity: null,
     },
+    intakeLifecycle: {
+        activeClass: "accepted",
+        status: "ready",
+        failureState: "",
+        message: "intake lifecycle ready",
+        requestClasses: [],
+        sourceCategories: [],
+        minimumWorldPacket: null,
+        lifecycle: null,
+        draftCandidate: null,
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -270,6 +282,13 @@ const repoSkillMeshDepthEl = document.getElementById("repo-skill-mesh-depth");
 const repoSkillMeshDistributedEl = document.getElementById("repo-skill-mesh-distributed");
 const repoSkillMeshCloudEl = document.getElementById("repo-skill-mesh-cloud");
 const repoSkillMeshGuardEl = document.getElementById("repo-skill-mesh-guard");
+const intakeLifecycleStatusEl = document.getElementById("intake-lifecycle-status");
+const intakeLifecycleSelectEl = document.getElementById("intake-lifecycle-class-select");
+const intakeLifecycleDraftBtn = document.getElementById("btn-intake-lifecycle-draft");
+const intakeLifecycleSourceEl = document.getElementById("intake-lifecycle-source");
+const intakeLifecycleWorldEl = document.getElementById("intake-lifecycle-world");
+const intakeLifecycleLifecycleEl = document.getElementById("intake-lifecycle-lifecycle");
+const intakeLifecycleCandidateEl = document.getElementById("intake-lifecycle-candidate");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -356,6 +375,16 @@ const repoSkillMeshEls = {
     guard: repoSkillMeshGuardEl,
 };
 
+const intakeLifecycleEls = {
+    status: intakeLifecycleStatusEl,
+    select: intakeLifecycleSelectEl,
+    draftButton: intakeLifecycleDraftBtn,
+    source: intakeLifecycleSourceEl,
+    world: intakeLifecycleWorldEl,
+    lifecycle: intakeLifecycleLifecycleEl,
+    candidate: intakeLifecycleCandidateEl,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
 // ─────────────────────────────────────────────────────────────────────────────
@@ -400,6 +429,7 @@ async function main() {
     await refreshAssessmentLab();
     await refreshGovernanceFde();
     await refreshRepoSkillMesh();
+    await refreshIntakeLifecycle();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -534,6 +564,17 @@ async function refreshRepoSkillMesh() {
         _setRepoSkillMeshState(json);
     } catch {
         updateRepoSkillMeshRuntimePanel();
+    }
+}
+
+async function refreshIntakeLifecycle() {
+    try {
+        const res = await fetch(`${API_BASE}/api/intake-lifecycle`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setIntakeLifecycleState(json);
+    } catch {
+        updateIntakeLifecycleRuntimePanel();
     }
 }
 
@@ -1184,6 +1225,25 @@ function updateRepoSkillMeshRuntimePanel() {
     updateRepoSkillMeshPanel(repoSkillMeshEls, state.repoSkillMesh);
 }
 
+function _setIntakeLifecycleState(json) {
+    state.intakeLifecycle = {
+        activeClass: json.active_class || "accepted",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "intake lifecycle ready",
+        requestClasses: Array.isArray(json.request_classes) ? json.request_classes : [],
+        sourceCategories: Array.isArray(json.source_categories) ? json.source_categories : [],
+        minimumWorldPacket: json.minimum_world_packet || null,
+        lifecycle: json.lifecycle || null,
+        draftCandidate: json.draft_candidate || null,
+    };
+    updateIntakeLifecycleRuntimePanel();
+}
+
+function updateIntakeLifecycleRuntimePanel() {
+    updateIntakeLifecyclePanel(intakeLifecycleEls, state.intakeLifecycle);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -1436,6 +1496,45 @@ async function evaluateRepoSkillMesh() {
             message: String(error.message || error),
         };
         updateRepoSkillMeshRuntimePanel();
+    }
+}
+
+async function draftIntakeLifecycle() {
+    const requestClass = intakeLifecycleSelectEl?.value || "accepted";
+    const todoId = requestClass === "accepted" ? "XWORLD-TODO-037" : "";
+    try {
+        const res = await fetch(`${API_BASE}/api/intake-lifecycle/draft`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                request_class: requestClass,
+                source_category: "chat-context",
+                public_safe_name: "Add Request Intake Draft Flow",
+                todo_id: todoId,
+                minimum_world_packet: true,
+                heartbeat_present: true,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setIntakeLifecycleState(detail.intake_lifecycle || {
+                active_class: state.intakeLifecycle.activeClass,
+                status: "blocked",
+                failure_state: detail.failure_state || "todo_classification_missing",
+                message: detail.message || "intake lifecycle draft failed",
+            });
+            return;
+        }
+        _setIntakeLifecycleState(json);
+    } catch (error) {
+        state.intakeLifecycle = {
+            ...state.intakeLifecycle,
+            status: "blocked",
+            failureState: "todo_classification_missing",
+            message: String(error.message || error),
+        };
+        updateIntakeLifecycleRuntimePanel();
     }
 }
 
@@ -1845,6 +1944,11 @@ function wireEvents() {
     if (repoSkillMeshEvaluateBtn) {
         repoSkillMeshEvaluateBtn.addEventListener("click", async () => {
             await evaluateRepoSkillMesh();
+        });
+    }
+    if (intakeLifecycleDraftBtn) {
+        intakeLifecycleDraftBtn.addEventListener("click", async () => {
+            await draftIntakeLifecycle();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

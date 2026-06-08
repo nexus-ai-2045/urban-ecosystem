@@ -16,6 +16,8 @@
 | `GET` | `/api/governance-fde` | `get_governance_fde` | MVP-006: governance layerとFDE packet stateを返す。 |
 | `POST` | `/api/governance-fde/decide` | `decide_governance_fde` | MVP-006: FDE decision packetを公開安全な範囲で評価する。 |
 | `GET` | `/api/health` | `health` | ヘルスチェック (§21.4)。 |
+| `GET` | `/api/intake-lifecycle` | `get_intake_lifecycle` | MVP-008: intake / worldbuilding / lifecycle guard stateを返す。 |
+| `POST` | `/api/intake-lifecycle/draft` | `draft_intake_lifecycle` | MVP-008: 追加依頼を外部writeなしのdraft candidateとして評価する。 |
 | `GET` | `/api/labels` | `get_labels` | 日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。 |
 | `GET` | `/api/motif-arcs` | `get_motif_arcs` | MVP-004: public-safe motif arc packを返す。 |
 | `POST` | `/api/motif-arcs/evaluate` | `evaluate_motif_arc` | MVP-004: motif arc のArchetype / World guaranteeを確認する。 |

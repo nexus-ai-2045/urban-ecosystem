@@ -1089,6 +1089,158 @@ class TestRepoSkillMesh:
         assert body["failure_state"] == "external_write_attempted"
 
 
+class TestIntakeLifecycle:
+    def test_intake_lifecycle_returns_pipeline_and_guards(self, client_no_key):
+        """MVP-008: intake pipeline、validator、lifecycle guardを返す。"""
+        res = client_no_key.get("/api/intake-lifecycle")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_class"] == "accepted"
+        assert body["request_classes"] == ["accepted", "parking-lot", "watch", "rejected/out-of-scope"]
+        assert "project-hypothesis" in body["source_categories"]
+        assert [step["step"] for step in body["pipeline_steps"]] == [
+            "receive",
+            "classify",
+            "source_category",
+            "public_safe_name",
+            "minimum_world_packet",
+            "todo_or_gate",
+            "draft_artifact",
+            "optional_external_issue",
+        ]
+        assert body["minimum_world_packet"]["required_fields"] == [
+            "world_layer",
+            "actor_role",
+            "conflict",
+            "constraint",
+            "signal",
+            "transition",
+            "failure_state",
+        ]
+        assert body["lifecycle"]["orphan_threshold"] == 3
+        assert body["lifecycle"]["heartbeat_mode"] == "read-only/draft-only"
+        assert body["lifecycle"]["external_write_allowed"] is False
+
+    def test_intake_lifecycle_accepts_draft_candidate(self, client_no_key):
+        """MVP-008: 公開安全な追加依頼をdraft candidateにする。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={
+                "request_class": "accepted",
+                "source_category": "chat-context",
+                "public_safe_name": "Add Request Intake Draft Flow",
+                "todo_id": "XWORLD-TODO-037",
+                "minimum_world_packet": True,
+                "heartbeat_present": True,
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_class"] == "accepted"
+        assert body["draft_candidate"]["public_safe_name"] == "Add Request Intake Draft Flow"
+        assert body["draft_candidate"]["todo_id"] == "XWORLD-TODO-037"
+        assert body["draft_candidate"]["gate"] == "human review before external write"
+
+    def test_intake_lifecycle_rejects_external_write(self, client_no_key):
+        """MVP-008: 人間レビュー前の外部writeを拒否する。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "accepted", "todo_id": "XWORLD-TODO-037", "external_write": True},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "external_write_blocked"
+
+    def test_intake_lifecycle_rejects_private_source_content(self, client_no_key):
+        """MVP-008: private source本文をpublic docsに入れない。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "watch", "private_source_content": True},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "source_not_public_safe"
+
+    def test_intake_lifecycle_rejects_validator_hit(self, client_no_key):
+        """MVP-008: protected name / private path / 外部本文 / secret-like stringを拒否する。"""
+        for field in ("protected_name", "private_path", "external_post_body", "secret_like_string"):
+            res = client_no_key.post(
+                "/api/intake-lifecycle/draft",
+                json={"request_class": "watch", field: True},
+            )
+
+            assert res.status_code == 400
+            assert res.json()["detail"]["failure_state"] == "validator_hit"
+
+    def test_intake_lifecycle_rejects_missing_todo_for_accepted(self, client_no_key):
+        """MVP-008: accepted ideaにはTODO IDを要求する。"""
+        for payload in ({"request_class": "accepted"}, {"request_class": "accepted", "todo_id": ""}):
+            res = client_no_key.post("/api/intake-lifecycle/draft", json=payload)
+
+            assert res.status_code == 400
+            assert res.json()["detail"]["failure_state"] == "todo_classification_missing"
+
+    def test_intake_lifecycle_rejects_text_value_validator_hit(self, client_no_key):
+        """MVP-008: boolean flagだけでなく文字列本文の混入も拒否する。"""
+        cases = [
+            ("private_source_content", "local private excerpt"),
+            ("protected_name", "protected implementation name"),
+            ("private_path", "C:/private/source/path"),
+            ("external_post_body", "quoted external body"),
+            ("secret_like_string", "secret-like-value"),
+        ]
+        for field, value in cases:
+            res = client_no_key.post(
+                "/api/intake-lifecycle/draft",
+                json={"request_class": "watch", field: value},
+            )
+
+            assert res.status_code == 400
+            assert res.json()["detail"]["failure_state"] in {"source_not_public_safe", "validator_hit"}
+
+    def test_intake_lifecycle_rejects_missing_world_packet(self, client_no_key):
+        """MVP-008: Minimum World Packet不足を拒否する。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "watch", "minimum_world_packet": False},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "world_packet_missing"
+
+    def test_intake_lifecycle_rejects_orphan_threshold(self, client_no_key):
+        """MVP-008: orphan候補がしきい値を超えたらreview alert扱いで止める。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "watch", "orphan_count": 4},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "orphan_threshold_exceeded"
+
+    def test_intake_lifecycle_rejects_stale_without_self_report(self, client_no_key):
+        """MVP-008: staleは自己申告なしで確定しない。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "watch", "stale": True},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "stale_without_self_report"
+
+    def test_intake_lifecycle_rejects_missing_heartbeat(self, client_no_key):
+        """MVP-008: heartbeatなしのlifecycle更新を拒否する。"""
+        res = client_no_key.post(
+            "/api/intake-lifecycle/draft",
+            json={"request_class": "watch", "heartbeat_present": False},
+        )
+
+        assert res.status_code == 400
+        assert res.json()["detail"]["failure_state"] == "heartbeat_missing"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # /api/runs テスト (§21.2)
 # ─────────────────────────────────────────────────────────────────────────────

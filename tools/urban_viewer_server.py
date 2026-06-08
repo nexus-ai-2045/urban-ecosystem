@@ -24,6 +24,8 @@ urban_viewer_server.py — Urban Ecosystem リプレイビューア FastAPI サ�
   POST /api/governance-fde/decide FDE decision packet を評価する
   GET /api/repo-skill-mesh      repo-as-skill / distributed ops guard state
   POST /api/repo-skill-mesh/evaluate skill call / distributed ops plan を評価する
+  GET /api/intake-lifecycle     intake / worldbuilding / lifecycle guard state
+  POST /api/intake-lifecycle/draft intake draft candidate を評価する
   GET /api/settings     ランタイム設定状態 (秘密値は返さない)
   POST /api/settings    ランタイム設定更新 (process-local / 永続保存なし)
   GET /api/data/{run_id}/{file}  データファイル配信 (許可リスト 11 件)
@@ -475,6 +477,44 @@ _SKILL_FAMILIES: dict[str, dict[str, str]] = {
         "guard": "draft-only automation gate",
     },
 }
+
+# MVP-008 Intake Lifecycle And Worldbuilding Pipeline: 外部writeではなく、
+# source -> public-safe candidate -> TODO/gate のdraft化だけをstatelessに評価する。
+INTAKE_REQUEST_CLASSES: tuple[str, ...] = ("accepted", "parking-lot", "watch", "rejected/out-of-scope")
+INTAKE_SOURCE_CATEGORIES: tuple[str, ...] = (
+    "project-hypothesis",
+    "public-policy",
+    "external-benchmark",
+    "local-source-abstraction",
+    "chat-context",
+)
+_INTAKE_PIPELINE_STEPS: tuple[dict[str, str], ...] = (
+    {"step": "receive", "output": "request stub", "gate": "source containment"},
+    {"step": "classify", "output": "context idea class", "gate": "classification required"},
+    {"step": "source_category", "output": "source category", "gate": "public-safe source"},
+    {"step": "public_safe_name", "output": "abstract name", "gate": "naming validator"},
+    {"step": "minimum_world_packet", "output": "world packet", "gate": "world richness"},
+    {"step": "todo_or_gate", "output": "TODO ID or watch reason", "gate": "coverage guarantee"},
+    {"step": "draft_artifact", "output": "docs/work-order candidate", "gate": "human review"},
+    {"step": "optional_external_issue", "output": "approved external write only", "gate": "explicit approval"},
+)
+_INTAKE_VALIDATOR_RULES: tuple[dict[str, str], ...] = (
+    {"rule": "protected_names", "rejects": "protected names as implementation IDs"},
+    {"rule": "private_paths", "rejects": "private absolute paths"},
+    {"rule": "external_post_body", "rejects": "quoted external post body"},
+    {"rule": "secret_like_strings", "rejects": "secret-like strings"},
+    {"rule": "todo_coverage", "rejects": "accepted idea without TODO ID"},
+    {"rule": "source_category", "rejects": "TODO without source category"},
+)
+INTAKE_WORLD_PACKET_FIELDS: tuple[str, ...] = (
+    "world_layer",
+    "actor_role",
+    "conflict",
+    "constraint",
+    "signal",
+    "transition",
+    "failure_state",
+)
 
 # run_id バリデーション正規表現 (§21.1)
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
@@ -1452,6 +1492,64 @@ def _repo_skill_mesh_error(status_code: int, failure_state: str, message: str) -
     })
 
 
+def _safe_intake_lifecycle_state(
+    active_class: str = "accepted",
+    status: str = "ready",
+    failure_state: str = "",
+    message: str = "intake lifecycle ready",
+    draft_candidate: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """MVP-008のstateless intake / worldbuilding lifecycle stateを返す。"""
+    return {
+        "active_class": active_class,
+        "status": status,
+        "failure_state": failure_state,
+        "message": message,
+        "request_classes": list(INTAKE_REQUEST_CLASSES),
+        "source_categories": list(INTAKE_SOURCE_CATEGORIES),
+        "pipeline_steps": list(_INTAKE_PIPELINE_STEPS),
+        "validator_rules": list(_INTAKE_VALIDATOR_RULES),
+        "minimum_world_packet": {
+            "required_fields": list(INTAKE_WORLD_PACKET_FIELDS),
+            "required": True,
+        },
+        "lifecycle": {
+            "orphan_threshold": 3,
+            "stale_self_report_required": True,
+            "heartbeat_mode": "read-only/draft-only",
+            "auto_close_allowed": False,
+            "external_write_allowed": False,
+        },
+        "draft_candidate": draft_candidate or {
+            "public_safe_name": "Worldbuilding Extraction Pipeline",
+            "todo_id": "XWORLD-TODO-034",
+            "source_category": "project-hypothesis",
+            "gate": "intake review",
+        },
+        "runtime_only": True,
+    }
+
+
+def _intake_lifecycle_error(status_code: int, failure_state: str, message: str) -> HTTPException:
+    """intake draft candidateの失敗状態を返す。"""
+    return HTTPException(status_code=status_code, detail={
+        "failure_state": failure_state,
+        "message": message,
+        "intake_lifecycle": _safe_intake_lifecycle_state(
+            status="blocked",
+            failure_state=failure_state,
+            message=message,
+        ),
+    })
+
+
+def _truthy_or_text_present(value: object) -> bool:
+    """boolean flagまたは文字列本文の混入を検出する。"""
+    if value is True:
+        return True
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _read_summary(run_id: str) -> dict:
     """operator entry 用に summary.json を読み込む。"""
     try:
@@ -1984,6 +2082,70 @@ async def evaluate_repo_skill_mesh(request: Request) -> JSONResponse:
         status="ready",
         failure_state="",
         message=f"{skill_id} accepted by repo skill mesh gate",
+    ))
+
+
+@app.get("/api/intake-lifecycle")
+async def get_intake_lifecycle() -> JSONResponse:
+    """MVP-008: intake / worldbuilding / lifecycle guard stateを返す。"""
+    return JSONResponse(_safe_intake_lifecycle_state())
+
+
+@app.post("/api/intake-lifecycle/draft")
+async def draft_intake_lifecycle(request: Request) -> JSONResponse:
+    """MVP-008: 追加依頼を外部writeなしのdraft candidateとして評価する。"""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError as exc:
+        raise _intake_lifecycle_error(400, "todo_classification_missing", "invalid json") from exc
+    if not isinstance(body, dict):
+        raise _intake_lifecycle_error(400, "todo_classification_missing", "request body must be an object")
+
+    request_class = body.get("request_class", "accepted")
+    if not isinstance(request_class, str) or request_class not in INTAKE_REQUEST_CLASSES:
+        raise _intake_lifecycle_error(400, "todo_classification_missing", "request class is required")
+    source_category = body.get("source_category", "project-hypothesis")
+    if not isinstance(source_category, str) or source_category not in INTAKE_SOURCE_CATEGORIES:
+        raise _intake_lifecycle_error(400, "source_not_public_safe", "source category is required")
+    if body.get("external_write") is True:
+        raise _intake_lifecycle_error(400, "external_write_blocked", "external write needs human review")
+    if _truthy_or_text_present(body.get("private_source_content")):
+        raise _intake_lifecycle_error(400, "source_not_public_safe", "private source content cannot enter public docs")
+    if _truthy_or_text_present(body.get("protected_name")) or _truthy_or_text_present(body.get("private_path")):
+        raise _intake_lifecycle_error(400, "validator_hit", "public-safe naming validator blocked the candidate")
+    if _truthy_or_text_present(body.get("external_post_body")):
+        raise _intake_lifecycle_error(400, "validator_hit", "external post body cannot be quoted")
+    if _truthy_or_text_present(body.get("secret_like_string")):
+        raise _intake_lifecycle_error(400, "validator_hit", "secret-like string cannot enter public docs")
+    todo_id = body.get("todo_id")
+    if request_class == "accepted" and (not isinstance(todo_id, str) or not todo_id.startswith("XWORLD-TODO-")):
+        raise _intake_lifecycle_error(400, "todo_classification_missing", "accepted idea needs TODO ID")
+    if body.get("minimum_world_packet") is False:
+        raise _intake_lifecycle_error(400, "world_packet_missing", "Minimum World Packet is required")
+    orphan_count = body.get("orphan_count", 0)
+    if isinstance(orphan_count, int) and orphan_count > 3:
+        raise _intake_lifecycle_error(400, "orphan_threshold_exceeded", "orphan threshold exceeded")
+    if body.get("heartbeat_present") is False:
+        raise _intake_lifecycle_error(400, "heartbeat_missing", "heartbeat must report the latest review point")
+    if body.get("stale") is True and body.get("stale_self_report") is not True:
+        raise _intake_lifecycle_error(400, "stale_without_self_report", "stale needs self-report evidence")
+
+    public_safe_name = body.get("public_safe_name", "Worldbuilding Extraction Pipeline")
+    if not isinstance(public_safe_name, str) or not public_safe_name.strip():
+        public_safe_name = "Worldbuilding Extraction Pipeline"
+    draft_candidate = {
+        "public_safe_name": public_safe_name,
+        "todo_id": todo_id if isinstance(todo_id, str) else "",
+        "source_category": source_category,
+        "request_class": request_class,
+        "gate": "human review before external write",
+    }
+    return JSONResponse(_safe_intake_lifecycle_state(
+        active_class=request_class,
+        status="ready",
+        failure_state="",
+        message=f"{request_class} draft candidate accepted by intake gate",
+        draft_candidate=draft_candidate,
     ))
 
 

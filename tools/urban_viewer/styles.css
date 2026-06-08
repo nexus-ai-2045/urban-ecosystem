@@ -249,7 +249,8 @@ body {
 .motif-arc-panel,
 .assessment-lab-panel,
 .governance-fde-panel,
-.repo-skill-mesh-panel {
+.repo-skill-mesh-panel,
+.intake-lifecycle-panel {
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius);

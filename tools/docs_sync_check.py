@@ -314,6 +314,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         "wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml",
         "cross-world-operator-mvp-008-intake-lifecycle-worldbuilding.md",
         "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
+        "wo-urban-035-cross-world-intake-lifecycle-prototype.yaml",
     ]
     for link in required_linear_links:
         if link not in linear:
@@ -339,6 +340,7 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-026-cross-world-repo-skill-distributed-ops.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-034-cross-world-repo-skill-distributed-ops-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml",
+        project_root / "docs" / "subagents" / "work-orders" / "wo-urban-035-cross-world-intake-lifecycle-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-028-cross-world-sentinel-entry-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-029-cross-world-world-bridge-prototype.yaml",
         project_root / "docs" / "subagents" / "work-orders" / "wo-urban-030-cross-world-guide-roster-prototype.yaml",
