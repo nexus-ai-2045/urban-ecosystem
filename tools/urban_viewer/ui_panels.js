@@ -147,6 +147,52 @@ export function updateWorldBridgePanel(els, snapshot) {
 }
 
 /**
+ * MVP-003 Role Roster panel を更新する。
+ * @param {Object} els
+ * @param {{ activeRole:string, status:string, failureState:string, message:string, active:Object|null, roles?:Object[], operatorBoundary:string }} snapshot
+ */
+export function updateAgentRosterPanel(els, snapshot) {
+    if (!els) return;
+    const activeRole = snapshot.activeRole || "guide";
+    const blocked = Boolean(snapshot.failureState);
+    const active = snapshot.active || {};
+    if (els.active) {
+        els.active.textContent = activeRole;
+        els.active.classList.toggle("status-pill--ok", !blocked);
+        els.active.classList.toggle("status-pill--warning", blocked);
+        els.active.classList.toggle("status-pill--muted", false);
+    }
+    if (els.roleSelect && Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
+        const currentValue = els.roleSelect.value || activeRole;
+        els.roleSelect.innerHTML = "";
+        for (const role of snapshot.roles) {
+            const option = document.createElement("option");
+            option.value = role.id;
+            option.textContent = role.id;
+            els.roleSelect.appendChild(option);
+        }
+        els.roleSelect.value = snapshot.roles.some((role) => role.id === currentValue)
+            ? currentValue
+            : activeRole;
+    }
+    if (els.layer) {
+        els.layer.textContent = active.layer || "liminal";
+    }
+    if (els.boundary) {
+        els.boundary.textContent = snapshot.operatorBoundary ? "human gate" : "human";
+    }
+    if (els.guidance) {
+        els.guidance.className = blocked
+            ? "settings-status settings-status--error"
+            : "settings-status";
+        els.guidance.textContent = active.guidance || snapshot.message || "role ready";
+    }
+    if (els.selectButton) {
+        els.selectButton.disabled = false;
+    }
+}
+
+/**
  * 右パネルのリアルタイム概要を更新する。
  * @param {Object} els
  * @param {{ runId:string, playing:boolean, tick:number, tickTotal:number, day:number|string, time:string, agents:number, moving:number, selectedAgentId:number|null, recentVisits?:Object[] }} snapshot

@@ -51,6 +51,7 @@ from tools.urban_viewer_server import (
     _make_configured_llm_provider,
     _set_operator_replay,
     _set_world_bridge_simulated,
+    _set_agent_roster_guide,
 )
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
@@ -281,6 +282,7 @@ def client_no_key(sample_run_dir, monkeypatch):
     _RUNTIME_CONFIG.clear()
     _set_operator_replay()
     _set_world_bridge_simulated()
+    _set_agent_roster_guide()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -293,6 +295,7 @@ def client_with_key(sample_run_dir, monkeypatch):
     _RUNTIME_CONFIG.clear()
     _set_operator_replay()
     _set_world_bridge_simulated()
+    _set_agent_roster_guide()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -658,6 +661,61 @@ class TestWorldBridge:
         assert entry.status_code == 200
         assert res.status_code == 200
         assert res.json()["current_layer"] == "liminal"
+
+
+class TestAgentRoster:
+    def test_agent_roster_returns_public_safe_roles(self, client_no_key):
+        """MVP-003: 抽象role一覧を返し、operator境界を明示する。"""
+        res = client_no_key.get("/api/agent-roster")
+
+        assert res.status_code == 200
+        body = res.json()
+        role_ids = [role["id"] for role in body["roles"]]
+        assert role_ids == [
+            "guide",
+            "partner",
+            "monitoring",
+            "pursuit",
+            "intervention",
+            "field-support",
+            "supervisor",
+        ]
+        assert body["active_role"] == "guide"
+        assert body["runtime_only"] is True
+        assert "human oversight" in body["operator_boundary"]
+
+    def test_agent_roster_selects_role(self, client_no_key):
+        """active roleを選択でき、world layer接続を返す。"""
+        res = client_no_key.post("/api/agent-roster/select", json={"role_id": "field-support"})
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_role"] == "field-support"
+        assert body["active"]["layer"] == "physical"
+        assert "human approval" in body["active"]["guidance"]
+
+    def test_agent_roster_rejects_unknown_role(self, client_no_key):
+        """未定義roleは role_not_found。"""
+        res = client_no_key.post("/api/agent-roster/select", json={"role_id": "raw_character_role"})
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "role_not_found"
+        assert body["agent_roster"]["active_role"] == "guide"
+
+    def test_agent_roster_guidance_uses_operator_context(self, client_no_key):
+        """operator entry後はguide/partner説明に対象agent contextが入る。"""
+        entry = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "test_run", "agent_id": 0, "trigger_class": "entry_intent"},
+        )
+        res = client_no_key.post("/api/agent-roster/select", json={"role_id": "partner"})
+
+        assert entry.status_code == 200
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_role"] == "partner"
+        assert "Agent 0" in body["active"]["guidance"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

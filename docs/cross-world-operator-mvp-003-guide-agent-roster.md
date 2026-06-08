@@ -1,22 +1,23 @@
-# MVP-003 Guide And Agent Roster 実装前仕様
+# MVP-003 Guide And Agent Roster prototype
 
-- Status: `draft`
-- Version: `0.1.4`
+- Status: `implemented`
+- Version: `0.4.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - Linear draft: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - TODO正本: [cross-world-operator-todo.md](cross-world-operator-todo.md)
 - Work order: [wo-urban-022-cross-world-guide-agent-roster.yaml](subagents/work-orders/wo-urban-022-cross-world-guide-agent-roster.yaml)
+- Prototype work order: [wo-urban-030-cross-world-guide-roster-prototype.yaml](subagents/work-orders/wo-urban-030-cross-world-guide-roster-prototype.yaml)
 
 ## 目的
 
-`UE-XWORLD-MVP-003 Guide And Agent Roster` は、MVP-001のoperator entryとMVP-002のworld bridgeに対して、案内、伴走、監視、追跡、介入、現場支援、統括の抽象roleを定義するための実装前仕様です。
+`UE-XWORLD-MVP-003 Guide And Agent Roster` は、MVP-001のoperator entryとMVP-002のworld bridgeに対して、案内、伴走、監視、追跡、介入、現場支援、統括の抽象roleを選択・確認するためのtoy prototypeです。
 
-このPRでは実装コードとdata contractを変更しません。次の実装PRで迷わないよう、role責任、operatorとの境界、world layerとの接続、失敗状態、public-safe naming gateを固定します。
+このPRではdata contractを変更しません。viewer用のprocess-local stateとして、role責任、operatorとの境界、world layerとの接続、失敗状態、public-safe naming gateを固定します。
 
 ## Versioning
 
-この仕様追加は、Cross-world Operator Mode docs package の `0.1.4` PATCH更新です。
+このprototype追加は、Cross-world Operator Mode docs package の `0.4.0` MINOR更新です。
 
 data contract、主要API、agent runtime実装は含まないため、Urban Ecosystem data contract `0.5.0` は変更しません。
 
@@ -57,7 +58,21 @@ data contract、主要API、agent runtime実装は含まないため、Urban Eco
 | `field-support` | `physical` layer由来の制約を説明する | human approval、cost、運用制約を説明する | cloudや外部APIを勝手に実行しない |
 | `supervisor` | role間の衝突を調停する | gate、責任境界、handoff先を決める | user oversightを置き換えない |
 
-このrole setは実装候補であり、このPRではdata contractへ追加しません。
+このrole setはviewer APIのprocess-local stateとして実装します。data contractへは追加しません。
+
+## Prototype API
+
+- `GET /api/agent-roster`
+  - active role、role一覧、各roleの責任、world layer、できること、できないこと、現在contextに合わせたguidanceを返す。
+- `POST /api/agent-roster/select`
+  - `role_id` を受け取り、active roleを更新する。
+  - 受け付けるroleは `guide`、`partner`、`monitoring`、`pursuit`、`intervention`、`field-support`、`supervisor` の抽象roleだけにする。
+
+## Prototype UI
+
+- 右パネルに `Role Roster` を追加する。
+- operatorは抽象roleを選び、現在layer、human gate境界、guidanceを確認できる。
+- roleはoperator判断やhuman oversightを置き換えず、説明・観測・提案に限定する。
 
 ## Operator境界
 
