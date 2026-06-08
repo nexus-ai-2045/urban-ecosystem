@@ -20,6 +20,8 @@ urban_viewer_server.py — Urban Ecosystem リプレイビューア FastAPI サ�
   POST /api/motif-arcs/evaluate motif arc の受け入れ条件を確認する
   GET /api/assessment-lab       assessment / benchmark category state
   POST /api/assessment-lab/evaluate benchmark category を評価する
+  GET /api/governance-fde       governance / FDE packet state
+  POST /api/governance-fde/decide FDE decision packet を評価する
   GET /api/settings     ランタイム設定状態 (秘密値は返さない)
   POST /api/settings    ランタイム設定更新 (process-local / 永続保存なし)
   GET /api/data/{run_id}/{file}  データファイル配信 (許可リスト 11 件)
@@ -365,6 +367,64 @@ _ASSESSMENT_LAB_STATE: dict[str, object] = {
     "status": "ready",
     "failure_state": "",
     "message": "assessment lab ready",
+}
+
+# MVP-006 Governance And Fractal Decision: user oversightをagent化せず、
+# FDE packetでproposal / review / execution / oversightを分ける。
+GOVERNANCE_LAYER_IDS: tuple[str, ...] = ("proposal", "review", "execution", "oversight")
+FDE_STEP_IDS: tuple[str, ...] = ("entry", "packet", "evidence", "decision", "closure")
+FDE_DECISION_IDS: tuple[str, ...] = ("proceed", "revise", "watch", "parking-lot", "reject")
+_GOVERNANCE_LAYERS: dict[str, dict[str, str]] = {
+    "proposal": {
+        "name": "Proposal Branch",
+        "responsibility": "変更案を作る",
+        "input": "TODO、benchmark result、operator intent",
+        "output": "proposal packet",
+        "gate": "source category review",
+    },
+    "review": {
+        "name": "Review Branch",
+        "responsibility": "証拠とriskを確認する",
+        "input": "proposal packet、tests、drift checks",
+        "output": "review note",
+        "gate": "governance review",
+    },
+    "execution": {
+        "name": "Execution Branch",
+        "responsibility": "承認済み作業だけ実行する",
+        "input": "reviewed proposal、allowed write paths",
+        "output": "PR / docs / work order",
+        "gate": "human gate",
+    },
+    "oversight": {
+        "name": "User Oversight",
+        "responsibility": "公開境界と異議申し立てを保持する",
+        "input": "PR state、release state、user instruction",
+        "output": "approval / stop / rollback request",
+        "gate": "user oversight",
+    },
+}
+_FDE_STEPS: dict[str, dict[str, str]] = {
+    "entry": {
+        "name": "Entry",
+        "meaning": "何を判断するかを明確にする",
+    },
+    "packet": {
+        "name": "Packet",
+        "meaning": "source category、scope、allowed write paths、gateを束ねる",
+    },
+    "evidence": {
+        "name": "Evidence",
+        "meaning": "tests、CI、static scan、human review statusを集める",
+    },
+    "decision": {
+        "name": "Decision",
+        "meaning": "proceed、revise、watch、parking-lot、rejectを選ぶ",
+    },
+    "closure": {
+        "name": "Closure",
+        "meaning": "merge、handoff、next MVP、rollback conditionを記録する",
+    },
 }
 
 # run_id バリデーション正規表現 (§21.1)
@@ -1187,6 +1247,85 @@ def _assessment_lab_error(status_code: int, failure_state: str, message: str) ->
     })
 
 
+def _governance_layer(layer_id: str) -> dict[str, object]:
+    """governance layer の公開安全な説明を返す。"""
+    layer = _GOVERNANCE_LAYERS[layer_id]
+    return {
+        "layer_id": layer_id,
+        "public_safe_name": layer["name"],
+        "responsibility": layer["responsibility"],
+        "input": layer["input"],
+        "output": layer["output"],
+        "gate": layer["gate"],
+        "user_controlled": layer_id == "oversight",
+    }
+
+
+def _fde_step(step_id: str) -> dict[str, object]:
+    """FDE step の説明を返す。"""
+    step = _FDE_STEPS[step_id]
+    return {
+        "step_id": step_id,
+        "public_safe_name": step["name"],
+        "meaning": step["meaning"],
+    }
+
+
+def _safe_governance_fde_state(
+    decision: str = "watch",
+    status: str = "ready",
+    failure_state: str = "",
+    message: str = "governance FDE ready",
+) -> dict[str, object]:
+    """MVP-006のstateless governance / FDE stateを返す。"""
+    return {
+        "active_decision": decision,
+        "status": status,
+        "failure_state": failure_state,
+        "message": message,
+        "layers": [_governance_layer(layer_id) for layer_id in GOVERNANCE_LAYER_IDS],
+        "fde_steps": [_fde_step(step_id) for step_id in FDE_STEP_IDS],
+        "decisions": list(FDE_DECISION_IDS),
+        "numeric_protocol": {
+            "status": "parking-lot",
+            "reason": "numeric meaningはcreative hypothesisであり、実装根拠として未成熟。",
+            "recheck_condition": "concrete operator workflow、decision packet、testable behaviorに接続できた時。",
+        },
+        "future_frame": {
+            "mode": "comparison",
+            "fields": ["old_future_image", "current_local_capacity", "implementation_gap"],
+            "prohibited": "prophecy / inevitable future",
+        },
+        "time_sense": {
+            "fields": ["wait_value", "progress", "stuck_state", "next_return_point"],
+        },
+        "skill_orchestration": {
+            "skill_mesh": True,
+            "orchestration_pack": True,
+            "recursive_calls_allowed": "loop guard and human gate required",
+        },
+        "oversight": {
+            "user_role": "external_monitor",
+            "user_is_agent": False,
+            "human_gate_required": True,
+        },
+        "runtime_only": True,
+    }
+
+
+def _governance_fde_error(status_code: int, failure_state: str, message: str) -> HTTPException:
+    """FDE decision packetの失敗状態を返す。"""
+    return HTTPException(status_code=status_code, detail={
+        "failure_state": failure_state,
+        "message": message,
+        "governance_fde": _safe_governance_fde_state(
+            status="blocked",
+            failure_state=failure_state,
+            message=message,
+        ),
+    })
+
+
 def _read_summary(run_id: str) -> dict:
     """operator entry 用に summary.json を読み込む。"""
     try:
@@ -1633,6 +1772,51 @@ async def evaluate_assessment_category(request: Request) -> JSONResponse:
         status="ready",
         failure_state="",
         message=f"{category_id} evaluated by benchmark gate",
+    ))
+
+
+@app.get("/api/governance-fde")
+async def get_governance_fde() -> JSONResponse:
+    """MVP-006: governance layerとFDE packet stateを返す。"""
+    return JSONResponse(_safe_governance_fde_state())
+
+
+@app.post("/api/governance-fde/decide")
+async def decide_governance_fde(request: Request) -> JSONResponse:
+    """MVP-006: FDE decision packetを公開安全な範囲で評価する。"""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError as exc:
+        raise _governance_fde_error(400, "packet_missing_evidence", "invalid json") from exc
+    if not isinstance(body, dict):
+        raise _governance_fde_error(400, "packet_missing_evidence", "request body must be an object")
+
+    decision = body.get("decision", "watch")
+    if not isinstance(decision, str) or decision not in FDE_DECISION_IDS:
+        raise _governance_fde_error(404, "packet_missing_evidence", "decision is not defined")
+    if body.get("human_gate") is False:
+        raise _governance_fde_error(400, "oversight_bypassed", "human gate is required")
+    if body.get("user_as_agent") is True:
+        raise _governance_fde_error(400, "oversight_bypassed", "user must stay external monitor")
+    if body.get("future_claim") == "prophecy":
+        raise _governance_fde_error(400, "future_claim_overreach", "future frame must be comparative")
+    if body.get("numeric_rule") == "implemented":
+        raise _governance_fde_error(400, "numeric_rule_overreach", "numeric protocol stays parking-lot")
+    if body.get("recursive_depth_unbounded") is True:
+        raise _governance_fde_error(400, "recursive_loop_unbounded", "recursive calls need depth and stop condition")
+    evidence = body.get("evidence", [])
+    if decision == "proceed" and (not isinstance(evidence, list) or len(evidence) < 3):
+        raise _governance_fde_error(
+            400,
+            "packet_missing_evidence",
+            "proceed decision requires tests, scan, and review evidence",
+        )
+
+    return JSONResponse(_safe_governance_fde_state(
+        decision=decision,
+        status="ready",
+        failure_state="",
+        message=f"{decision} decision accepted by FDE gate",
     ))
 
 

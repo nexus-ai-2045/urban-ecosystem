@@ -337,6 +337,28 @@
         </div>
         <div id="assessment-lab-fail" class="settings-status">不合格条件を確認します。</div>
       </div>
+      <div id="governance-fde-panel" class="governance-fde-panel" aria-label="Governance FDE" aria-live="polite">
+        <div class="operator-header">
+          <span>Governance</span>
+          <span id="governance-fde-status" class="status-pill status-pill--muted">watch</span>
+        </div>
+        <label class="field-label" for="governance-fde-decision-select">FDE decision</label>
+        <div class="world-bridge-actions">
+          <select id="governance-fde-decision-select" aria-label="FDE decision"></select>
+          <button id="btn-governance-fde-decide" type="button">判定</button>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Oversight</span>
+            <span id="governance-fde-oversight" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">FDE</span>
+            <span id="governance-fde-steps" class="live-value">確認中</span>
+          </div>
+        </div>
+        <div id="governance-fde-numeric" class="settings-status">numeric protocolを確認します。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

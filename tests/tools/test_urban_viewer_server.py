@@ -885,6 +885,103 @@ class TestAssessmentLab:
         assert body["failure_state"] == "capability_claim_unverified"
 
 
+class TestGovernanceFde:
+    def test_governance_fde_returns_layers_and_fde_steps(self, client_no_key):
+        """MVP-006: governance layer、FDE steps、oversight boundaryを返す。"""
+        res = client_no_key.get("/api/governance-fde")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert [layer["layer_id"] for layer in body["layers"]] == [
+            "proposal",
+            "review",
+            "execution",
+            "oversight",
+        ]
+        assert [step["step_id"] for step in body["fde_steps"]] == [
+            "entry",
+            "packet",
+            "evidence",
+            "decision",
+            "closure",
+        ]
+        assert body["oversight"]["user_role"] == "external_monitor"
+        assert body["oversight"]["user_is_agent"] is False
+        assert body["numeric_protocol"]["status"] == "parking-lot"
+        assert body["runtime_only"] is True
+
+    def test_governance_fde_accepts_proceed_with_evidence(self, client_no_key):
+        """proceedはtests、scan、review相当の証拠がある時だけ通す。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={
+                "decision": "proceed",
+                "human_gate": True,
+                "evidence": ["tests", "static-scan", "review"],
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["active_decision"] == "proceed"
+        assert body["failure_state"] == ""
+
+    def test_governance_fde_rejects_proceed_without_evidence(self, client_no_key):
+        """証拠不足のproceedはpacket_missing_evidenceで拒否する。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={"decision": "proceed", "human_gate": True, "evidence": ["tests"]},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "packet_missing_evidence"
+
+    def test_governance_fde_rejects_oversight_bypass(self, client_no_key):
+        """human gate省略やuser agent化を拒否する。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={"decision": "watch", "human_gate": False},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "oversight_bypassed"
+
+    def test_governance_fde_rejects_future_claim_overreach(self, client_no_key):
+        """未来像を予言として扱うpacketを拒否する。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={"decision": "watch", "future_claim": "prophecy"},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "future_claim_overreach"
+
+    def test_governance_fde_rejects_numeric_rule_overreach(self, client_no_key):
+        """numeric protocolを実装済みruleにすることを拒否する。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={"decision": "watch", "numeric_rule": "implemented"},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "numeric_rule_overreach"
+
+    def test_governance_fde_rejects_unbounded_recursive_loop(self, client_no_key):
+        """recursive skill callにdepth/stop conditionがないpacketを拒否する。"""
+        res = client_no_key.post(
+            "/api/governance-fde/decide",
+            json={"decision": "watch", "recursive_depth_unbounded": True},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "recursive_loop_unbounded"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # /api/runs テスト (§21.2)
 # ─────────────────────────────────────────────────────────────────────────────

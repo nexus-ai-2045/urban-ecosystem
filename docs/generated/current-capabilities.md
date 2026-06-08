@@ -13,6 +13,8 @@
 | `GET` | `/api/assessment-lab` | `get_assessment_lab` | MVP-005: assessment / benchmark category stateを返す。 |
 | `POST` | `/api/assessment-lab/evaluate` | `evaluate_assessment_category` | MVP-005: benchmark categoryを公開安全な範囲で評価する。 |
 | `GET` | `/api/data/{run_id}/{file}` | `get_data_file` | データファイルを配信する (§21.3)。 |
+| `GET` | `/api/governance-fde` | `get_governance_fde` | MVP-006: governance layerとFDE packet stateを返す。 |
+| `POST` | `/api/governance-fde/decide` | `decide_governance_fde` | MVP-006: FDE decision packetを公開安全な範囲で評価する。 |
 | `GET` | `/api/health` | `health` | ヘルスチェック (§21.4)。 |
 | `GET` | `/api/labels` | `get_labels` | 日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。 |
 | `GET` | `/api/motif-arcs` | `get_motif_arcs` | MVP-004: public-safe motif arc packを返す。 |

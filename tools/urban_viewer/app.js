@@ -26,6 +26,7 @@ import {
     updateAgentRosterPanel,
     updateMotifArcPanel,
     updateAssessmentLabPanel,
+    updateGovernanceFdePanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -142,6 +143,17 @@ const state = {
         categories: [],
         active: null,
     },
+    governanceFde: {
+        activeDecision: "watch",
+        status: "ready",
+        failureState: "",
+        message: "governance FDE ready",
+        layers: [],
+        fdeSteps: [],
+        decisions: [],
+        numericProtocol: null,
+        oversight: null,
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -234,6 +246,12 @@ const assessmentLabEvaluateBtn = document.getElementById("btn-assessment-lab-eva
 const assessmentLabInputEl = document.getElementById("assessment-lab-input");
 const assessmentLabOutputEl = document.getElementById("assessment-lab-output");
 const assessmentLabFailEl = document.getElementById("assessment-lab-fail");
+const governanceFdeStatusEl = document.getElementById("governance-fde-status");
+const governanceFdeDecisionSel = document.getElementById("governance-fde-decision-select");
+const governanceFdeDecideBtn = document.getElementById("btn-governance-fde-decide");
+const governanceFdeOversightEl = document.getElementById("governance-fde-oversight");
+const governanceFdeStepsEl = document.getElementById("governance-fde-steps");
+const governanceFdeNumericEl = document.getElementById("governance-fde-numeric");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -301,6 +319,15 @@ const assessmentLabEls = {
     fail: assessmentLabFailEl,
 };
 
+const governanceFdeEls = {
+    status: governanceFdeStatusEl,
+    select: governanceFdeDecisionSel,
+    decideButton: governanceFdeDecideBtn,
+    oversight: governanceFdeOversightEl,
+    fde: governanceFdeStepsEl,
+    numeric: governanceFdeNumericEl,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
 // ─────────────────────────────────────────────────────────────────────────────
@@ -343,6 +370,7 @@ async function main() {
     await refreshAgentRoster();
     await refreshMotifArcs();
     await refreshAssessmentLab();
+    await refreshGovernanceFde();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -455,6 +483,17 @@ async function refreshAssessmentLab() {
         _setAssessmentLabState(json);
     } catch {
         updateAssessmentLabRuntimePanel();
+    }
+}
+
+async function refreshGovernanceFde() {
+    try {
+        const res = await fetch(`${API_BASE}/api/governance-fde`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setGovernanceFdeState(json);
+    } catch {
+        updateGovernanceFdeRuntimePanel();
     }
 }
 
@@ -1068,6 +1107,25 @@ function updateAssessmentLabRuntimePanel() {
     updateAssessmentLabPanel(assessmentLabEls, state.assessmentLab);
 }
 
+function _setGovernanceFdeState(json) {
+    state.governanceFde = {
+        activeDecision: json.active_decision || "watch",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "governance FDE ready",
+        layers: Array.isArray(json.layers) ? json.layers : [],
+        fdeSteps: Array.isArray(json.fde_steps) ? json.fde_steps : [],
+        decisions: Array.isArray(json.decisions) ? json.decisions : [],
+        numericProtocol: json.numeric_protocol || null,
+        oversight: json.oversight || null,
+    };
+    updateGovernanceFdeRuntimePanel();
+}
+
+function updateGovernanceFdeRuntimePanel() {
+    updateGovernanceFdePanel(governanceFdeEls, state.governanceFde);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -1249,6 +1307,41 @@ async function evaluateAssessmentLab() {
             message: String(error.message || error),
         };
         updateAssessmentLabRuntimePanel();
+    }
+}
+
+async function decideGovernanceFde() {
+    const decision = governanceFdeDecisionSel?.value || "watch";
+    try {
+        const res = await fetch(`${API_BASE}/api/governance-fde/decide`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                decision,
+                human_gate: true,
+                evidence: ["local-tests", "static-scan", "human-review-surface"],
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setGovernanceFdeState(detail.governance_fde || {
+                active_decision: state.governanceFde.activeDecision,
+                status: "blocked",
+                failure_state: detail.failure_state || "packet_missing_evidence",
+                message: detail.message || "FDE decision failed",
+            });
+            return;
+        }
+        _setGovernanceFdeState(json);
+    } catch (error) {
+        state.governanceFde = {
+            ...state.governanceFde,
+            status: "blocked",
+            failureState: "packet_missing_evidence",
+            message: String(error.message || error),
+        };
+        updateGovernanceFdeRuntimePanel();
     }
 }
 
@@ -1648,6 +1741,11 @@ function wireEvents() {
     if (assessmentLabEvaluateBtn) {
         assessmentLabEvaluateBtn.addEventListener("click", async () => {
             await evaluateAssessmentLab();
+        });
+    }
+    if (governanceFdeDecideBtn) {
+        governanceFdeDecideBtn.addEventListener("click", async () => {
+            await decideGovernanceFde();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {
