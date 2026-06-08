@@ -233,6 +233,36 @@
         </div>
         <div id="operator-message" class="settings-status">エージェントを選択してください。</div>
       </div>
+      <div id="world-bridge-panel" class="world-bridge-panel" aria-label="World bridge" aria-live="polite">
+        <div class="operator-header">
+          <span>World Bridge</span>
+          <span id="world-bridge-layer" class="status-pill status-pill--muted">simulated</span>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Packet</span>
+            <span id="world-bridge-packet" class="live-value">確認中</span>
+          </div>
+          <div>
+            <span class="live-label">Signal</span>
+            <span id="world-bridge-signal" class="live-value">planned</span>
+          </div>
+        </div>
+        <label class="field-label" for="world-bridge-target-select">移動先 layer</label>
+        <div class="world-bridge-actions">
+          <select id="world-bridge-target-select" aria-label="World layer">
+            <option value="simulated">simulated</option>
+            <option value="liminal">liminal</option>
+            <option value="physical">physical</option>
+          </select>
+          <button id="btn-world-bridge-transition" type="button">移動</button>
+        </div>
+        <label class="layer-toggle world-bridge-agent-context">
+          <input id="world-bridge-agent-context" type="checkbox">
+          agent context を要求
+        </label>
+        <div id="world-bridge-message" class="settings-status">三層world layerを確認できます。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

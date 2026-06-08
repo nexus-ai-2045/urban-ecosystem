@@ -1,18 +1,23 @@
-# MVP-002 World Bridge State Model 実装前仕様
+# MVP-002 World Bridge State Model prototype
 
-- Status: `draft`
-- Version: `0.1.2`
+- Status: `implemented`
+- Version: `0.3.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - Linear draft: [cross-world-operator-linear-drafts.md](cross-world-operator-linear-drafts.md)
 - TODO正本: [cross-world-operator-todo.md](cross-world-operator-todo.md)
 - Work order: [wo-urban-021-cross-world-bridge-state-model.yaml](subagents/work-orders/wo-urban-021-cross-world-bridge-state-model.yaml)
+- Prototype work order: [wo-urban-029-cross-world-world-bridge-prototype.yaml](subagents/work-orders/wo-urban-029-cross-world-world-bridge-prototype.yaml)
 
 ## 目的
 
-`UE-XWORLD-MVP-002 World Bridge State Model` は、MVP-001のoperator entryを、`physical`、`simulated`、`liminal` の三層worldへ接続するための実装前仕様です。
+`UE-XWORLD-MVP-002 World Bridge State Model` は、MVP-001のoperator entryを、`physical`、`simulated`、`liminal` の三層worldへ接続するためのtoy prototypeです。
 
-このPRでは実装コードとdata contractを変更しません。次の実装PRで迷わないよう、world layer、移動条件、失敗状態、Minimum World Packet、event/music layerの扱いを公開安全な粒度で固定します。
+このPRではdata contractを変更しません。viewer用のprocess-local stateとして、world layer、移動条件、失敗状態、Minimum World Packet、event/music layerの体験信号を公開安全な粒度で実装します。
+
+## Versioning
+
+このprototype追加は、Cross-world Operator Mode docs package の `0.3.0` MINOR更新です。Urban Ecosystem data contract はこのPRでは変更しません。
 
 ## 対象TODO
 
@@ -45,7 +50,7 @@
 - `simulated`: replay、agent state、scenario stateを観測するlayer。
 - `liminal`: `physical` と `simulated` の間で、operator intent、entry gate、return gateを扱う境界layer。
 
-この三層は実装候補であり、このPRではdata contractへ追加しません。
+この三層はviewer APIのprocess-local stateとして実装します。data contractへは追加しません。
 
 ## 最小フロー
 
@@ -53,7 +58,16 @@
 2. systemは移動元layer、移動先layer、対象agent、Minimum World Packetの充足を確認する。
 3. 移動が許可されると、viewpoint explanationに現在layerと移動理由を表示する。
 4. `liminal` layerでは、移動中・未確定・境界確認中であることを明示する。
-5. 移動できない場合は、元のviewpointを維持し、失敗理由を説明する。
+5. 移動できない場合は、元のlayerを維持し、失敗理由を説明する。
+
+## Prototype API
+
+- `GET /api/world-bridge`
+  - 現在layer、利用可能layer、許可transition、Minimum World Packet、Event + Music signalを返す。
+- `POST /api/world-bridge/transition`
+  - `target_layer`、`reason_class`、`requires_agent_context` を受け取り、許可されたlayer移動だけを行う。
+  - `physical` と `simulated` の直行は許可せず、`liminal` 経由を要求する。
+  - `requires_agent_context: true` の場合は、MVP-001のoperator entryでagent contextがある時だけ通す。
 
 ## 失敗状態
 

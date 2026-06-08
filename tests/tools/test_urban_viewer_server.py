@@ -50,6 +50,7 @@ from tools.urban_viewer_server import (
     _RUNTIME_CONFIG,
     _make_configured_llm_provider,
     _set_operator_replay,
+    _set_world_bridge_simulated,
 )
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
@@ -279,6 +280,7 @@ def client_no_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY 未設定のクライアント。"""
     _RUNTIME_CONFIG.clear()
     _set_operator_replay()
+    _set_world_bridge_simulated()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -290,6 +292,7 @@ def client_with_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY が設定されたクライアント (テスト用ダミーキー)。"""
     _RUNTIME_CONFIG.clear()
     _set_operator_replay()
+    _set_world_bridge_simulated()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -571,6 +574,90 @@ class TestOperatorMode:
         assert res.status_code == 400
         body = res.json()["detail"]
         assert body["failure_state"] == "trigger_not_allowed"
+
+
+class TestWorldBridge:
+    def test_world_bridge_starts_in_simulated_layer(self, client_no_key):
+        """MVP-002: 初期状態は simulated layer。"""
+        res = client_no_key.get("/api/world-bridge")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["current_layer"] == "simulated"
+        assert body["minimum_world_packet"]["ready"] is True
+        assert len(body["minimum_world_packet"]["fields"]) == 7
+        assert body["event_music_signal"]["status"] == "planned_signal"
+        assert body["runtime_only"] is True
+
+    def test_world_bridge_allows_liminal_transition(self, client_no_key):
+        """simulated -> liminal は許可する。"""
+        res = client_no_key.post(
+            "/api/world-bridge/transition",
+            json={"target_layer": "liminal", "reason_class": "operator_intent"},
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["previous_layer"] == "simulated"
+        assert body["current_layer"] == "liminal"
+        assert body["failure_state"] == ""
+
+    def test_world_bridge_blocks_direct_physical_transition(self, client_no_key):
+        """simulated -> physical の直行は liminal 経由を要求する。"""
+        res = client_no_key.post(
+            "/api/world-bridge/transition",
+            json={"target_layer": "physical", "reason_class": "operator_intent"},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "transition_not_allowed"
+        assert body["world_bridge"]["current_layer"] == "simulated"
+
+    def test_world_bridge_rejects_unknown_layer(self, client_no_key):
+        """未定義layerは layer_not_found。"""
+        res = client_no_key.post(
+            "/api/world-bridge/transition",
+            json={"target_layer": "unknown", "reason_class": "operator_intent"},
+        )
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "layer_not_found"
+
+    def test_world_bridge_requires_agent_context_when_requested(self, client_no_key):
+        """agent context要求時、operator entry前なら失敗する。"""
+        res = client_no_key.post(
+            "/api/world-bridge/transition",
+            json={
+                "target_layer": "liminal",
+                "reason_class": "operator_intent",
+                "requires_agent_context": True,
+            },
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "agent_context_missing"
+
+    def test_world_bridge_agent_context_passes_after_operator_entry(self, client_no_key):
+        """operator entry後はagent context要求つきtransitionが通る。"""
+        entry = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "test_run", "agent_id": 0, "trigger_class": "entry_intent"},
+        )
+        res = client_no_key.post(
+            "/api/world-bridge/transition",
+            json={
+                "target_layer": "liminal",
+                "reason_class": "operator_intent",
+                "requires_agent_context": True,
+            },
+        )
+
+        assert entry.status_code == 200
+        assert res.status_code == 200
+        assert res.json()["current_layer"] == "liminal"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

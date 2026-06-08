@@ -18,6 +18,8 @@
 | `POST` | `/api/runs` | `create_run` | UI から新しい sample simulation run を作る。 |
 | `GET` | `/api/settings` | `get_settings` | ビューア設定状態を返す。API キー値は返さない。 |
 | `POST` | `/api/settings` | `update_settings` | UI から process-local な設定を更新する。 |
+| `GET` | `/api/world-bridge` | `get_world_bridge` | MVP-002: 三層 world bridge state を返す。runtime-onlyで永続化しない。 |
+| `POST` | `/api/world-bridge/transition` | `transition_world_bridge` | MVP-002: physical / simulated / liminal のlayer移動を行う。 |
 
 ## Data File Allowlist
 

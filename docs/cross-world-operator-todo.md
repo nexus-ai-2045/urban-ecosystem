@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.2.0`
+- Version: `0.3.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -295,7 +295,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-003 World Bridge Actor
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: data contract review
@@ -443,7 +443,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-017 Three-world Layer
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: data contract review
@@ -453,7 +453,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-018 Event + Music Layer
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: asset/publication review
@@ -634,7 +634,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-036 Minimum World Packet Checklist
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-002 World Bridge State Model 実装前仕様](cross-world-operator-mvp-002-world-bridge.md)
 - Gate: quality-gate review
