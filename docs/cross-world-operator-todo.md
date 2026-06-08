@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.6.0`
+- Version: `0.7.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -516,7 +516,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-024 Future-Known Implementation Frame
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: source category review
@@ -526,7 +526,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-025 Human Time-Sense Boundary Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: assessment review
@@ -545,7 +545,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-027 FDE Packet Router Benchmark
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: governance review
@@ -565,7 +565,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-029 User Oversight Fourth-Power Layer
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: human oversight review
@@ -575,7 +575,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-030 Deliberative Separation-of-Powers Layer
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: governance review

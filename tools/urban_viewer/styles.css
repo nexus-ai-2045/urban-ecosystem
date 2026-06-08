@@ -247,7 +247,8 @@ body {
 .world-bridge-panel,
 .agent-roster-panel,
 .motif-arc-panel,
-.assessment-lab-panel {
+.assessment-lab-panel,
+.governance-fde-panel {
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
