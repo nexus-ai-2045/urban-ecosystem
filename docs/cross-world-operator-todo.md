@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.7.0`
+- Version: `0.8.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -585,7 +585,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-031 Repository-as-Skill Mesh
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: loop guard review
@@ -594,7 +594,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-032 P2P Distributed Operations Spike
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: trust/moderation review
@@ -603,7 +603,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-033 Cloud Capacity Envelope
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `project-hypothesis`
 - Next artifact: [MVP-007 Repo-as-Skill And Distributed Ops 実装前仕様](cross-world-operator-mvp-007-repo-skill-distributed-ops.md)
 - Gate: cloud/account/cost review

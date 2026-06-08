@@ -27,6 +27,7 @@ import {
     updateMotifArcPanel,
     updateAssessmentLabPanel,
     updateGovernanceFdePanel,
+    updateRepoSkillMeshPanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -154,6 +155,16 @@ const state = {
         numericProtocol: null,
         oversight: null,
     },
+    repoSkillMesh: {
+        activeSkillId: "governance-skill",
+        status: "ready",
+        failureState: "",
+        message: "repo skill mesh ready",
+        skillFamilies: [],
+        recursiveGuard: null,
+        distributedOps: null,
+        cloudCapacity: null,
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -252,6 +263,13 @@ const governanceFdeDecideBtn = document.getElementById("btn-governance-fde-decid
 const governanceFdeOversightEl = document.getElementById("governance-fde-oversight");
 const governanceFdeStepsEl = document.getElementById("governance-fde-steps");
 const governanceFdeNumericEl = document.getElementById("governance-fde-numeric");
+const repoSkillMeshStatusEl = document.getElementById("repo-skill-mesh-status");
+const repoSkillMeshSelectEl = document.getElementById("repo-skill-mesh-select");
+const repoSkillMeshEvaluateBtn = document.getElementById("btn-repo-skill-mesh-evaluate");
+const repoSkillMeshDepthEl = document.getElementById("repo-skill-mesh-depth");
+const repoSkillMeshDistributedEl = document.getElementById("repo-skill-mesh-distributed");
+const repoSkillMeshCloudEl = document.getElementById("repo-skill-mesh-cloud");
+const repoSkillMeshGuardEl = document.getElementById("repo-skill-mesh-guard");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -328,6 +346,16 @@ const governanceFdeEls = {
     numeric: governanceFdeNumericEl,
 };
 
+const repoSkillMeshEls = {
+    status: repoSkillMeshStatusEl,
+    select: repoSkillMeshSelectEl,
+    evaluateButton: repoSkillMeshEvaluateBtn,
+    depth: repoSkillMeshDepthEl,
+    distributed: repoSkillMeshDistributedEl,
+    cloud: repoSkillMeshCloudEl,
+    guard: repoSkillMeshGuardEl,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 初期化
 // ─────────────────────────────────────────────────────────────────────────────
@@ -371,6 +399,7 @@ async function main() {
     await refreshMotifArcs();
     await refreshAssessmentLab();
     await refreshGovernanceFde();
+    await refreshRepoSkillMesh();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -494,6 +523,17 @@ async function refreshGovernanceFde() {
         _setGovernanceFdeState(json);
     } catch {
         updateGovernanceFdeRuntimePanel();
+    }
+}
+
+async function refreshRepoSkillMesh() {
+    try {
+        const res = await fetch(`${API_BASE}/api/repo-skill-mesh`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setRepoSkillMeshState(json);
+    } catch {
+        updateRepoSkillMeshRuntimePanel();
     }
 }
 
@@ -1126,6 +1166,24 @@ function updateGovernanceFdeRuntimePanel() {
     updateGovernanceFdePanel(governanceFdeEls, state.governanceFde);
 }
 
+function _setRepoSkillMeshState(json) {
+    state.repoSkillMesh = {
+        activeSkillId: json.active_skill_id || "governance-skill",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "repo skill mesh ready",
+        skillFamilies: Array.isArray(json.skill_families) ? json.skill_families : [],
+        recursiveGuard: json.recursive_guard || null,
+        distributedOps: json.distributed_ops || null,
+        cloudCapacity: json.cloud_capacity || null,
+    };
+    updateRepoSkillMeshRuntimePanel();
+}
+
+function updateRepoSkillMeshRuntimePanel() {
+    updateRepoSkillMeshPanel(repoSkillMeshEls, state.repoSkillMesh);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -1342,6 +1400,42 @@ async function decideGovernanceFde() {
             message: String(error.message || error),
         };
         updateGovernanceFdeRuntimePanel();
+    }
+}
+
+async function evaluateRepoSkillMesh() {
+    const skillId = repoSkillMeshSelectEl?.value || "governance-skill";
+    try {
+        const res = await fetch(`${API_BASE}/api/repo-skill-mesh/evaluate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                skill_id: skillId,
+                maximum_depth: 1,
+                allowed_io: true,
+                loop_guard: true,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setRepoSkillMeshState(detail.repo_skill_mesh || {
+                active_skill_id: state.repoSkillMesh.activeSkillId,
+                status: "blocked",
+                failure_state: detail.failure_state || "allowed_io_missing",
+                message: detail.message || "repo skill mesh evaluation failed",
+            });
+            return;
+        }
+        _setRepoSkillMeshState(json);
+    } catch (error) {
+        state.repoSkillMesh = {
+            ...state.repoSkillMesh,
+            status: "blocked",
+            failureState: "allowed_io_missing",
+            message: String(error.message || error),
+        };
+        updateRepoSkillMeshRuntimePanel();
     }
 }
 
@@ -1746,6 +1840,11 @@ function wireEvents() {
     if (governanceFdeDecideBtn) {
         governanceFdeDecideBtn.addEventListener("click", async () => {
             await decideGovernanceFde();
+        });
+    }
+    if (repoSkillMeshEvaluateBtn) {
+        repoSkillMeshEvaluateBtn.addEventListener("click", async () => {
+            await evaluateRepoSkillMesh();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

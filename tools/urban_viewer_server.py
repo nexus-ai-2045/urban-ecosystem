@@ -22,6 +22,8 @@ urban_viewer_server.py — Urban Ecosystem リプレイビューア FastAPI サ�
   POST /api/assessment-lab/evaluate benchmark category を評価する
   GET /api/governance-fde       governance / FDE packet state
   POST /api/governance-fde/decide FDE decision packet を評価する
+  GET /api/repo-skill-mesh      repo-as-skill / distributed ops guard state
+  POST /api/repo-skill-mesh/evaluate skill call / distributed ops plan を評価する
   GET /api/settings     ランタイム設定状態 (秘密値は返さない)
   POST /api/settings    ランタイム設定更新 (process-local / 永続保存なし)
   GET /api/data/{run_id}/{file}  データファイル配信 (許可リスト 11 件)
@@ -424,6 +426,53 @@ _FDE_STEPS: dict[str, dict[str, str]] = {
     "closure": {
         "name": "Closure",
         "meaning": "merge、handoff、next MVP、rollback conditionを記録する",
+    },
+}
+
+# MVP-007 Repo-as-Skill And Distributed Ops: 実際のrecursive call / P2P / cloud実行ではなく、
+# guardが揃った計画かどうかだけをstatelessに評価する。
+SKILL_FAMILY_IDS: tuple[str, ...] = (
+    "operator-entry-skill",
+    "world-bridge-skill",
+    "guide-roster-skill",
+    "motif-intake-skill",
+    "assessment-skill",
+    "governance-skill",
+    "distributed-ops-skill",
+    "intake-lifecycle-skill",
+)
+_SKILL_FAMILIES: dict[str, dict[str, str]] = {
+    "operator-entry-skill": {
+        "responsibility": "entry / return / trigger boundary",
+        "guard": "human gate、public-safe trigger",
+    },
+    "world-bridge-skill": {
+        "responsibility": "world layer / Minimum World Packet",
+        "guard": "data contract review",
+    },
+    "guide-roster-skill": {
+        "responsibility": "guide / partner / monitoring / intervention",
+        "guard": "role boundary",
+    },
+    "motif-intake-skill": {
+        "responsibility": "motif acceptance / parking-lot",
+        "guard": "public-safe naming gate",
+    },
+    "assessment-skill": {
+        "responsibility": "benchmark / harness assessment",
+        "guard": "safety review",
+    },
+    "governance-skill": {
+        "responsibility": "FDE packet / oversight",
+        "guard": "user oversight",
+    },
+    "distributed-ops-skill": {
+        "responsibility": "P2P / cloud capacity planning",
+        "guard": "trust / cost / approval gate",
+    },
+    "intake-lifecycle-skill": {
+        "responsibility": "add request / stale / heartbeat",
+        "guard": "draft-only automation gate",
     },
 }
 
@@ -1326,6 +1375,83 @@ def _governance_fde_error(status_code: int, failure_state: str, message: str) ->
     })
 
 
+def _skill_family(skill_id: str) -> dict[str, object]:
+    """skill family の責任とguardを返す。"""
+    skill = _SKILL_FAMILIES[skill_id]
+    return {
+        "skill_id": skill_id,
+        "responsibility": skill["responsibility"],
+        "required_guard": skill["guard"],
+    }
+
+
+def _safe_repo_skill_mesh_state(
+    active_skill_id: str = "governance-skill",
+    status: str = "ready",
+    failure_state: str = "",
+    message: str = "repo skill mesh ready",
+) -> dict[str, object]:
+    """MVP-007のstateless repo-as-skill / distributed ops stateを返す。"""
+    return {
+        "active_skill_id": active_skill_id,
+        "status": status,
+        "failure_state": failure_state,
+        "message": message,
+        "skill_families": [_skill_family(skill_id) for skill_id in SKILL_FAMILY_IDS],
+        "recursive_guard": {
+            "maximum_depth": 3,
+            "allowed_io_required": True,
+            "call_reason_required": True,
+            "stop_condition_required": True,
+            "evidence_packet_required": True,
+            "loop_guard_required": True,
+        },
+        "distributed_ops": {
+            "mode": "design-spike",
+            "implementation_allowed": False,
+            "required_before_implementation": [
+                "identity",
+                "trust",
+                "sync",
+                "conflict_resolution",
+                "moderation",
+                "abuse_resistance",
+                "rollback_and_audit_trail",
+            ],
+        },
+        "cloud_capacity": {
+            "execution_allowed": False,
+            "required_before_execution": [
+                "target_service",
+                "account_project",
+                "billing_owner",
+                "estimated_cost",
+                "quota",
+                "region",
+                "data_egress",
+                "credential_boundary",
+                "rollback_plan",
+                "human_approval",
+            ],
+        },
+        "external_writes_allowed": False,
+        "runtime_only": True,
+    }
+
+
+def _repo_skill_mesh_error(status_code: int, failure_state: str, message: str) -> HTTPException:
+    """repo skill mesh planの失敗状態を返す。"""
+    return HTTPException(status_code=status_code, detail={
+        "failure_state": failure_state,
+        "message": message,
+        "repo_skill_mesh": _safe_repo_skill_mesh_state(
+            status="blocked",
+            failure_state=failure_state,
+            message=message,
+        ),
+    })
+
+
 def _read_summary(run_id: str) -> dict:
     """operator entry 用に summary.json を読み込む。"""
     try:
@@ -1817,6 +1943,47 @@ async def decide_governance_fde(request: Request) -> JSONResponse:
         status="ready",
         failure_state="",
         message=f"{decision} decision accepted by FDE gate",
+    ))
+
+
+@app.get("/api/repo-skill-mesh")
+async def get_repo_skill_mesh() -> JSONResponse:
+    """MVP-007: repo-as-skill / distributed ops guard stateを返す。"""
+    return JSONResponse(_safe_repo_skill_mesh_state())
+
+
+@app.post("/api/repo-skill-mesh/evaluate")
+async def evaluate_repo_skill_mesh(request: Request) -> JSONResponse:
+    """MVP-007: skill call / distributed ops planを公開安全な範囲で評価する。"""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError as exc:
+        raise _repo_skill_mesh_error(400, "allowed_io_missing", "invalid json") from exc
+    if not isinstance(body, dict):
+        raise _repo_skill_mesh_error(400, "allowed_io_missing", "request body must be an object")
+
+    skill_id = body.get("skill_id", "governance-skill")
+    if not isinstance(skill_id, str) or skill_id not in SKILL_FAMILY_IDS:
+        raise _repo_skill_mesh_error(404, "allowed_io_missing", "skill_id is not defined")
+    if body.get("external_write") is True:
+        raise _repo_skill_mesh_error(400, "external_write_attempted", "external write needs human review")
+    if body.get("cloud_execute") is True:
+        raise _repo_skill_mesh_error(400, "cloud_approval_missing", "cloud execution needs capacity envelope and approval")
+    if body.get("p2p_operationalize") is True:
+        raise _repo_skill_mesh_error(400, "trust_model_missing", "P2P needs identity, trust, and moderation model")
+    if body.get("loop_guard") is False:
+        raise _repo_skill_mesh_error(400, "loop_guard_missing", "recursive call needs loop guard")
+    if body.get("allowed_io") is False:
+        raise _repo_skill_mesh_error(400, "allowed_io_missing", "skill call needs allowed I/O")
+    depth = body.get("maximum_depth", 1)
+    if not isinstance(depth, int) or depth < 0 or depth > 3:
+        raise _repo_skill_mesh_error(400, "recursive_depth_exceeded", "maximum depth must be 0..3")
+
+    return JSONResponse(_safe_repo_skill_mesh_state(
+        active_skill_id=skill_id,
+        status="ready",
+        failure_state="",
+        message=f"{skill_id} accepted by repo skill mesh gate",
     ))
 
 
