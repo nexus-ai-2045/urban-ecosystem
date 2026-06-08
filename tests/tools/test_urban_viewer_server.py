@@ -49,6 +49,7 @@ from tools.urban_viewer_server import (
     AGENT_PROFILES_RE,
     _RUNTIME_CONFIG,
     _make_configured_llm_provider,
+    _set_operator_replay,
 )
 from tools.urban_viewer.labels import (
     CATEGORY_LABELS,
@@ -277,6 +278,7 @@ def _create_minimal_static_files(run_dir: Path) -> None:
 def client_no_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY 未設定のクライアント。"""
     _RUNTIME_CONFIG.clear()
+    _set_operator_replay()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
@@ -287,6 +289,7 @@ def client_no_key(sample_run_dir, monkeypatch):
 def client_with_key(sample_run_dir, monkeypatch):
     """GOOGLE_MAPS_API_KEY が設定されたクライアント (テスト用ダミーキー)。"""
     _RUNTIME_CONFIG.clear()
+    _set_operator_replay()
     monkeypatch.setenv("DATA_DIR", str(sample_run_dir))
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "TEST_DUMMY_KEY_NOT_REAL")
@@ -480,6 +483,94 @@ class TestCreateRun:
         assert "GOOGLE_CLOUD_PROJECT" in res.text
         assert not (tmp_path / "vertex_no_project").exists()
         _RUNTIME_CONFIG.clear()
+
+
+class TestOperatorMode:
+    def test_operator_mode_starts_in_replay(self, client_no_key):
+        """MVP-001: 初期状態は replay viewpoint。"""
+        res = client_no_key.get("/api/operator-mode")
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["viewpoint"] == "replay"
+        assert body["status"] in {"idle", "blocked"}
+        assert body["runtime_only"] is True
+
+    def test_operator_entry_and_return_flow(self, client_no_key):
+        """MVP-001: agent selection -> entry -> inspection -> return。"""
+        entry = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "test_run", "agent_id": 0, "trigger_class": "entry_intent"},
+        )
+
+        assert entry.status_code == 200
+        entry_body = entry.json()
+        assert entry_body["viewpoint"] == "inspection"
+        assert entry_body["status"] == "active"
+        assert entry_body["run_id"] == "test_run"
+        assert entry_body["agent_id"] == 0
+        assert entry_body["trigger_class"] == "entry_intent"
+        assert entry_body["failure_state"] == ""
+
+        returned = client_no_key.post("/api/operator-mode/return")
+
+        assert returned.status_code == 200
+        return_body = returned.json()
+        assert return_body["viewpoint"] == "replay"
+        assert return_body["status"] == "idle"
+        assert return_body["agent_id"] is None
+
+    def test_operator_entry_rejects_missing_agent(self, client_no_key):
+        """存在しない agent は replay viewpoint を維持して target_not_found。"""
+        res = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "test_run", "agent_id": 999, "trigger_class": "entry_intent"},
+        )
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "target_not_found"
+        assert body["operator_mode"]["viewpoint"] == "replay"
+
+    def test_operator_entry_rejects_missing_run(self, client_no_key):
+        """存在しない run も replay viewpoint を維持して target_not_found。"""
+        res = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "missing_run", "agent_id": 0, "trigger_class": "entry_intent"},
+        )
+
+        assert res.status_code == 404
+        body = res.json()["detail"]
+        assert body["failure_state"] == "target_not_found"
+        assert body["operator_mode"]["viewpoint"] == "replay"
+
+    def test_operator_entry_rejects_trigger_text(self, client_no_key):
+        """public API は生の起動語句を受け取らない。"""
+        res = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={
+                "run_id": "test_run",
+                "agent_id": 0,
+                "trigger_class": "entry_intent",
+                "trigger_text": "private local phrase",
+            },
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "trigger_not_allowed"
+        assert body["operator_mode"]["viewpoint"] == "replay"
+
+    def test_operator_entry_rejects_unknown_trigger_class(self, client_no_key):
+        """trigger class は公開安全な抽象classだけ許可する。"""
+        res = client_no_key.post(
+            "/api/operator-mode/entry",
+            json={"run_id": "test_run", "agent_id": 0, "trigger_class": "raw_phrase"},
+        )
+
+        assert res.status_code == 400
+        body = res.json()["detail"]
+        assert body["failure_state"] == "trigger_not_allowed"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

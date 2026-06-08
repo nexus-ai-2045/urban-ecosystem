@@ -212,6 +212,27 @@
 
     <!-- 右パネル: 凡例 / エージェント詳細 (§5.3) -->
     <aside class="right-panel">
+      <div id="operator-panel" class="operator-panel" aria-label="Operator mode" aria-live="polite">
+        <div class="operator-header">
+          <span>Operator</span>
+          <span id="operator-viewpoint" class="status-pill status-pill--muted">replay</span>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">対象</span>
+            <span id="operator-target" class="live-value">未選択</span>
+          </div>
+          <div>
+            <span class="live-label">状態</span>
+            <span id="operator-status" class="live-value">待機中</span>
+          </div>
+        </div>
+        <div class="operator-actions">
+          <button id="btn-operator-entry" type="button">選択中の視点へ入る</button>
+          <button id="btn-operator-return" type="button">Replay に戻る</button>
+        </div>
+        <div id="operator-message" class="settings-status">エージェントを選択してください。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

@@ -11,6 +11,9 @@
 | `GET` | `/api/data/{run_id}/{file}` | `get_data_file` | データファイルを配信する (§21.3)。 |
 | `GET` | `/api/health` | `health` | ヘルスチェック (§21.4)。 |
 | `GET` | `/api/labels` | `get_labels` | 日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。 |
+| `GET` | `/api/operator-mode` | `get_operator_mode` | MVP-001: operator viewpoint state を返す。runtime-onlyで永続化しない。 |
+| `POST` | `/api/operator-mode/entry` | `enter_operator_mode` | MVP-001: 選択agentのinspection viewpointへ入る。 |
+| `POST` | `/api/operator-mode/return` | `return_operator_mode` | MVP-001: replay viewpointへ戻る。 |
 | `GET` | `/api/runs` | `list_runs` | 利用可能な run 一覧を返す (§21.2)。 |
 | `POST` | `/api/runs` | `create_run` | UI から新しい sample simulation run を作る。 |
 | `GET` | `/api/settings` | `get_settings` | ビューア設定状態を返す。API キー値は返さない。 |

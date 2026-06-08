@@ -21,6 +21,7 @@ import {
     updateLoadStatus,
     updateLivePanel,
     updateMapStatus,
+    updateOperatorModePanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -92,6 +93,15 @@ const state = {
         mapId:      MAPS_MAP_ID && !MAPS_MAP_ID.startsWith("%%") ? MAPS_MAP_ID : "",
         settings:   null,
     },
+    operatorMode: {
+        viewpoint: "replay",
+        status: "idle",
+        runId: "",
+        agentId: null,
+        triggerClass: "",
+        failureState: "",
+        message: "replay viewpoint",
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -153,6 +163,12 @@ const llmModelInput = document.getElementById("llm-model-input");
 const llmBaseUrlInput = document.getElementById("llm-base-url-input");
 const llmModelDirInput = document.getElementById("llm-model-dir-input");
 const googleCloudProjectInput = document.getElementById("google-cloud-project-input");
+const operatorViewpointEl = document.getElementById("operator-viewpoint");
+const operatorTargetEl = document.getElementById("operator-target");
+const operatorStatusEl = document.getElementById("operator-status");
+const operatorMessageEl = document.getElementById("operator-message");
+const operatorEntryBtn = document.getElementById("btn-operator-entry");
+const operatorReturnBtn = document.getElementById("btn-operator-return");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -172,6 +188,15 @@ const liveEls = {
     movingCount:   document.getElementById("live-moving-count"),
     selectedAgent: document.getElementById("live-selected-agent"),
     activityList:  document.getElementById("live-activity-list"),
+};
+
+const operatorEls = {
+    viewpoint: operatorViewpointEl,
+    target: operatorTargetEl,
+    status: operatorStatusEl,
+    message: operatorMessageEl,
+    entryButton: operatorEntryBtn,
+    returnButton: operatorReturnBtn,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -211,6 +236,7 @@ async function main() {
     await initAdapter();
     await refreshSettingsStatus();
     await refreshHealthStatus();
+    await refreshOperatorMode();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -268,6 +294,17 @@ async function refreshHealthStatus() {
         updateMapRuntimeStatus();
     } catch {
         updateMapRuntimeStatus();
+    }
+}
+
+async function refreshOperatorMode() {
+    try {
+        const res = await fetch(`${API_BASE}/api/operator-mode`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setOperatorModeState(json);
+    } catch {
+        updateOperatorRuntimePanel();
     }
 }
 
@@ -588,6 +625,7 @@ async function loadRun(runId) {
     if (!runId) return;
 
     state.runtime.runId = runId;
+    await returnOperatorMode(false);
 
     const summaryData = await fetchRunFile(runId, "summary.json");
     const profileCount = Number.isInteger(summaryData?.agents) && summaryData.agents > 0
@@ -699,6 +737,7 @@ async function loadRun(runId) {
     updatePlayButton(playBtn, false);
     updateSlider(sliderEl, Math.max(0, ticks.length - 1), 0);
     updateLiveRuntimePanel();
+    updateOperatorRuntimePanel();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -782,6 +821,86 @@ async function renderCurrentTick() {
         state.data.visitRecords,
     );
     updateLiveRuntimePanel(agentStates);
+    updateOperatorRuntimePanel();
+}
+
+function _setOperatorModeState(json) {
+    state.operatorMode = {
+        viewpoint: json.viewpoint || "replay",
+        status: json.status || "idle",
+        runId: json.run_id || "",
+        agentId: json.agent_id ?? null,
+        triggerClass: json.trigger_class || "",
+        failureState: json.failure_state || "",
+        message: json.message || "replay viewpoint",
+    };
+    updateOperatorRuntimePanel();
+}
+
+function updateOperatorRuntimePanel() {
+    updateOperatorModePanel(operatorEls, {
+        viewpoint: state.operatorMode.viewpoint,
+        status: state.operatorMode.status,
+        agentId: state.operatorMode.agentId,
+        selectedAgentId: state.selection.agentId,
+        failureState: state.operatorMode.failureState,
+        message: state.operatorMode.message,
+    });
+}
+
+async function enterOperatorMode() {
+    const agentId = state.selection.agentId;
+    if (agentId === null || agentId === undefined) {
+        state.operatorMode.message = "先にエージェントを選択してください。";
+        state.operatorMode.failureState = "target_not_found";
+        updateOperatorRuntimePanel();
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/api/operator-mode/entry`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                run_id: state.runtime.runId,
+                agent_id: agentId,
+                trigger_class: "entry_intent",
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setOperatorModeState(detail.operator_mode || {
+                viewpoint: "replay",
+                status: "blocked",
+                failure_state: detail.failure_state || "entry_not_allowed",
+                message: detail.message || "entry failed",
+            });
+            return;
+        }
+        _setOperatorModeState(json);
+    } catch (error) {
+        state.operatorMode = {
+            viewpoint: "replay",
+            status: "blocked",
+            runId: "",
+            agentId: null,
+            triggerClass: "",
+            failureState: "entry_not_allowed",
+            message: String(error.message || error),
+        };
+        updateOperatorRuntimePanel();
+    }
+}
+
+async function returnOperatorMode(updatePanel = true) {
+    try {
+        const res = await fetch(`${API_BASE}/api/operator-mode/return`, { method: "POST" });
+        if (!res.ok) return;
+        const json = await res.json();
+        _setOperatorModeState(json);
+    } catch {
+        if (updatePanel) updateOperatorRuntimePanel();
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -942,6 +1061,7 @@ function handleAgentClick(agentId) {
         state.data.visitRecords,
     );
     updateLiveRuntimePanel(agentStates);
+    updateOperatorRuntimePanel();
 }
 
 function updateMapRuntimeStatus() {
@@ -1149,6 +1269,16 @@ function wireEvents() {
     if (createRunBtn) {
         createRunBtn.addEventListener("click", async () => {
             await createRunFromForm();
+        });
+    }
+    if (operatorEntryBtn) {
+        operatorEntryBtn.addEventListener("click", async () => {
+            await enterOperatorMode();
+        });
+    }
+    if (operatorReturnBtn) {
+        operatorReturnBtn.addEventListener("click", async () => {
+            await returnOperatorMode();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {
