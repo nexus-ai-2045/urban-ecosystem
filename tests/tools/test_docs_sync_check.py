@@ -58,7 +58,7 @@ def test_cross_world_drift_detects_missing_readme_link(tmp_path: Path) -> None:
 def test_cross_world_drift_detects_version_mismatch(tmp_path: Path) -> None:
     _write_minimal_cross_world_tree(tmp_path)
     todo = tmp_path / "docs" / "cross-world-operator-todo.md"
-    todo.write_text(todo.read_text(encoding="utf-8").replace("- Version: `0.3.0`", "- Version: `0.1.10`"), encoding="utf-8")
+    todo.write_text(todo.read_text(encoding="utf-8").replace("- Version: `0.4.0`", "- Version: `0.1.10`"), encoding="utf-8")
 
     errors = cross_world_drift_errors(tmp_path)
 
@@ -103,15 +103,15 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
         encoding="utf-8",
     )
 
-    (docs / "cross-world-operator-roadmap.md").write_text("- Version: `0.3.0`\n", encoding="utf-8")
-    (docs / "cross-world-operator-roadmap.html").write_text("<span>Version: 0.3.0</span>\n", encoding="utf-8")
+    (docs / "cross-world-operator-roadmap.md").write_text("- Version: `0.4.0`\n", encoding="utf-8")
+    (docs / "cross-world-operator-roadmap.html").write_text("<span>Version: 0.4.0</span>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.html").write_text("<html></html>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.md").write_text(
-        "- Version: `0.3.0`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
+        "- Version: `0.4.0`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
         encoding="utf-8",
     )
     (docs / "cross-world-operator-linear-drafts.md").write_text(
-        "- Version: `0.3.0`\n"
+        "- Version: `0.4.0`\n"
         + "\n".join(f"UE-XWORLD-MVP-{index:03d}" for index in range(0, 9))
         + "\ncross-world-operator-mvp-001-sentinel-entry.md\n"
         + "wo-urban-020-cross-world-sentinel-entry.yaml\n"
@@ -121,6 +121,7 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
         + "wo-urban-029-cross-world-world-bridge-prototype.yaml\n"
         + "cross-world-operator-mvp-003-guide-agent-roster.md\n"
         + "wo-urban-022-cross-world-guide-agent-roster.yaml\n"
+        + "wo-urban-030-cross-world-guide-roster-prototype.yaml\n"
         + "cross-world-operator-mvp-004-motif-arc-pack.md\n"
         + "wo-urban-023-cross-world-motif-arc-pack.yaml\n"
         + "cross-world-operator-mvp-005-assessment-benchmark-lab.md\n"
@@ -151,3 +152,4 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
     (work_orders / "wo-urban-027-cross-world-intake-lifecycle-worldbuilding.yaml").write_text("id: wo-urban-027\n", encoding="utf-8")
     (work_orders / "wo-urban-028-cross-world-sentinel-entry-prototype.yaml").write_text("id: wo-urban-028\n", encoding="utf-8")
     (work_orders / "wo-urban-029-cross-world-world-bridge-prototype.yaml").write_text("id: wo-urban-029\n", encoding="utf-8")
+    (work_orders / "wo-urban-030-cross-world-guide-roster-prototype.yaml").write_text("id: wo-urban-030\n", encoding="utf-8")

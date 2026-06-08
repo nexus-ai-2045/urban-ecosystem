@@ -23,6 +23,7 @@ import {
     updateMapStatus,
     updateOperatorModePanel,
     updateWorldBridgePanel,
+    updateAgentRosterPanel,
     updateTimeDisplay,
     updateSlider,
     updatePlayButton,
@@ -114,6 +115,15 @@ const state = {
         packetCount: 0,
         signalStatus: "planned_signal",
     },
+    agentRoster: {
+        activeRole: "guide",
+        status: "ready",
+        failureState: "",
+        message: "guide role ready",
+        roles: [],
+        active: null,
+        operatorBoundary: "",
+    },
     selection: { agentId: null },
     layerVisible: {
         poi:   false,
@@ -188,6 +198,12 @@ const worldBridgeTargetSel = document.getElementById("world-bridge-target-select
 const worldBridgeTransitionBtn = document.getElementById("btn-world-bridge-transition");
 const worldBridgeAgentContextInput = document.getElementById("world-bridge-agent-context");
 const worldBridgeMessageEl = document.getElementById("world-bridge-message");
+const agentRosterActiveEl = document.getElementById("agent-roster-active");
+const agentRosterRoleSel = document.getElementById("agent-roster-role-select");
+const agentRosterSelectBtn = document.getElementById("btn-agent-roster-select");
+const agentRosterLayerEl = document.getElementById("agent-roster-layer");
+const agentRosterBoundaryEl = document.getElementById("agent-roster-boundary");
+const agentRosterGuidanceEl = document.getElementById("agent-roster-guidance");
 
 const mapStatusEls = {
     modeValue:      document.getElementById("map-mode-value"),
@@ -226,6 +242,15 @@ const worldBridgeEls = {
     transitionButton: worldBridgeTransitionBtn,
     agentContextInput: worldBridgeAgentContextInput,
     message: worldBridgeMessageEl,
+};
+
+const agentRosterEls = {
+    active: agentRosterActiveEl,
+    roleSelect: agentRosterRoleSel,
+    selectButton: agentRosterSelectBtn,
+    layer: agentRosterLayerEl,
+    boundary: agentRosterBoundaryEl,
+    guidance: agentRosterGuidanceEl,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -267,6 +292,7 @@ async function main() {
     await refreshHealthStatus();
     await refreshOperatorMode();
     await refreshWorldBridge();
+    await refreshAgentRoster();
     _updateRunLimitsDisplay();
 
     // run 一覧を取得して selector に反映
@@ -346,6 +372,17 @@ async function refreshWorldBridge() {
         _setWorldBridgeState(json);
     } catch {
         updateWorldBridgeRuntimePanel();
+    }
+}
+
+async function refreshAgentRoster() {
+    try {
+        const res = await fetch(`${API_BASE}/api/agent-roster`);
+        if (!res.ok) return;
+        const json = await res.json();
+        _setAgentRosterState(json);
+    } catch {
+        updateAgentRosterRuntimePanel();
     }
 }
 
@@ -910,6 +947,23 @@ function updateWorldBridgeRuntimePanel() {
     updateWorldBridgePanel(worldBridgeEls, state.worldBridge);
 }
 
+function _setAgentRosterState(json) {
+    state.agentRoster = {
+        activeRole: json.active_role || "guide",
+        status: json.status || "ready",
+        failureState: json.failure_state || "",
+        message: json.message || "guide role ready",
+        roles: Array.isArray(json.roles) ? json.roles : [],
+        active: json.active || null,
+        operatorBoundary: json.operator_boundary || "",
+    };
+    updateAgentRosterRuntimePanel();
+}
+
+function updateAgentRosterRuntimePanel() {
+    updateAgentRosterPanel(agentRosterEls, state.agentRoster);
+}
+
 async function enterOperatorMode() {
     const agentId = state.selection.agentId;
     if (agentId === null || agentId === undefined) {
@@ -998,6 +1052,37 @@ async function transitionWorldBridge() {
             message: String(error.message || error),
         };
         updateWorldBridgeRuntimePanel();
+    }
+}
+
+async function selectAgentRosterRole() {
+    const roleId = agentRosterRoleSel?.value || "guide";
+    try {
+        const res = await fetch(`${API_BASE}/api/agent-roster/select`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ role_id: roleId }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            const detail = json.detail || {};
+            _setAgentRosterState(detail.agent_roster || {
+                active_role: state.agentRoster.activeRole,
+                status: "blocked",
+                failure_state: detail.failure_state || "role_not_found",
+                message: detail.message || "role selection failed",
+            });
+            return;
+        }
+        _setAgentRosterState(json);
+    } catch (error) {
+        state.agentRoster = {
+            ...state.agentRoster,
+            status: "blocked",
+            failureState: "role_not_found",
+            message: String(error.message || error),
+        };
+        updateAgentRosterRuntimePanel();
     }
 }
 
@@ -1382,6 +1467,11 @@ function wireEvents() {
     if (worldBridgeTransitionBtn) {
         worldBridgeTransitionBtn.addEventListener("click", async () => {
             await transitionWorldBridge();
+        });
+    }
+    if (agentRosterSelectBtn) {
+        agentRosterSelectBtn.addEventListener("click", async () => {
+            await selectAgentRosterRole();
         });
     }
     for (const inputEl of [newRunTicksInput, newRunAgentsInput, newRunPoisInput, newRunSeedInput]) {

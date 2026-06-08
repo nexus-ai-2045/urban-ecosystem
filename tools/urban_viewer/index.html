@@ -263,6 +263,36 @@
         </label>
         <div id="world-bridge-message" class="settings-status">三層world layerを確認できます。</div>
       </div>
+      <div id="agent-roster-panel" class="agent-roster-panel" aria-label="Agent roster" aria-live="polite">
+        <div class="operator-header">
+          <span>Role Roster</span>
+          <span id="agent-roster-active" class="status-pill status-pill--muted">guide</span>
+        </div>
+        <label class="field-label" for="agent-roster-role-select">抽象role</label>
+        <div class="world-bridge-actions">
+          <select id="agent-roster-role-select" aria-label="Agent roster role">
+            <option value="guide">guide</option>
+            <option value="partner">partner</option>
+            <option value="monitoring">monitoring</option>
+            <option value="pursuit">pursuit</option>
+            <option value="intervention">intervention</option>
+            <option value="field-support">field-support</option>
+            <option value="supervisor">supervisor</option>
+          </select>
+          <button id="btn-agent-roster-select" type="button">選択</button>
+        </div>
+        <div class="operator-grid">
+          <div>
+            <span class="live-label">Layer</span>
+            <span id="agent-roster-layer" class="live-value">liminal</span>
+          </div>
+          <div>
+            <span class="live-label">境界</span>
+            <span id="agent-roster-boundary" class="live-value">human</span>
+          </div>
+        </div>
+        <div id="agent-roster-guidance" class="settings-status">現在状態を説明します。</div>
+      </div>
       <div id="live-panel" class="live-panel" aria-label="リアルタイム概要" aria-live="polite">
         <div class="live-header">
           <span>ライブ</span>

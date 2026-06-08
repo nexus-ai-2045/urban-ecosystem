@@ -8,6 +8,8 @@
 | Method | Path | Handler | Summary |
 | --- | --- | --- | --- |
 | `GET` | `/` | `root` | ビューア HTML を返す (APIキー注入 or fallback)。 |
+| `GET` | `/api/agent-roster` | `get_agent_roster` | MVP-003: guide / partner などの抽象role stateを返す。 |
+| `POST` | `/api/agent-roster/select` | `select_agent_roster_role` | MVP-003: active roleを選択する。 |
 | `GET` | `/api/data/{run_id}/{file}` | `get_data_file` | データファイルを配信する (§21.3)。 |
 | `GET` | `/api/health` | `health` | ヘルスチェック (§21.4)。 |
 | `GET` | `/api/labels` | `get_labels` | 日本語ラベルマップを返す (WO-010 §5.3 / §19.3.1)。 |

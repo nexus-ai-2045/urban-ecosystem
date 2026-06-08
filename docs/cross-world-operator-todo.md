@@ -1,7 +1,7 @@
 # Cross-world Operator Mode 未実装TODO
 
 - Status: `draft`
-- Version: `0.3.0`
+- Version: `0.4.0`
 - Owner: `manager`
 - Updated: `2026-06-08`
 - HTML表示: [cross-world-operator-todo.html](cross-world-operator-todo.html)
@@ -306,7 +306,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-004 Guide / Partner
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: public-safe naming review
@@ -317,7 +317,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-005 Agent Roster
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: public-safe naming review
@@ -328,7 +328,7 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-006 Cyber-ops Milestones
 
-- Status: `drafted`
+- Status: `implemented`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-003 Guide And Agent Roster 実装前仕様](cross-world-operator-mvp-003-guide-agent-roster.md)
 - Gate: scope review
