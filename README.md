@@ -8,7 +8,7 @@
 
 ## 公開デモ / バージョン
 
-- 公開デモ: [urban-ecosystem](https://urban-ecosystem-qbdvhvtbea-an.a.run.app/)
+- 公開デモ: [urban-ecosystem](https://urban-ecosystem-7r3ac467fa-an.a.run.app/)
 - アプリ版バージョン: `0.1.0`
 - データ契約バージョン: [`0.5.0`](docs/subagents/contracts/urban-ecosystem-data-contract.md)
 
@@ -17,7 +17,7 @@
 ### 最短導線（5 分で OK）
 
 1. 公開デモを見る  
-   [urban-ecosystem demo](https://urban-ecosystem-qbdvhvtbea-an.a.run.app/)
+   [urban-ecosystem demo](https://urban-ecosystem-7r3ac467fa-an.a.run.app/)
 2. 画面上の「分かりにくさ」を3つだけメモする  
 3. そのまま Issue / コメントへ投げる
 
