@@ -3,7 +3,7 @@ urban_2d ルールベース行動決定 (§9 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール MVP / §20 境界ケース補遺
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
 
 本モジュールは LLM を呼ばない決定論的ルール群 (RuleBasedProvider 相当)。
 定数・距離計算・時刻帯テーブル・目的地選択・滞在時間・近接判定・

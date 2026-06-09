@@ -3,7 +3,7 @@
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §12.1 CLI 仕様 / §9 行動ルール / §13.3 検証
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
 
 scope:
   profiles + POI から §9 のルールで agent_states.jsonl / poi_visit_records.jsonl /
@@ -45,6 +45,15 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from environments.urban_2d.simulation import Simulation, load_inputs  # noqa: E402
 from environments.urban_2d.data_loader import load_activity_plans, load_roads  # noqa: E402
+from environments.urban_2d.models import (  # noqa: E402
+    MATRIX_EVIDENCE_TYPE_VALUES,
+    MATRIX_HUMAN_GATE_ACTION_VALUES,
+    MATRIX_HUMAN_GATE_STATUS_VALUES,
+    MATRIX_ROLE_VALUES,
+    MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
+    MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
+    WORLD_LAYER_VALUES,
+)
 from environments.urban_2d.road_graph import build_road_graph  # noqa: E402
 from app.llm_provider import make_llm_provider  # noqa: E402
 
@@ -210,6 +219,27 @@ def _run(args: argparse.Namespace) -> int:
             activity_plans=activity_plans,
             llm_provider=provider,
             enable_summaries=enable_summaries,
+            matrix_mode=args.matrix_mode,
+            matrix_role=args.matrix_role,
+            matrix_agent_id=args.matrix_agent_id,
+            matrix_ttl_ticks=args.matrix_ttl_ticks,
+            matrix_trigger_id=args.matrix_trigger_id,
+            matrix_transition_tick=args.matrix_transition_tick,
+            matrix_source_layer=args.matrix_source_layer,
+            matrix_target_layer=args.matrix_target_layer,
+            matrix_evidence_type=args.matrix_evidence_type,
+            matrix_evidence_ref=args.matrix_evidence_ref,
+            matrix_guide_tick=args.matrix_guide_tick,
+            matrix_guide_layer=args.matrix_guide_layer,
+            matrix_human_gate_tick=args.matrix_human_gate_tick,
+            matrix_gate_action=args.matrix_gate_action,
+            matrix_gate_status=args.matrix_gate_status,
+            matrix_gate_reason=args.matrix_gate_reason,
+            matrix_swarm_heartbeat_tick=args.matrix_swarm_heartbeat_tick,
+            matrix_swarm_stale_tick=args.matrix_swarm_stale_tick,
+            matrix_swarm_stale_after_ticks=args.matrix_swarm_stale_after_ticks,
+            matrix_swarm_orphan_tolerance=args.matrix_swarm_orphan_tolerance,
+            matrix_swarm_heartbeat_interval_ticks=args.matrix_swarm_heartbeat_interval_ticks,
         )
         summary = sim.run(out_dir)
     except ValueError as exc:
@@ -258,6 +288,139 @@ def build_parser() -> argparse.ArgumentParser:
             "off 時 interaction_events の summary は空文字になる。"
             "--llm と独立に制御できる。既定はサマリ生成あり (on)。"
         ),
+    )
+    run_p.add_argument(
+        "--matrix-mode",
+        action="store_true",
+        default=False,
+        help=(
+            "MATRIXモードを有効化し、任意出力 matrix_events.jsonl を生成する。"
+            "既定 off では既存 replay と同じく出力しない。"
+        ),
+    )
+    run_p.add_argument(
+        "--matrix-role",
+        choices=sorted(MATRIX_ROLE_VALUES),
+        default="sentinel_mvp",
+        help="MATRIXモードの public alias (既定 sentinel_mvp)",
+    )
+    run_p.add_argument(
+        "--matrix-agent-id",
+        type=int,
+        default=None,
+        help="takeover 対象の既存 agent id (未指定時は最小 id)",
+    )
+    run_p.add_argument(
+        "--matrix-ttl-ticks",
+        type=int,
+        default=1,
+        help="takeover を保持する tick 数 (既定 1)",
+    )
+    run_p.add_argument(
+        "--matrix-trigger-id",
+        choices=["wake_matrix", "enter_bridge", "assume_sentinel"],
+        default="assume_sentinel",
+        help="MATRIXモードの内部 trigger id (既定 assume_sentinel)",
+    )
+    run_p.add_argument(
+        "--matrix-transition-tick",
+        type=int,
+        default=None,
+        help="world_transition を出力する tick (未指定時は出力しない)",
+    )
+    run_p.add_argument(
+        "--matrix-source-layer",
+        choices=sorted(WORLD_LAYER_VALUES),
+        default="real",
+        help="world_transition の source layer (既定 real)",
+    )
+    run_p.add_argument(
+        "--matrix-target-layer",
+        choices=sorted(WORLD_LAYER_VALUES),
+        default="virtual",
+        help="world_transition の target layer (既定 virtual)",
+    )
+    run_p.add_argument(
+        "--matrix-evidence-type",
+        choices=sorted(MATRIX_EVIDENCE_TYPE_VALUES),
+        default="matrix_event",
+        help="world_transition の evidence type (既定 matrix_event)",
+    )
+    run_p.add_argument(
+        "--matrix-evidence-ref",
+        default="matrix_events.jsonl",
+        help="world_transition の evidence ref (既定 matrix_events.jsonl)",
+    )
+    run_p.add_argument(
+        "--matrix-guide-tick",
+        type=int,
+        default=None,
+        help="guide_agent heartbeat を出力する tick (未指定時は出力しない)",
+    )
+    run_p.add_argument(
+        "--matrix-guide-layer",
+        choices=sorted(WORLD_LAYER_VALUES),
+        default="real",
+        help="guide_agent が説明する world layer (既定 real)",
+    )
+    run_p.add_argument(
+        "--matrix-human-gate-tick",
+        type=int,
+        default=None,
+        help="operator_agent human_gate を出力する tick (未指定時は出力しない)",
+    )
+    run_p.add_argument(
+        "--matrix-gate-action",
+        choices=sorted(MATRIX_HUMAN_GATE_ACTION_VALUES),
+        default="public_pr",
+        help="human_gate の対象 action (既定 public_pr)",
+    )
+    run_p.add_argument(
+        "--matrix-gate-status",
+        choices=sorted(MATRIX_HUMAN_GATE_STATUS_VALUES),
+        default="requires_human",
+        help="human_gate の状態 (既定 requires_human)",
+    )
+    run_p.add_argument(
+        "--matrix-gate-reason",
+        default="operator_agent_human_gate",
+        help="human_gate の理由 (既定 operator_agent_human_gate)",
+    )
+    run_p.add_argument(
+        "--matrix-swarm-heartbeat-tick",
+        type=int,
+        default=None,
+        help="sentinel_swarm heartbeat を出力する tick (未指定時は出力しない)",
+    )
+    run_p.add_argument(
+        "--matrix-swarm-stale-tick",
+        type=int,
+        default=None,
+        help="sentinel_swarm stale_report を出力する tick (未指定時は出力しない)",
+    )
+    run_p.add_argument(
+        "--matrix-swarm-stale-after-ticks",
+        type=int,
+        default=MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
+        help=(
+            "sentinel_swarm を stale とみなす heartbeat 欠落 tick 数 "
+            f"(既定 {MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT})"
+        ),
+    )
+    run_p.add_argument(
+        "--matrix-swarm-orphan-tolerance",
+        type=int,
+        default=MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
+        help=(
+            "sentinel_swarm の orphan 許容数 "
+            f"(既定 {MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT})"
+        ),
+    )
+    run_p.add_argument(
+        "--matrix-swarm-heartbeat-interval-ticks",
+        type=int,
+        default=1,
+        help="sentinel_swarm heartbeat の期待間隔 tick 数 (既定 1)",
     )
     run_p.add_argument("--out", required=True, help="出力ディレクトリ (末尾が run_id)")
     run_p.set_defaults(func=_run)

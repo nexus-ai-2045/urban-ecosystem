@@ -2,7 +2,7 @@
 test_urban_data_loader.py — §13.1 データ検証の機械化テスト。
 
 正本:
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.5.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
   - docs/ai-ecosystem-tool-spec.md §13.1
 
 カバレッジ:

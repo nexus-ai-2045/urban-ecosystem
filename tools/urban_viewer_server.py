@@ -75,6 +75,7 @@ ALLOWED_FILES: frozenset[str] = frozenset({
     "poi_visit_records.jsonl",
     "interaction_events.jsonl",
     "relationships.jsonl",
+    "matrix_events.jsonl",
     "summary.json",
     "metrics.json",
 })

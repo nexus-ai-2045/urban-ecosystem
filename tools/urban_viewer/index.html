@@ -449,6 +449,22 @@
           </ul>
         </div>
       </div>
+      <div id="matrix-panel" class="matrix-panel" aria-label="MATRIXモード状態" aria-live="polite">
+        <div class="matrix-panel-header">
+          <span>MATRIX</span>
+          <span class="status-pill status-pill--muted">off</span>
+        </div>
+        <div class="matrix-panel-empty">この run には MATRIX イベントがありません</div>
+        <div class="matrix-world" aria-label="現在のworld layer">
+          <div class="matrix-world-label">World layer</div>
+          <div class="matrix-world-chips">
+            <span class="matrix-world-chip matrix-world-chip--active">real</span>
+            <span class="matrix-world-chip">virtual</span>
+            <span class="matrix-world-chip">liminal</span>
+          </div>
+          <div class="matrix-world-reason">matrix_off</div>
+        </div>
+      </div>
       <div id="legend-panel" aria-label="凡例">
         <div class="legend-header">凡例</div>
         <div class="legend-total">データ未ロード</div>
@@ -464,6 +480,7 @@
     <span id="time-display" class="time-display">Day: 0  Time: 08:00:00</span>
     <button id="btn-play"  class="control-btn" type="button" aria-label="再生">▶ 再生</button>
     <button id="btn-step"  class="control-btn" type="button" aria-label="ステップ">⏭ ステップ</button>
+    <button id="btn-audio-cue" class="control-btn audio-cue-btn" type="button" aria-label="8-bit cue off" aria-pressed="false">音 off</button>
     <span class="speed-label">速度:</span>
     <select id="speed-select" class="speed-select" aria-label="再生速度">
       <option value="1">1x</option>
