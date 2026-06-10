@@ -2,7 +2,7 @@
 
 status: implementation-ready draft
 owner: nexus_ai
-updated: 2026-06-08
+updated: 2026-06-10
 public_boundary: 公開面の正本は GitHub docs / issues / PRs とする。
 
 ## 目的
@@ -291,9 +291,9 @@ MATRIXモードは複数 workstream に分かれるため、main agent は orche
 
 | 判定 | Yes 条件 | 現状 |
 |---|---|---|
-| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | No (local 実装 TODO、Browser 1280/390 表示確認、外部 worker review は完了。PR 作成と human review が operation gate として未完了) |
-| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (M1-M5 runtime primitive、M6 docs packet、M7 benchmark spec、M8 Three Worlds UI、M9 audio cue、M10 Recursive Repo Skills が完了) |
-| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | No (local checks と Browser 1280/390 表示確認は通過。public PR と human review が未完了) |
+| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | No (2026-06-10 実測監査: M0-M10 の証拠 file / test / contract version 0.6.0-0.6.4 は全件実在を確認。public PR は #93 として 2026-06-09 に作成・merge 済みで「PR 作成未完了」記述は解消したが、human review は 0 件のまま author self-merge。監査で見つかった残務を M11-001 / M11-002 として未着手で追加したため残務ゼロではない) |
+| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-10 実測: unit/integration 602 件 pass・fail 0・skip 0 (matrix mode 関連 14 件含む)、E2E Playwright 21 件 pass を 2 回連続確認、drift gate は `matrix_mode_skill_check.py --check` と `docs_sync_check.py --check` の 2/2 が exit 0・drift 0 件、決定論 smoke は同一 seed 2 回 run で matrix on 10 file / off 9 file の sha256 byte 一致と off-by-default (matrix_events.jsonl 非生成・出力への matrix 混入ゼロ) を確認) |
+| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | No (2026-06-10 実測: local checks / E2E / drift gate / 決定論はすべて pass。public PR #93 は merge 済みだが reviews 0 件で author が作成 2 分後に self-merge しており、「human review なしで public PR を行わない」の運用境界が evidence で確認できていない。human review 経路の確立は M11-001) |
 
 No の場合の運用:
 
@@ -329,6 +329,8 @@ No の場合の運用:
 | M8-001 | 完了 | Three Worlds を viewer に接続する | 現在の world layer が UI で確認できる | `matrix-world` UI / viewer tests |
 | M9-001 | 完了 | 8-bit audio cue layer を実装する | 生成/権利リスクなしの短い audio cue 方針がある | `docs/matrix-mode-audio-cues.md` / `btn-audio-cue` |
 | M10-001 | 完了 | Recursive Repo Skills を設計する | docs が callable operating packet として読め、dispatch が bounded になる | `docs/matrix-mode-skill-index.md` / `tools/matrix_mode_skill_check.py` |
+| M11-001 | 未着手 | public PR の human review 経路を確立する | PR #93 が self-merge (reviews 0 件) で merge された状態を是正し、以後の matrix mode 関連 PR は author 以外の human review approve を得てから merge する運用 (branch protection 等) が evidence で確認できる | 次回 PR の reviews に approve 1 件以上 / branch protection 設定の screenshot or `gh api` 出力 |
+| M11-002 | 未着手 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/` 配下の screenshot or PR 添付 / smoke 実行 log |
 
 ## 進捗報告運用
 
