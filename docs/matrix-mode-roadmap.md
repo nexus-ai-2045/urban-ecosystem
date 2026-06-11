@@ -226,6 +226,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 - spore forest
 - 8-bit audio cue layer
 - vehicle / virtual event experience layer
+- GSI 3D map layer (`gsi_3d_layer`, packet 起草済み → `docs/gsi-3d-map-layer.md`)
 
 ### Phase 10: Recursive Repo Skills
 
