@@ -16,6 +16,7 @@ source: docs/matrix-mode-roadmap.md
 | ID | Status | Public alias | 種別 | 証拠 |
 |---|---|---|---|---|
 | MP-001 | draft | `cybernetic_governance` | Cross-world Pack 1 | この文書 |
+| MP-002 | draft | `exchange_pair` | Cross-world Pack 2 | この文書 |
 
 ## MP-001: Cross-world Pack 1
 
@@ -78,3 +79,64 @@ source: docs/matrix-mode-roadmap.md
 - 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
 - protected names、protected quotes、lookalike art、voice、music が runtime、UI copy、code identifier に追加されていない。
 - `docs/matrix-mode-roadmap.md` の M6-001 がこの packet を証拠として参照する。
+
+## MP-002: Cross-world Pack 2
+
+### Influence summary
+
+「何かを得るには、同等の何かを差し出さなければならない」という等価コスト制約を、world layer transition の抽象コスト構造と agent 状態変化の不可逆イベントとして表現する。
+
+### Public alias
+
+`exchange_pair`
+
+### 採用するもの
+
+- **等価コスト制約**: world layer transition が発生するたびに、agent は `transition_cost` に相当する抽象コストを必ず負担する。コスト 0 の無償移動は許可しない (最低コスト 1)。
+- **変換ペア構造**: 各 transition は「得るもの (target layer)」と「失うもの (cost payload)」の 2 要素で表現される。`MatrixEvent` optional field `exchange_cost_payload` に「消費した資源種別と量」を記録する。
+- **不可逆性フラグ**: 代償を払った変換は replay で取り消せない。`exchanged=true` フラグをイベントに持たせ、逆方向 transition を発行しても元の状態には戻らない (cost が再度発生する) ことを contract で明示する。
+- **replay での現れ方**: `matrix_events.jsonl` の `world_transition` イベントに `exchange_cost_payload` (string または dict) と `exchanged` (bool) を optional field として追加する。既存 run への影響なし (optional フィールドなので従来 event との後方互換を維持)。
+- **contract での現れ方**: data contract v0.7.0 のオプションフィールド節に `exchange_cost_payload` と `exchanged` を追記する。
+
+### 採用しないもの
+
+- 保護された作品名・キャラクター名・固有の術式名・組織名・台詞・見た目・音楽・声。
+- 代償として「死」「人体の喪失」などの身体損傷を直接再現する表現 (抽象コスト数値に置き換える)。
+- 特定 2 人組の関係性・物語展開・因果関係の再現。
+- 課金 API、外部送信、Cloud Run deploy、GitHub push、production DB 操作。
+- LLM 呼び出し必須の動作 (RuleBasedProvider 経路で fallback が成立しなくなる構造)。
+- 実在人物・組織のなりすまし。
+
+### Minimum world-building element
+
+| 要素 | 役割 | 実装場所 |
+|---|---|---|
+| `exchange_cost_payload` | transition で消費した資源を人間可読に記録する optional string または dict。replay で後から集計・比較できる。例: `"cost_unit:1"` | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `exchanged` | この transition が等価変換として完了したことを示す optional bool。`true` の場合、逆方向の移動は元の状態を復元しない (逆 transition は別の新しい event として記録する)。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `exchange_pair_rule` | contract 規則として「`exchanged=true` の場合は `exchange_cost_payload` が必須」制約を docs に明示する。 | `urban-ecosystem-data-contract.md` の `world_transition` Rules 節 |
+
+### Appearance in repo surfaces
+
+| Surface | 現れるもの | M9 の範囲 |
+|---|---|---|
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `exchange_cost_payload` / `exchanged` optional field 追加、world_transition Rules 追記 | v0.7.0 で実装 |
+| replay | `world_transition` event に両フィールドを optional 追加 | M9 で実装 |
+| viewer | `exchange_cost_payload` を表示する候補欄 (フィールドが無ければ既存表示のまま) | 将来 TODO |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M9 で実装 |
+
+### Risk notes
+
+- **著作権・商標**: 採用するのは「等価交換という制約構造」という一般的な設計パターンのみ。特定作品のキャラクター名・術式名・固有名詞はコード、UI copy、trigger id、sample data のいずれにも入れない。
+- **scope**: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
+- **secret / cost**: 外部 API、Cloud Run deploy、GitHub push は対象外。ローカルテストのみ。
+- **決定論**: `exchange_cost_payload` と `exchanged` は optional。既存の `matrix_events.jsonl` を出力しない run (matrix_mode=False) には影響しない。matrix_mode=True かつ `world_transition` を出力する run でのみ追加される。同一 seed・同一入力では新フィールドの有無と内容が一致することを確認する。
+
+### Testable acceptance
+
+- `docs/matrix-mode-motif-packets.md` に `exchange_pair` packet がある。
+- public alias が `lower_snake_case` のオリジナル名である。
+- 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.0 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` かつ `matrix_transition_tick` 指定 run で `world_transition` event に両フィールドが含まれる。同一 seed 2 回で値が一致する (決定論)。
