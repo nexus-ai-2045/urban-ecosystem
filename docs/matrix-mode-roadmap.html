@@ -486,9 +486,9 @@
           <tr><th>判定</th><th>現状</th><th>理由</th></tr>
         </thead>
         <tbody>
-          <tr><td>残務ゼロ？</td><td>No</td><td>local 実装 TODO、Browser 1280/390 表示確認、外部 worker review は完了。PR 作成と human review が operation gate として未完了。</td></tr>
-          <tr><td>実装完了？</td><td>Yes</td><td>M1-M5 runtime primitive、M6 docs packet、M7 benchmark spec、M8 Three Worlds UI、M9 audio cue、M10 Recursive Repo Skills が完了。</td></tr>
-          <tr><td>運用保証？</td><td>No</td><td>local checks と Browser 1280/390 表示確認は通過。public PR と human review が未完了。</td></tr>
+          <tr><td>残務ゼロ？</td><td>No</td><td>2026-06-10 実測監査で M0-M10 の証拠は全件実在を確認。PR #93 は merge 済みだが human review 0 件の self-merge で、是正 TODO (M11-001 / M11-002) が未着手のため残務ゼロではない。</td></tr>
+          <tr><td>実装完了？</td><td>Yes</td><td>2026-06-10 実測: unit/integration 602 件 pass・E2E 21 件 pass を 2 回・drift gate 2/2 exit 0・同一 seed 2 回 run の sha256 byte 一致と off-by-default を確認。</td></tr>
+          <tr><td>運用保証？</td><td>No</td><td>local checks は全 pass。PR #93 が reviews 0 件で author self-merge のため、human review 経路の evidence が未確立 (M11-001)。</td></tr>
         </tbody>
       </table>
     </section>
@@ -520,6 +520,8 @@
           <tr><td>完了</td><td>Three Worlds UI</td><td><code>matrix-world</code> viewer panel</td></tr>
           <tr><td>完了</td><td>8-bit audio cue</td><td><code>matrix-mode-audio-cues.md</code> / <code>btn-audio-cue</code></td></tr>
           <tr><td>完了</td><td>Recursive Repo Skills</td><td><code>matrix-mode-skill-index.md</code> / drift check</td></tr>
+          <tr><td>未着手</td><td>public PR の human review 経路を確立する (M11-001)</td><td>次回 PR の approve 1 件以上 / branch protection 設定</td></tr>
+          <tr><td>未着手</td><td>手動確認の証拠を artifact 化する (M11-002)</td><td>Browser check screenshot / CLI smoke log</td></tr>
         </tbody>
       </table>
     </section>
