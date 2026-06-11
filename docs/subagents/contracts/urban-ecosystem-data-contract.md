@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.0
+version: 0.7.1
 owner: manager
-updated: 2026-06-11
+updated: 2026-06-12
 
 ## Purpose
 
@@ -321,6 +321,8 @@ Optional:
 - `reason` (string): 人間可読な説明。LLM 生成を必須にしない。
 - `exchange_cost_payload` (string or dict, optional): `world_transition` で消費した資源を人間可読に記録する。replay で後から集計・比較できる。例: `"cost_unit:1"`。`exchanged=true` の場合は必須。
 - `exchanged` (bool, optional): この transition が等価変換として完了したことを示す。`true` の場合、逆方向の移動は元の状態を復元しない (逆 transition は別の新しい event として記録する)。
+- `hierarchy_rank` (integer >= 0, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与する命令権限の階層ランク。0 が最上位権限 (apex)。値が小さいほど高い権限を持ち、命令は低い rank 番号から高い rank 番号へ向かう。`takeover_start` で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `sworn_duty` (string, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与するエージェントの宣言誓約を人間可読に記録する。「何ができ、何をしてはならないか」を一言で表す抽象説明。`takeover_start` で使用する。例: `"threat_containment"`。保護された名称・外部秘密・個人情報を含めない。
 
 Rules:
 
@@ -349,6 +351,18 @@ Rules:
 - `liminal` から出る transition は cost 2 とし、human gate または明示的な matrix event を evidence として残す。
 - world layer model は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `exchanged=true` の `world_transition` は `exchange_cost_payload` を必ず持つ。`exchange_cost_payload` は消費した抽象コストを人間可読に表現し、保護された名称・外部秘密・個人情報を含めない。
+
+### Oath Chain (`oath_chain`)
+
+`oath_chain` は命令権限の階層構造と役割誓約を表す公開 alias である (MP-003 / v0.7.1)。`takeover_start` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `hierarchy_rank` は 0 始まりの非負整数。0 が apex (最上位権限)。同一 rank が複数いる場合は協調関係を持つ。
+- `sworn_duty` は人間可読な宣言文。保護されたキャラクター名・固有術語・外部秘密・個人情報を含めない。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `oath_chain` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`sworn_duty` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -469,3 +483,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.6.3 (MATRIX M4-001): `operator_agent` の human gate を追加。`human_gate` event、`gate_action` / `gate_status` / `gate_reason` を contract 化し、MVP runtime では高リスク action を実行せず `requires_human` として記録する。
 - 0.6.4 (MATRIX M5-001): `sentinel_swarm` の heartbeat / stale self-report を追加。`swarm_status`、`heartbeat_interval_ticks`、`stale_after_ticks`、`orphan_tolerance`、`last_heartbeat_tick`、`missed_heartbeats` を contract 化し、stale は 3 simulation tick 欠落、orphan tolerance は初期 `0` とした。
 - 0.7.0 (MATRIX M9-002): `exchange_pair` motif packet (MP-002) の optional field を追加。`exchange_cost_payload` (string or dict) と `exchanged` (bool) を `MatrixEvent` の optional field として追加した。`world_transition` Rules に「`exchanged=true` の場合は `exchange_cost_payload` が必須」制約を明示した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.1 (MATRIX M9-003): `oath_chain` motif packet (MP-003) の optional field を追加。`hierarchy_rank` (integer >= 0) と `sworn_duty` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、命令権限の階層と役割誓約を replay 可能な形で記録する。Oath Chain Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
