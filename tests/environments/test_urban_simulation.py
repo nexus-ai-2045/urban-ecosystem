@@ -2058,3 +2058,83 @@ def test_walled_society_fields_present_in_guide_heartbeat():
     states_a = json.dumps(sim_a.agent_states, ensure_ascii=False, sort_keys=True)
     states_b = json.dumps(sim_b.agent_states, ensure_ascii=False, sort_keys=True)
     assert states_a == states_b, "同一 seed で agent_states が一致するべき"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MP-006: duel_school motif packet (v0.7.4)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_duel_school_fields_absent_when_matrix_off():
+    """matrix_mode=False の run では matrix_events.jsonl を出力せず、
+    agent_states は既存出力と byte 一致する (off-by-default 不変性)。
+
+    MP-006 Testable acceptance (off-by-default) / contract v0.7.4。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 42
+    ticks = 4
+
+    # matrix_mode=False で 2 回実行し agent_states が byte 一致することを確認
+    sim1 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim1.simulate()
+
+    sim2 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim2.simulate()
+
+    # matrix_events は空 (duel_school フィールドも当然含まれない)
+    assert sim1.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+    assert sim2.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+
+    # agent_states の byte 一致 (rng 消費順序が不変であることを確認)
+    states1 = json.dumps(sim1.agent_states, ensure_ascii=False, sort_keys=True)
+    states2 = json.dumps(sim2.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states1 == states2, "同一 seed / matrix_mode=False で agent_states が一致するべき"
+
+
+def test_duel_school_fields_present_in_takeover_start():
+    """matrix_mode=True の run で takeover_start event に duel_style と duel_rank が含まれる。
+    同一 seed 2 回 run で値が一致する (決定論)。
+
+    MP-006 Testable acceptance (takeover_start fields) / contract v0.7.4。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 55
+
+    def _run():
+        sim = Simulation(
+            pois, profiles,
+            seed=seed, ticks=6, run_id="duel_school_test",
+            matrix_mode=True,
+            matrix_agent_id=0,
+            matrix_ttl_ticks=5,
+            matrix_duel_style="technical",
+            matrix_duel_rank=3,
+        )
+        sim.simulate()
+        return sim
+
+    sim_a = _run()
+    sim_b = _run()
+
+    # takeover_start event を抽出
+    starts_a = [e for e in sim_a.matrix_events if e["type"] == "takeover_start"]
+    starts_b = [e for e in sim_b.matrix_events if e["type"] == "takeover_start"]
+
+    assert len(starts_a) == 1, "takeover_start が 1 件出力されるべき"
+    evt = starts_a[0]
+
+    # duel_school フィールドの存在確認
+    assert "duel_style" in evt, "duel_style が takeover_start に含まれるべき"
+    assert "duel_rank" in evt, "duel_rank が takeover_start に含まれるべき"
+
+    # 値の確認
+    assert evt["duel_style"] == "technical", "duel_style は指定値と一致するべき"
+    assert evt["duel_rank"] == 3, "duel_rank は指定値と一致するべき"
+
+    # 決定論: 同一 seed 2 回の結果が一致
+    assert starts_a == starts_b, "同一 seed で takeover_start の内容が一致するべき"
+
+    # 同一 seed で agent_states も byte 一致 (既存決定論の不変性確認)
+    states_a = json.dumps(sim_a.agent_states, ensure_ascii=False, sort_keys=True)
+    states_b = json.dumps(sim_b.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states_a == states_b, "同一 seed で agent_states が一致するべき"
