@@ -61,7 +61,7 @@ pytestmark = pytest.mark.skipif(
 # プロジェクトルート
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 
-# テスト用サーバーポート (他テストと衝突しないよう専用ポートを使う)
+# テスト用サーバーポートの fallback 値。実際の E2E では衝突回避のため空きポートを動的に使う。
 _SERVER_PORT = 19080
 
 # サーバー起動タイムアウト (秒)
@@ -97,6 +97,10 @@ def _ensure_e2e_run(data_root: Path) -> None:
         "--sample-pois", "300",
         "--ticks", "24",
         "--seed", "42",
+        "--matrix-mode",
+        "--matrix-ttl-ticks", "4",
+        "--matrix-transition-tick", "1",
+        "--matrix-swarm-stale-tick", "3",
         "--out", str(run_dir),
     ]
     result = subprocess.run(
@@ -153,6 +157,13 @@ def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> bool:
     return False
 
 
+def _find_free_port() -> int:
+    """E2E サーバー用の空き TCP port を返す。"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # pytest fixtures
 # ─────────────────────────────────────────────────────────────────────────────
@@ -166,6 +177,7 @@ def live_server(tmp_path_factory):
     python = _find_python_with_uvicorn()
     data_root = tmp_path_factory.mktemp("urban_e2e_data")
     _ensure_e2e_run(data_root)
+    server_port = _find_free_port()
 
     # GOOGLE_MAPS_API_KEY を除外した環境変数
     env = {k: v for k, v in os.environ.items() if k != "GOOGLE_MAPS_API_KEY"}
@@ -178,7 +190,7 @@ def live_server(tmp_path_factory):
             python, "-m", "uvicorn",
             "app.main:app",
             "--host", "127.0.0.1",
-            "--port", str(_SERVER_PORT),
+            "--port", str(server_port),
             "--log-level", "error",
         ],
         env=env,
@@ -188,12 +200,12 @@ def live_server(tmp_path_factory):
     )
 
     # ポートが開くまで待つ
-    if not _wait_for_port("127.0.0.1", _SERVER_PORT, timeout=_SERVER_STARTUP_TIMEOUT):
+    if not _wait_for_port("127.0.0.1", server_port, timeout=_SERVER_STARTUP_TIMEOUT):
         proc.terminate()
         proc.wait()
         pytest.skip(f"サーバーが {_SERVER_STARTUP_TIMEOUT} 秒以内に起動しなかった")
 
-    base_url = f"http://127.0.0.1:{_SERVER_PORT}"
+    base_url = f"http://127.0.0.1:{server_port}"
     yield base_url
 
     proc.terminate()
@@ -380,6 +392,63 @@ class TestMapDisplay:
         assert page.locator("#live-activity-list").count() == 1, "#live-activity-list が存在しない"
         live_text = page.locator("#live-panel").inner_text()
         assert "直近の動き" in live_text
+
+
+class TestMatrixOptionalFieldsPanel:
+    """MATRIX panel が MP-002〜004 の optional fields を event type ごとに表示する。"""
+
+    def _seek_matrix_tick(self, page: "Page", tick_index: int, expected_text: str) -> str:
+        """slider で tick を移動し、MATRIX panel が期待 event を描画するまで待つ。"""
+        page.evaluate("""(tick) => {
+            const slider = document.getElementById('time-slider');
+            slider.value = String(tick);
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+        }""", tick_index)
+        page.wait_for_function(
+            """(text) => {
+                const panel = document.getElementById('matrix-panel');
+                return Boolean(panel && (panel.textContent || '').includes(text));
+            }""",
+            arg=expected_text,
+            timeout=5000,
+        )
+        return page.locator("#matrix-panel").inner_text()
+
+    def test_takeover_start_shows_oath_chain_fields(self, loaded_page):
+        """tick 0 の takeover_start に MP-003 の階層と誓約が表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 0, "takeover_start")
+
+        assert "takeover_start" in panel_text
+        assert "Oath chain" in panel_text
+        assert "hierarchy_rank" in panel_text
+        assert "1" in panel_text
+        assert "sworn_duty" in panel_text
+        assert "threat_containment" in panel_text
+
+    def test_world_transition_shows_exchange_pair_fields(self, loaded_page):
+        """tick 1 の world_transition に MP-002 の交換コストと完了状態が表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 1, "world_transition")
+
+        assert "world_transition" in panel_text
+        assert "Exchange pair" in panel_text
+        assert "exchange_cost_payload" in panel_text
+        assert "cost_unit:1" in panel_text
+        assert "exchanged" in panel_text
+        assert "true" in panel_text
+
+    def test_stale_report_shows_unstable_city_core_fields(self, loaded_page):
+        """tick 3 の stale_report に MP-004 の不安定度と安定化フェーズが表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 3, "stale_report")
+
+        assert "stale_report" in panel_text
+        assert "Unstable city core" in panel_text
+        assert "core_instability_level" in panel_text
+        assert "1" in panel_text
+        assert "stabilization_phase" in panel_text
+        assert "precursor" in panel_text
 
 
 class TestLayerToggle:

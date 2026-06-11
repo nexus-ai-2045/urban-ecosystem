@@ -524,18 +524,94 @@ export function updateMatrixPanel(panelEl, snapshot) {
         const row = document.createElement("li");
         const role = item.matrix_role || "matrix";
         const agent = item.agent_id != null ? `A${item.agent_id}` : "Agent";
-        row.textContent = `${role} -> ${agent}`;
+        row.textContent = `active / ${role} -> ${agent}`;
         list.appendChild(row);
     }
     for (const event of current.slice(0, 3)) {
-        if (event.type === "takeover_start") continue;
-        const row = document.createElement("li");
-        const role = event.matrix_role || "matrix";
-        const agent = event.agent_id != null ? `A${event.agent_id}` : "Agent";
-        row.textContent = `${event.type || "event"} / ${role} / ${agent}`;
-        list.appendChild(row);
+        list.appendChild(buildMatrixEventRow(event));
     }
     panelEl.appendChild(list);
+}
+
+function buildMatrixEventRow(event) {
+    const row = document.createElement("li");
+    const role = event.matrix_role || "matrix";
+    const agent = event.agent_id != null ? `A${event.agent_id}` : "Agent";
+
+    const title = document.createElement("div");
+    title.className = "matrix-event-title";
+    title.textContent = `${event.type || "event"} / ${role} / ${agent}`;
+    row.appendChild(title);
+
+    const fieldGroups = matrixOptionalFieldGroups(event);
+    for (const group of fieldGroups) {
+        const groupEl = document.createElement("div");
+        groupEl.className = "matrix-event-fields";
+
+        const label = document.createElement("div");
+        label.className = "matrix-event-fields-label";
+        label.textContent = group.label;
+        groupEl.appendChild(label);
+
+        for (const field of group.fields) {
+            if (!Object.prototype.hasOwnProperty.call(event, field)) continue;
+            const fieldEl = document.createElement("div");
+            fieldEl.className = "matrix-event-field";
+
+            const key = document.createElement("span");
+            key.className = "matrix-event-field-key";
+            key.textContent = field;
+            fieldEl.appendChild(key);
+
+            const value = document.createElement("span");
+            value.className = "matrix-event-field-value";
+            value.textContent = formatMatrixFieldValue(event[field]);
+            fieldEl.appendChild(value);
+
+            groupEl.appendChild(fieldEl);
+        }
+
+        if (groupEl.childElementCount > 1) {
+            row.appendChild(groupEl);
+        }
+    }
+
+    return row;
+}
+
+function matrixOptionalFieldGroups(event) {
+    if (event.type === "world_transition") {
+        return [{
+            label: "Exchange pair",
+            fields: ["exchange_cost_payload", "exchanged"],
+        }];
+    }
+    if (event.type === "takeover_start") {
+        return [{
+            label: "Oath chain",
+            fields: ["hierarchy_rank", "sworn_duty"],
+        }];
+    }
+    if (event.type === "stale_report") {
+        return [{
+            label: "Unstable city core",
+            fields: ["core_instability_level", "stabilization_phase"],
+        }];
+    }
+    return [];
+}
+
+function formatMatrixFieldValue(value) {
+    if (value === null || value === undefined) return "—";
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "object") {
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+    return String(value);
 }
 
 function appendWorldLayerSummary(panelEl, snapshot) {

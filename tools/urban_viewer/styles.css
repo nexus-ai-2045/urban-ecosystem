@@ -734,9 +734,55 @@ body {
     border-radius: 6px;
     background: var(--accent-soft);
     color: var(--text-primary);
+}
+
+.matrix-event-title {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.matrix-event-fields {
+    display: grid;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(31, 157, 104, 0.18);
+}
+
+.matrix-event-fields-label {
+    color: #146446;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.matrix-event-field {
+    display: grid;
+    grid-template-columns: minmax(88px, 0.9fr) minmax(0, 1.1fr);
+    gap: 6px;
+    align-items: start;
+}
+
+.matrix-event-field-key,
+.matrix-event-field-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.matrix-event-field-key {
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.matrix-event-field-value {
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
 }
 
 /* 凡例 */
