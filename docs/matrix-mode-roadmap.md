@@ -216,7 +216,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 
 最初の backlog:
 
-- exchange and transformation
+- exchange and transformation (→ MP-002 実装済み)
 - oath hierarchy and command
 - unstable city core
 - walled society and outside knowledge
@@ -291,9 +291,9 @@ MATRIXモードは複数 workstream に分かれるため、main agent は orche
 
 | 判定 | Yes 条件 | 現状 |
 |---|---|---|
-| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | No (2026-06-10 実測監査: M0-M10 の証拠 file / test / contract version 0.6.0-0.6.4 は全件実在を確認。public PR は #93 として 2026-06-09 に作成・merge 済みで「PR 作成未完了」記述は解消したが、human review は 0 件のまま author self-merge。監査で見つかった残務を M11-001 / M11-002 として未着手で追加したため残務ゼロではない) |
+| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-11 時点: TODO 表全 23 行を確認。M0-001〜M11-002 のすべてが `完了`。未着手・進行中・保留が 0 件。M9-002 は PR #95 (cead42e) で exchange_pair motif packet と data contract v0.7.0 が実装済み。M11-001 は PR #94 / #95 の merge 前 out-of-band review comment が evidence として確認できる) |
 | 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-10 実測: unit/integration 602 件 pass・fail 0・skip 0 (matrix mode 関連 14 件含む)、E2E Playwright 21 件 pass を 2 回連続確認、drift gate は `matrix_mode_skill_check.py --check` と `docs_sync_check.py --check` の 2/2 が exit 0・drift 0 件、決定論 smoke は同一 seed 2 回 run で matrix on 10 file / off 9 file の sha256 byte 一致と off-by-default (matrix_events.jsonl 非生成・出力への matrix 混入ゼロ) を確認) |
-| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | No (2026-06-10 実測: local checks / E2E / drift gate / 決定論はすべて pass。public PR #93 は merge 済みだが reviews 0 件で author が作成 2 分後に self-merge しており、「human review なしで public PR を行わない」の運用境界が evidence で確認できていない。human review 経路の確立は M11-001) |
+| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | Yes (2026-06-11 時点: issue intake = M0-003 template 確立済み / worker packet = parallel delegation map 文書化済み / human gate = PR #94 / #95 の merge 前 out-of-band review comment で evidence 確認 / docs drift = drift gate 2/2 exit 0 / E2E = Playwright 21 件 2 回連続 pass / 公開境界 = identity guard 実地通過 2 回 / rollback・stop 条件 = operator_agent human gate event と motif packet stop 条件が docs 化済み。全 7 条件に current evidence が揃った) |
 
 No の場合の運用:
 
@@ -328,8 +328,9 @@ No の場合の運用:
 | M7-001 | 完了 | Turing Bench を設計する | real-person impersonation なしで評価指標を定義する | `docs/matrix-mode-turing-bench.md` |
 | M8-001 | 完了 | Three Worlds を viewer に接続する | 現在の world layer が UI で確認できる | `matrix-world` UI / viewer tests |
 | M9-001 | 完了 | 8-bit audio cue layer を実装する | 生成/権利リスクなしの短い audio cue 方針がある | `docs/matrix-mode-audio-cues.md` / `btn-audio-cue` |
+| M9-002 | 完了 | Cross-world Pack 2: exchange_pair motif packet を実装する | `exchange_cost_payload` / `exchanged` optional field が data contract v0.7.0 に追加され、`world_transition` event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-002 / data contract v0.7.0 / test_exchange_pair_* 2 件 (PR #95, merge cead42e) |
 | M10-001 | 完了 | Recursive Repo Skills を設計する | docs が callable operating packet として読め、dispatch が bounded になる | `docs/matrix-mode-skill-index.md` / `tools/matrix_mode_skill_check.py` |
-| M11-001 | 未着手 | public PR の human review 経路を確立する | 公開名義方針 (`docs/public-identity-policy.md`) に従い、以後の matrix mode 関連 PR は (a) 外部協力者の review approve、または (b) maintainer の out-of-band 人間レビュー完了を merge 前に PR comment へ記録してから merge する運用が evidence で確認できる | 次回 PR の review approve、または merge 前の「maintainer out-of-band review 済み」comment |
+| M11-001 | 完了 | public PR の human review 経路を確立する | 公開名義方針 (`docs/public-identity-policy.md`) に従い、以後の matrix mode 関連 PR は (a) 外部協力者の review approve、または (b) maintainer の out-of-band 人間レビュー完了を merge 前に PR comment へ記録してから merge する運用が evidence で確認できる | PR #94 / #95 の merge 前 out-of-band review comment (公開名義方針準拠) |
 | M11-002 | 完了 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/evidence/m11-002-cli-smoke-2026-06-11.log` / `docs/evidence/m11-002-viewer-1280.png` / `docs/evidence/m11-002-viewer-390.png` |
 
 ## 進捗報告運用
