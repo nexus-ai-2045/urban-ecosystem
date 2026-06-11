@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.0
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.1
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -268,7 +268,7 @@ class InteractionEvent:
 class MatrixEvent:
     """MATRIX Mode Event JSONL の 1 行。
 
-    contract §MATRIX Mode Event JSONL v0.7.0:
+    contract §MATRIX Mode Event JSONL v0.7.1:
       Required: tick, day, time, type, agent_id, matrix_role
       Optional: ttl_ticks, exit_reason, trigger_id, source_layer, target_layer,
                 world_layer, transition_cost, evidence_type, evidence_ref,
@@ -277,7 +277,9 @@ class MatrixEvent:
                 stale_after_ticks, orphan_tolerance, last_heartbeat_tick,
                 missed_heartbeats, reason,
                 exchange_cost_payload (MP-002 / v0.7.0),
-                exchanged (MP-002 / v0.7.0)
+                exchanged (MP-002 / v0.7.0),
+                hierarchy_rank (MP-003 / v0.7.1),
+                sworn_duty (MP-003 / v0.7.1)
     """
     tick: int
     day: int
@@ -309,6 +311,9 @@ class MatrixEvent:
     # MP-002 exchange_pair (v0.7.0): world_transition の等価コスト記録
     exchange_cost_payload: Optional[Any] = None  # string or dict
     exchanged: Optional[bool] = None
+    # MP-003 oath_chain (v0.7.1): takeover_start の命令権限階層と役割誓約
+    hierarchy_rank: Optional[int] = None   # 0 = apex (最上位権限)
+    sworn_duty: Optional[str] = None       # 人間可読な役割宣言。例: "threat_containment"
     extra: dict[str, Any] = field(default_factory=dict)
 
 

@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.0
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.1
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -170,6 +170,8 @@ class Simulation:
         matrix_swarm_stale_after_ticks: int = MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
         matrix_swarm_orphan_tolerance: int = MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
         matrix_swarm_heartbeat_interval_ticks: int = 1,
+        matrix_oath_chain_rank: int = 1,
+        matrix_sworn_duty: str = "threat_containment",
     ) -> None:
         """シミュレーション初期化。
 
@@ -213,6 +215,12 @@ class Simulation:
             matrix_swarm_stale_after_ticks: stale 判定までの heartbeat 欠落 tick 数。
             matrix_swarm_orphan_tolerance: orphan sentinel の許容数。MVP 既定は 0。
             matrix_swarm_heartbeat_interval_ticks: heartbeat 期待間隔。
+            matrix_oath_chain_rank: oath_chain motif (MP-003 / v0.7.1) の命令権限ランク。
+                0 が apex (最上位権限)。matrix_mode=True の takeover_start に付与する。
+                rng を消費しないため既存の rng 消費順序は不変。
+            matrix_sworn_duty: oath_chain motif (MP-003 / v0.7.1) の役割誓約。
+                matrix_mode=True の takeover_start に付与する。
+                保護されたキャラクター名・外部秘密・個人情報を含めない。
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
@@ -267,6 +275,9 @@ class Simulation:
         self.matrix_swarm_stale_after_ticks = matrix_swarm_stale_after_ticks
         self.matrix_swarm_orphan_tolerance = matrix_swarm_orphan_tolerance
         self.matrix_swarm_heartbeat_interval_ticks = matrix_swarm_heartbeat_interval_ticks
+        # MP-003 oath_chain (v0.7.1): takeover_start に付与する命令権限と誓約
+        self.matrix_oath_chain_rank = matrix_oath_chain_rank
+        self.matrix_sworn_duty = matrix_sworn_duty
         if self.matrix_mode:
             self._validate_matrix_config()
 
@@ -348,6 +359,8 @@ class Simulation:
                 raise ValueError(f"matrix_gate_action が不正です: {self.matrix_gate_action}")
             if self.matrix_gate_status not in MATRIX_HUMAN_GATE_STATUS_VALUES:
                 raise ValueError(f"matrix_gate_status が不正です: {self.matrix_gate_status}")
+        if self.matrix_oath_chain_rank < 0:
+            raise ValueError("matrix_oath_chain_rank は 0 以上が必要")
         if self.matrix_swarm_stale_after_ticks < 1:
             raise ValueError("matrix_swarm_stale_after_ticks は 1 以上が必要")
         if self.matrix_swarm_orphan_tolerance < 0:
@@ -1297,6 +1310,8 @@ class Simulation:
         end_tick = min(self.ticks - 1, self.matrix_ttl_ticks - 1)
 
         if tick == 0:
+            # MP-003 oath_chain (v0.7.1): 命令権限ランクと役割誓約を決定論的に付与する。
+            # rng を消費しないため既存の rng 消費順序は不変。
             self.matrix_events.append({
                 "tick": tick,
                 "day": day,
@@ -1310,6 +1325,8 @@ class Simulation:
                 "target_layer": "virtual",
                 "world_layer": "virtual",
                 "reason": "sentinel_mvp_attach",
+                "hierarchy_rank": self.matrix_oath_chain_rank,
+                "sworn_duty": self.matrix_sworn_duty,
             })
         if tick == end_tick:
             exit_reason = "ttl_expired"
