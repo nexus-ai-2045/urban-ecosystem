@@ -486,9 +486,9 @@
           <tr><th>判定</th><th>現状</th><th>理由</th></tr>
         </thead>
         <tbody>
-          <tr><td>残務ゼロ？</td><td>Yes</td><td>2026-06-12 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-002 のすべてが完了。未着手・進行中・保留が 0 件。M9-006 は duel_school motif packet と data contract v0.7.4 が本 commit で実装済み。M9-005 は walled_society motif packet と data contract v0.7.3 が実装済み。M9-002 は PR #95 (cead42e) で実装済み。M11-001 は PR #94 / #95 の merge 前 out-of-band review comment が evidence として確認できる。</td></tr>
-          <tr><td>実装完了？</td><td>Yes</td><td>2026-06-10 実測: unit/integration 602 件 pass・E2E 21 件 pass を 2 回・drift gate 2/2 exit 0・同一 seed 2 回 run の sha256 byte 一致と off-by-default を確認。</td></tr>
-          <tr><td>運用保証？</td><td>Yes</td><td>2026-06-11 時点: issue intake / worker packet / human gate (PR #94/#95 out-of-band review comment) / docs drift (exit 0) / E2E (21 件 2 回 pass) / 公開境界 (identity guard 実地通過 2 回) / rollback・stop 条件 (docs 化済み) の全 7 条件に current evidence が揃った。</td></tr>
+          <tr><td>残務ゼロ？</td><td>Yes</td><td>2026-06-12 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが完了。未着手・進行中・保留が 0 件。M9-006 は duel_school motif packet と data contract v0.7.4 が本 commit で実装済み。M11-003 は MATRIX panel optional fields 表示と E2E 23 件で確認済み。</td></tr>
+          <tr><td>実装完了？</td><td>Yes</td><td>2026-06-12 実測: unit/integration 612 件 pass・fail 0 (duel_school unit tests 2 件含む)・E2E 全 24 件 pass (test_ui.py 23 件含む)・drift gate 2/2 exit 0・git diff --check exit 0。duel_style / duel_rank は takeover_start event に emit、MATRIX panel は MP-002/003/004 optional fields を event type ごとに表示する。</td></tr>
+          <tr><td>運用保証？</td><td>Yes</td><td>2026-06-12 時点: issue intake / worker packet / human gate (PR #94/#95 out-of-band review comment) / docs drift (exit 0) / E2E 23 件 pass / 公開境界 (identity guard 実地通過 2 回) / rollback・stop 条件 (docs 化済み) の全 7 条件に current evidence が揃った。</td></tr>
         </tbody>
       </table>
     </section>
@@ -527,6 +527,7 @@
           <tr><td>完了</td><td>Recursive Repo Skills</td><td><code>matrix-mode-skill-index.md</code> / drift check</td></tr>
           <tr><td>完了</td><td>public PR の human review 経路を確立する (M11-001)</td><td>PR #94 / #95 の merge 前 out-of-band review comment (公開名義方針準拠)</td></tr>
           <tr><td>完了</td><td>手動確認の証拠を artifact 化する (M11-002)</td><td><code>docs/evidence/m11-002-cli-smoke-2026-06-11.log</code> / <code>docs/evidence/m11-002-viewer-1280.png</code> / <code>docs/evidence/m11-002-viewer-390.png</code></td></tr>
+          <tr><td>完了</td><td>MATRIX panel optional fields の E2E 表示保証 (M11-003)</td><td><code>TestMatrixOptionalFieldsPanel</code> 3 件 / E2E 23 件 pass</td></tr>
         </tbody>
       </table>
     </section>
