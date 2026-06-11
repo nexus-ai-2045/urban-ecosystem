@@ -3,6 +3,7 @@
 status: draft
 owner: nexus_ai
 updated: 2026-06-12
+
 source: docs/matrix-mode-roadmap.md
 
 ## 目的
@@ -13,11 +14,14 @@ source: docs/matrix-mode-roadmap.md
 
 ## Packet Status
 
+Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装済み` = docs + data contract optional field + runtime emit + unit test が揃った packet。
+
 | ID | Status | Public alias | 種別 | 証拠 |
 |---|---|---|---|---|
-| MP-001 | draft | `cybernetic_governance` | Cross-world Pack 1 | この文書 |
+| MP-001 | docs-only | `cybernetic_governance` | Cross-world Pack 1 | この文書 |
 | MP-002 | 実装済み | `exchange_pair` | Cross-world Pack 2 | この文書 / data contract v0.7.0 / test_exchange_pair_* 2 件 |
 | MP-003 | 実装済み | `oath_chain` | Cross-world Pack 3 | この文書 / data contract v0.7.1 / test_oath_chain_* 2 件 |
+| MP-004 | 実装済み | `unstable_city_core` | Cross-world Pack 4 | この文書 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
 
 ## MP-001: Cross-world Pack 1
 
@@ -60,7 +64,7 @@ source: docs/matrix-mode-roadmap.md
 
 | Surface | 現れるもの | M6 の範囲 |
 |---|---|---|
-| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み (docs-only) |
 | contract | 将来の `MatrixEvent` field / enum 候補を検討する入口 | M6 では変更しない |
 | replay | `agent_states.jsonl` と `matrix_events.jsonl` の境界として説明する | M6 では新規 event を出さない |
 | viewer | body/network/command/observer の説明を将来 UI に出す候補 | M6 では UI copy を追加しない |
@@ -201,3 +205,63 @@ source: docs/matrix-mode-roadmap.md
 - `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.1 に更新されている。
 - `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
 - `matrix_mode=True` の run の `takeover_start` event に `hierarchy_rank` と `sworn_duty` が含まれる。同一 seed 2 回で値が一致する (決定論)。
+
+## MP-004: Cross-world Pack 4
+
+### Influence summary
+
+都市の中核 system が周期的に不安定化し、agent 行動に環境圧として現れる構造 (崩壊予兆 → 安定化介入のループ) を、監視系の self-report event に付与する抽象フィールドとして表現する。
+
+### Public alias
+
+`unstable_city_core`
+
+### 採用するもの
+
+- **不安定度レベル**: 都市中枢が蓄積する抽象的な不安定度を `core_instability_level` (integer >= 0) で表現する。0 = 安定基準値。値が大きいほど不安定化が進んでいることを示す。replay で推移を追跡・比較できる。
+- **安定化フェーズ**: 崩壊予兆 → 安定化介入 → 回復のループを `stabilization_phase` (string) で記録する。許容値: `precursor` (不安定化の予兆。しきい値以下)、`collapse` (しきい値超過、都市中枢が不安定化)、`intervention` (安定化操作が進行中)、`recovery` (安定状態へ復帰中)、`stable` (完全安定)。
+- **replay での現れ方**: `matrix_events.jsonl` の `stale_report` イベント (sentinel_swarm の heartbeat 欠落自己申告) に `core_instability_level` と `stabilization_phase` を optional field として追加する。既存 run への影響なし (optional フィールドなので後方互換を維持)。
+- **contract での現れ方**: data contract v0.7.2 の optional field 節に `core_instability_level` と `stabilization_phase` を追記する。Unstable City Core Rules として語彙制約を明示する。
+
+### 採用しないもの
+
+- 保護された作品名・キャラクター名・組織名・台詞・見た目・音楽・声。
+- 実在する都市・組織・人物の崩壊シナリオの再現。
+- 課金 API、外部送信、Cloud Run deploy、GitHub push、production DB 操作。
+- LLM 呼び出し必須の動作。
+- 身体損傷・暴力・破壊を直接描写する表現 (抽象的な数値と状態フェーズに置き換える)。
+- 実在人物・組織のなりすまし。
+
+### Minimum world-building element
+
+| 要素 | 役割 | 実装場所 |
+|---|---|---|
+| `core_instability_level` | 都市中枢の抽象的な不安定度。0 が安定基準値。`stale_report` event に付与し、replay で推移を追跡できる。保護された名称・外部秘密・個人情報を含めない。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `stabilization_phase` | 崩壊予兆から回復までの循環フェーズを人間可読に記録する optional string。許容値: `precursor` / `collapse` / `intervention` / `recovery` / `stable`。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `unstable_city_core_rule` | contract 規則として「`core_instability_level=0` が安定基準」「`stabilization_phase` は許容値リストから選ぶ」を docs に明示する。 | `urban-ecosystem-data-contract.md` の Unstable City Core Rules 節 |
+
+### Appearance in repo surfaces
+
+| Surface | 現れるもの | M9 の範囲 |
+|---|---|---|
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `core_instability_level` / `stabilization_phase` optional field 追加、Unstable City Core Rules 追記 | v0.7.2 で実装 |
+| replay | `stale_report` event に両フィールドを optional 追加 | M9 で実装 |
+| viewer | `core_instability_level` / `stabilization_phase` を表示する候補欄 (フィールドが無ければ既存表示のまま) | 将来 TODO |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M9 で実装 |
+
+### Risk notes
+
+- **著作権・商標**: 採用するのは「周期的な都市中枢不安定化という抽象状態機械」という一般的な設計パターンのみ。特定作品のキャラクター名・固有名詞はコード、UI copy、trigger id、sample data のいずれにも入れない。
+- **scope**: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
+- **secret / cost**: 外部 API、Cloud Run deploy、GitHub push は対象外。ローカルテストのみ。
+- **決定論**: `core_instability_level` と `stabilization_phase` は optional かつ固定値。既存の `matrix_events.jsonl` を出力しない run (matrix_mode=False) には影響しない。matrix_mode=True かつ `matrix_swarm_stale_tick` 指定 run の `stale_report` で追加される。同一 seed・同一入力では新フィールドの有無と内容が一致することを確認する。
+
+### Testable acceptance
+
+- `docs/matrix-mode-motif-packets.md` に `unstable_city_core` packet がある。
+- public alias が `lower_snake_case` のオリジナル名である。
+- 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.2 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` かつ `matrix_swarm_stale_tick` 指定 run の `stale_report` event に `core_instability_level` と `stabilization_phase` が含まれる。同一 seed 2 回で値が一致する (決定論)。

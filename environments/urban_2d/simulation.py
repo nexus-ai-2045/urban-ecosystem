@@ -52,6 +52,7 @@ from .models import (
     MATRIX_HUMAN_GATE_ACTION_VALUES,
     MATRIX_HUMAN_GATE_STATUS_VALUES,
     MATRIX_ROLE_VALUES,
+    MATRIX_STABILIZATION_PHASE_VALUES,
     MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
     MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
     MATRIX_SWARM_STATUS_VALUES,
@@ -172,6 +173,8 @@ class Simulation:
         matrix_swarm_heartbeat_interval_ticks: int = 1,
         matrix_oath_chain_rank: int = 1,
         matrix_sworn_duty: str = "threat_containment",
+        matrix_core_instability_level: int = 1,
+        matrix_stabilization_phase: str = "precursor",
     ) -> None:
         """シミュレーション初期化。
 
@@ -220,6 +223,14 @@ class Simulation:
                 rng を消費しないため既存の rng 消費順序は不変。
             matrix_sworn_duty: oath_chain motif (MP-003 / v0.7.1) の役割誓約。
                 matrix_mode=True の takeover_start に付与する。
+                保護されたキャラクター名・外部秘密・個人情報を含めない。
+            matrix_core_instability_level: unstable_city_core motif (MP-004 / v0.7.2) の
+                都市中枢不安定度。0 が安定基準値。matrix_mode=True かつ
+                matrix_swarm_stale_tick 指定時の stale_report に付与する。
+                rng を消費しないため既存の rng 消費順序は不変。
+            matrix_stabilization_phase: unstable_city_core motif (MP-004 / v0.7.2) の
+                崩壊-回復フェーズ。許容値: precursor / collapse / intervention / recovery / stable。
+                matrix_mode=True かつ matrix_swarm_stale_tick 指定時の stale_report に付与する。
                 保護されたキャラクター名・外部秘密・個人情報を含めない。
         """
         if ticks < 1:
@@ -278,6 +289,9 @@ class Simulation:
         # MP-003 oath_chain (v0.7.1): takeover_start に付与する命令権限と誓約
         self.matrix_oath_chain_rank = matrix_oath_chain_rank
         self.matrix_sworn_duty = matrix_sworn_duty
+        # MP-004 unstable_city_core (v0.7.2): stale_report に付与する不安定度とフェーズ
+        self.matrix_core_instability_level = matrix_core_instability_level
+        self.matrix_stabilization_phase = matrix_stabilization_phase
         if self.matrix_mode:
             self._validate_matrix_config()
 
@@ -361,6 +375,13 @@ class Simulation:
                 raise ValueError(f"matrix_gate_status が不正です: {self.matrix_gate_status}")
         if self.matrix_oath_chain_rank < 0:
             raise ValueError("matrix_oath_chain_rank は 0 以上が必要")
+        if self.matrix_core_instability_level < 0:
+            raise ValueError("matrix_core_instability_level は 0 以上が必要")
+        if self.matrix_stabilization_phase not in MATRIX_STABILIZATION_PHASE_VALUES:
+            allowed = ", ".join(sorted(MATRIX_STABILIZATION_PHASE_VALUES))
+            raise ValueError(
+                f"matrix_stabilization_phase は {allowed} のいずれかが必要"
+            )
         if self.matrix_swarm_stale_after_ticks < 1:
             raise ValueError("matrix_swarm_stale_after_ticks は 1 以上が必要")
         if self.matrix_swarm_orphan_tolerance < 0:
@@ -1430,6 +1451,8 @@ class Simulation:
             if status not in MATRIX_SWARM_STATUS_VALUES:
                 raise ValueError(f"unsupported matrix swarm_status: {status}")
             last_heartbeat_tick = self._matrix_swarm_last_heartbeat_tick()
+            # MP-004 unstable_city_core (v0.7.2): 決定論的に固定値を設定する。
+            # rng を消費しないため既存の rng 消費順序は不変。
             self.matrix_events.append({
                 "tick": tick,
                 "day": day,
@@ -1445,6 +1468,8 @@ class Simulation:
                 "last_heartbeat_tick": last_heartbeat_tick,
                 "missed_heartbeats": tick - last_heartbeat_tick,
                 "reason": "sentinel_swarm_stale",
+                "core_instability_level": self.matrix_core_instability_level,
+                "stabilization_phase": self.matrix_stabilization_phase,
             })
 
     def _matrix_candidate_transitions(self, source_layer: str) -> list[dict[str, Any]]:
