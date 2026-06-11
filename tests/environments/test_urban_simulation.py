@@ -1719,6 +1719,79 @@ class TestTick0InitialArrival:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MP-001: cybernetic_governance motif packet (v0.7.5)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_cybernetic_governance_fields_absent_when_matrix_off():
+    """matrix_mode=False の run では matrix_events.jsonl を出力せず、
+    agent_states は既存出力と byte 一致する (off-by-default 不変性)。
+
+    MP-001 Testable acceptance (off-by-default) / contract v0.7.5。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 42
+    ticks = 4
+
+    sim1 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim1.simulate()
+
+    sim2 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim2.simulate()
+
+    assert sim1.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+    assert sim2.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+
+    states1 = json.dumps(sim1.agent_states, ensure_ascii=False, sort_keys=True)
+    states2 = json.dumps(sim2.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states1 == states2, "同一 seed / matrix_mode=False で agent_states が一致するべき"
+
+
+def test_cybernetic_governance_fields_present_in_takeover_start():
+    """matrix_mode=True の run で takeover_start event に
+    body_network_boundary と command_review_channel が含まれる。
+    同一 seed 2 回 run で値が一致する (決定論)。
+
+    MP-001 Testable acceptance (takeover_start fields) / contract v0.7.5。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 21
+
+    def _run():
+        sim = Simulation(
+            pois, profiles,
+            seed=seed, ticks=4, run_id="cybernetic_governance_test",
+            matrix_mode=True,
+            matrix_agent_id=0,
+            matrix_ttl_ticks=3,
+            matrix_body_network_boundary="body_state_vs_network_state",
+            matrix_command_review_channel="human_gate_review_queue",
+        )
+        sim.simulate()
+        return sim
+
+    sim_a = _run()
+    sim_b = _run()
+
+    starts_a = [e for e in sim_a.matrix_events if e["type"] == "takeover_start"]
+    starts_b = [e for e in sim_b.matrix_events if e["type"] == "takeover_start"]
+
+    assert len(starts_a) == 1, "takeover_start が 1 件出力されるべき"
+    evt = starts_a[0]
+
+    assert "body_network_boundary" in evt, "body_network_boundary が takeover_start に含まれるべき"
+    assert "command_review_channel" in evt, "command_review_channel が takeover_start に含まれるべき"
+
+    assert evt["body_network_boundary"] == "body_state_vs_network_state"
+    assert evt["command_review_channel"] == "human_gate_review_queue"
+
+    assert starts_a == starts_b, "同一 seed で takeover_start の内容が一致するべき"
+
+    states_a = json.dumps(sim_a.agent_states, ensure_ascii=False, sort_keys=True)
+    states_b = json.dumps(sim_b.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states_a == states_b, "同一 seed で agent_states が一致するべき"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MP-002: exchange_pair motif packet (v0.7.0)
 # ─────────────────────────────────────────────────────────────────────────────
 
