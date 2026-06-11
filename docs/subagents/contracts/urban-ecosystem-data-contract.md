@@ -1,7 +1,7 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.2
+version: 0.7.3
 owner: manager
 updated: 2026-06-12
 
@@ -325,6 +325,8 @@ Optional:
 - `sworn_duty` (string, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与するエージェントの宣言誓約を人間可読に記録する。「何ができ、何をしてはならないか」を一言で表す抽象説明。`takeover_start` で使用する。例: `"threat_containment"`。保護された名称・外部秘密・個人情報を含めない。
 - `core_instability_level` (integer >= 0, optional): `unstable_city_core` motif (MP-004 / v0.7.2) が付与する都市中枢の抽象的な不安定度。0 = 安定基準値。値が大きいほど不安定化が進んでいることを示す。`stale_report` で使用する。保護された名称・外部秘密・個人情報を含めない。
 - `stabilization_phase` (string, optional): `unstable_city_core` motif (MP-004 / v0.7.2) が付与する崩壊-回復循環のフェーズを人間可読に記録する。許容値: `precursor` / `collapse` / `intervention` / `recovery` / `stable`。`stale_report` で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `boundary_permeability` (integer >= 0, optional): `walled_society` motif (MP-005 / v0.7.3) が付与する境界の透過性。0 = 完全封鎖 (境界は固く外部知識が入らない)。値が大きいほど境界が透過的で外部との情報交換が起きやすい。`guide_agent` heartbeat で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `outside_knowledge_level` (integer >= 0, optional): `walled_society` motif (MP-005 / v0.7.3) が付与する外部から流入した知識の蓄積レベル。0 = 外部知識なし。値が大きいほど境界内の社会が外部知識に影響されていることを示す。`guide_agent` heartbeat で使用する。保護された名称・外部秘密・個人情報を含めない。
 
 Rules:
 
@@ -377,6 +379,18 @@ Rules:
 - 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
 - `unstable_city_core` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `matrix_role`、`trigger_id`、`stabilization_phase` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
+
+### Walled Society (`walled_society`)
+
+`walled_society` は境界の内側で完結した social system と、外部からの知識流入が境界認識を変える構造を表す公開 alias である (MP-005 / v0.7.3)。`guide_agent` が発行する `heartbeat` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `boundary_permeability` は 0 始まりの非負整数。0 が完全封鎖 (外部知識ゼロ通過)。値が大きいほど境界が透過的であることを示す。
+- `outside_knowledge_level` は 0 始まりの非負整数。0 が外部知識の流入なし。値が大きいほど外部知識が境界内の社会認識に影響していることを示す。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `walled_society` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`reason` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -499,3 +513,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.7.0 (MATRIX M9-002): `exchange_pair` motif packet (MP-002) の optional field を追加。`exchange_cost_payload` (string or dict) と `exchanged` (bool) を `MatrixEvent` の optional field として追加した。`world_transition` Rules に「`exchanged=true` の場合は `exchange_cost_payload` が必須」制約を明示した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.1 (MATRIX M9-003): `oath_chain` motif packet (MP-003) の optional field を追加。`hierarchy_rank` (integer >= 0) と `sworn_duty` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、命令権限の階層と役割誓約を replay 可能な形で記録する。Oath Chain Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.2 (MATRIX M9-004): `unstable_city_core` motif packet (MP-004) の optional field を追加。`core_instability_level` (integer >= 0) と `stabilization_phase` (string) を `MatrixEvent` の optional field として追加した。`stale_report` に付与し、都市中枢の不安定度と崩壊-回復フェーズを replay 可能な形で記録する。Unstable City Core Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.3 (MATRIX M9-005): `walled_society` motif packet (MP-005) の optional field を追加。`boundary_permeability` (integer >= 0) と `outside_knowledge_level` (integer >= 0) を `MatrixEvent` の optional field として追加した。`guide_agent` heartbeat に付与し、境界の透過性と外部知識の蓄積レベルを replay 可能な形で記録する。Walled Society Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。

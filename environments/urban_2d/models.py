@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.2
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.3
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -273,7 +273,7 @@ class InteractionEvent:
 class MatrixEvent:
     """MATRIX Mode Event JSONL の 1 行。
 
-    contract §MATRIX Mode Event JSONL v0.7.2:
+    contract §MATRIX Mode Event JSONL v0.7.3:
       Required: tick, day, time, type, agent_id, matrix_role
       Optional: ttl_ticks, exit_reason, trigger_id, source_layer, target_layer,
                 world_layer, transition_cost, evidence_type, evidence_ref,
@@ -286,7 +286,9 @@ class MatrixEvent:
                 hierarchy_rank (MP-003 / v0.7.1),
                 sworn_duty (MP-003 / v0.7.1),
                 core_instability_level (MP-004 / v0.7.2),
-                stabilization_phase (MP-004 / v0.7.2)
+                stabilization_phase (MP-004 / v0.7.2),
+                boundary_permeability (MP-005 / v0.7.3),
+                outside_knowledge_level (MP-005 / v0.7.3)
     """
     tick: int
     day: int
@@ -324,6 +326,9 @@ class MatrixEvent:
     # MP-004 unstable_city_core (v0.7.2): stale_report の都市中枢不安定度と崩壊-回復フェーズ
     core_instability_level: Optional[int] = None   # 0 = 安定基準値。大きいほど不安定
     stabilization_phase: Optional[str] = None      # precursor/collapse/intervention/recovery/stable
+    # MP-005 walled_society (v0.7.3): guide_agent heartbeat の境界透過性と外部知識蓄積レベル
+    boundary_permeability: Optional[int] = None    # 0 = 完全封鎖。大きいほど透過的
+    outside_knowledge_level: Optional[int] = None  # 0 = 外部知識なし。大きいほど外部知識が浸透
     extra: dict[str, Any] = field(default_factory=dict)
 
 
