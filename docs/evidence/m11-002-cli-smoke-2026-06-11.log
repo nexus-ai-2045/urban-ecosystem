@@ -1,0 +1,50 @@
+# M11-002 CLI smoke log
+# Generated: 2026-06-11
+# Command:
+#   $REPO/.venv/bin/python tools/urban_simulation_cli.py run \
+#     --sample --seed 123 --ticks 6 --agents 10 --sample-pois 30 \
+#     --llm rule --matrix-mode \
+#     --matrix-transition-tick 2 \
+#     --matrix-guide-tick 3 \
+#     --matrix-human-gate-tick 4 \
+#     --matrix-swarm-heartbeat-tick 1 \
+#     --matrix-swarm-stale-tick 5 \
+#     --out $TMP/m11-smoke/run
+
+## stdout (exit 0)
+
+{
+  "run_id": "run",
+  "seed": 123,
+  "ticks": 6,
+  "agents": 10,
+  "pois": 30,
+  "aois": 10,
+  "roads": 29,
+  "interactions": 7,
+  "started_at": "2026-06-11T08:34:14Z"
+}
+
+## stderr
+
+(none)
+
+## matrix_events.jsonl — first 7 lines (all events, shows each event type)
+
+{"agent_id": 0, "day": 0, "matrix_role": "sentinel_mvp", "reason": "sentinel_mvp_attach", "source_layer": "real", "target_layer": "virtual", "tick": 0, "time": "08:00:00", "trigger_id": "assume_sentinel", "ttl_ticks": 1, "type": "takeover_start", "world_layer": "virtual"}
+{"agent_id": 0, "day": 0, "exit_reason": "ttl_expired", "matrix_role": "sentinel_mvp", "reason": "sentinel_mvp_release", "source_layer": "virtual", "target_layer": "real", "tick": 0, "time": "08:00:00", "trigger_id": "assume_sentinel", "type": "takeover_end", "world_layer": "real"}
+{"agent_id": 0, "day": 0, "heartbeat_interval_ticks": 1, "matrix_role": "sentinel_swarm", "orphan_tolerance": 0, "reason": "sentinel_swarm_heartbeat", "stale_after_ticks": 3, "swarm_status": "alive", "tick": 1, "time": "08:05:00", "trigger_id": "assume_sentinel", "type": "heartbeat", "world_layer": "virtual"}
+{"agent_id": 0, "day": 0, "evidence_ref": "matrix_events.jsonl", "evidence_type": "matrix_event", "matrix_role": "bridge_agent", "reason": "bridge_agent_transition", "source_layer": "real", "target_layer": "virtual", "tick": 2, "time": "08:10:00", "transition_cost": 1, "trigger_id": "assume_sentinel", "type": "world_transition", "world_layer": "virtual"}
+{"agent_id": 0, "candidate_transitions": [{"evidence_types": ["matrix_event", "derived_metric"], "source_layer": "real", "target_layer": "virtual", "transition_cost": 1}, {"evidence_types": ["matrix_event", "human_gate"], "source_layer": "real", "target_layer": "liminal", "transition_cost": 1}], "day": 0, "guide_summary": "real から選べる transition は 2 件です。", "matrix_role": "guide_agent", "reason": "guide_agent_options", "tick": 3, "time": "08:15:00", "trigger_id": "assume_sentinel", "type": "heartbeat", "world_layer": "real"}
+{"agent_id": 0, "day": 0, "evidence_ref": "human_gate", "evidence_type": "human_gate", "gate_action": "public_pr", "gate_reason": "operator_agent_human_gate", "gate_status": "requires_human", "matrix_role": "operator_agent", "reason": "operator_agent_requires_human", "tick": 4, "time": "08:20:00", "trigger_id": "assume_sentinel", "type": "human_gate", "world_layer": "liminal"}
+{"agent_id": 0, "day": 0, "last_heartbeat_tick": 1, "matrix_role": "sentinel_swarm", "missed_heartbeats": 4, "orphan_tolerance": 0, "reason": "sentinel_swarm_stale", "stale_after_ticks": 3, "swarm_status": "stale", "tick": 5, "time": "08:25:00", "trigger_id": "assume_sentinel", "type": "stale_report", "world_layer": "virtual"}
+
+## Event types observed (7 events / 6 ticks)
+
+- tick 0: takeover_start  (sentinel_mvp attached to agent 0)
+- tick 0: takeover_end    (ttl_expired, returned to real layer)
+- tick 1: heartbeat       (sentinel_swarm alive, interval=1)
+- tick 2: world_transition (bridge_agent, real -> virtual)
+- tick 3: heartbeat       (guide_agent options, 2 candidates)
+- tick 4: human_gate      (operator_agent, requires_human / public_pr)
+- tick 5: stale_report    (sentinel_swarm stale, missed 4 heartbeats)
