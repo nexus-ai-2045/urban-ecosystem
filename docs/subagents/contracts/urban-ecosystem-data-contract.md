@@ -1,7 +1,7 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.1
+version: 0.7.2
 owner: manager
 updated: 2026-06-12
 
@@ -323,6 +323,8 @@ Optional:
 - `exchanged` (bool, optional): この transition が等価変換として完了したことを示す。`true` の場合、逆方向の移動は元の状態を復元しない (逆 transition は別の新しい event として記録する)。
 - `hierarchy_rank` (integer >= 0, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与する命令権限の階層ランク。0 が最上位権限 (apex)。値が小さいほど高い権限を持ち、命令は低い rank 番号から高い rank 番号へ向かう。`takeover_start` で使用する。保護された名称・外部秘密・個人情報を含めない。
 - `sworn_duty` (string, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与するエージェントの宣言誓約を人間可読に記録する。「何ができ、何をしてはならないか」を一言で表す抽象説明。`takeover_start` で使用する。例: `"threat_containment"`。保護された名称・外部秘密・個人情報を含めない。
+- `core_instability_level` (integer >= 0, optional): `unstable_city_core` motif (MP-004 / v0.7.2) が付与する都市中枢の抽象的な不安定度。0 = 安定基準値。値が大きいほど不安定化が進んでいることを示す。`stale_report` で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `stabilization_phase` (string, optional): `unstable_city_core` motif (MP-004 / v0.7.2) が付与する崩壊-回復循環のフェーズを人間可読に記録する。許容値: `precursor` / `collapse` / `intervention` / `recovery` / `stable`。`stale_report` で使用する。保護された名称・外部秘密・個人情報を含めない。
 
 Rules:
 
@@ -363,6 +365,18 @@ Rules:
 - 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
 - `oath_chain` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `matrix_role`、`trigger_id`、`sworn_duty` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
+
+### Unstable City Core (`unstable_city_core`)
+
+`unstable_city_core` は都市の中核 system が周期的に不安定化する構造を表す公開 alias である (MP-004 / v0.7.2)。`stale_report` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `core_instability_level` は 0 始まりの非負整数。0 が安定基準値 (安定度最高)。値が大きいほど不安定化が進んでいることを示す。
+- `stabilization_phase` は `precursor` / `collapse` / `intervention` / `recovery` / `stable` のいずれかを使う。未知値は reader が warning として人間可読に列挙する (即エラーにはしない)。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `unstable_city_core` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`stabilization_phase` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -484,3 +498,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.6.4 (MATRIX M5-001): `sentinel_swarm` の heartbeat / stale self-report を追加。`swarm_status`、`heartbeat_interval_ticks`、`stale_after_ticks`、`orphan_tolerance`、`last_heartbeat_tick`、`missed_heartbeats` を contract 化し、stale は 3 simulation tick 欠落、orphan tolerance は初期 `0` とした。
 - 0.7.0 (MATRIX M9-002): `exchange_pair` motif packet (MP-002) の optional field を追加。`exchange_cost_payload` (string or dict) と `exchanged` (bool) を `MatrixEvent` の optional field として追加した。`world_transition` Rules に「`exchanged=true` の場合は `exchange_cost_payload` が必須」制約を明示した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.1 (MATRIX M9-003): `oath_chain` motif packet (MP-003) の optional field を追加。`hierarchy_rank` (integer >= 0) と `sworn_duty` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、命令権限の階層と役割誓約を replay 可能な形で記録する。Oath Chain Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.2 (MATRIX M9-004): `unstable_city_core` motif packet (MP-004) の optional field を追加。`core_instability_level` (integer >= 0) と `stabilization_phase` (string) を `MatrixEvent` の optional field として追加した。`stale_report` に付与し、都市中枢の不安定度と崩壊-回復フェーズを replay 可能な形で記録する。Unstable City Core Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
