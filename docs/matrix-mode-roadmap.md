@@ -329,7 +329,7 @@ No の場合の運用:
 | M8-001 | 完了 | Three Worlds を viewer に接続する | 現在の world layer が UI で確認できる | `matrix-world` UI / viewer tests |
 | M9-001 | 完了 | 8-bit audio cue layer を実装する | 生成/権利リスクなしの短い audio cue 方針がある | `docs/matrix-mode-audio-cues.md` / `btn-audio-cue` |
 | M10-001 | 完了 | Recursive Repo Skills を設計する | docs が callable operating packet として読め、dispatch が bounded になる | `docs/matrix-mode-skill-index.md` / `tools/matrix_mode_skill_check.py` |
-| M11-001 | 未着手 | public PR の human review 経路を確立する | PR #93 が self-merge (reviews 0 件) で merge された状態を是正し、以後の matrix mode 関連 PR は author 以外の human review approve を得てから merge する運用 (branch protection 等) が evidence で確認できる | 次回 PR の reviews に approve 1 件以上 / branch protection 設定の screenshot or `gh api` 出力 |
+| M11-001 | 未着手 | public PR の human review 経路を確立する | 公開名義方針 (`docs/public-identity-policy.md`) に従い、以後の matrix mode 関連 PR は (a) 外部協力者の review approve、または (b) maintainer の out-of-band 人間レビュー完了を merge 前に PR comment へ記録してから merge する運用が evidence で確認できる | 次回 PR の review approve、または merge 前の「maintainer out-of-band review 済み」comment |
 | M11-002 | 未着手 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/` 配下の screenshot or PR 添付 / smoke 実行 log |
 
 ## 進捗報告運用
