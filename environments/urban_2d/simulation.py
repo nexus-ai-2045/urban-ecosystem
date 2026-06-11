@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.0
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -1333,6 +1333,9 @@ class Simulation:
             transition_cost = WORLD_LAYER_MODEL[
                 self.matrix_source_layer
             ]["transition_cost"][self.matrix_target_layer]
+            # MP-002 exchange_pair (v0.7.0): 決定論的に固定値を設定する。
+            # rng を消費しないため既存の rng 消費順序は不変。
+            exchange_cost_payload = f"cost_unit:{transition_cost}"
             self.matrix_events.append({
                 "tick": tick,
                 "day": day,
@@ -1348,6 +1351,8 @@ class Simulation:
                 "evidence_type": self.matrix_evidence_type,
                 "evidence_ref": self.matrix_evidence_ref,
                 "reason": "bridge_agent_transition",
+                "exchange_cost_payload": exchange_cost_payload,
+                "exchanged": True,
             })
         if tick == self.matrix_guide_tick:
             candidates = self._matrix_candidate_transitions(self.matrix_guide_layer)

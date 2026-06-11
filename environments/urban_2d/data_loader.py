@@ -4,7 +4,7 @@ urban_2d データローダー。
 GeoJSON / JSON / JSONL ファイルを読み込み、正規化・検証して
 models.py の dataclass を返す。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.0
 検証仕様: docs/ai-ecosystem-tool-spec.md §13.1
 
 エラー報告ポリシー:

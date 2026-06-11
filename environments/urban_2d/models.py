@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.6.4
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.0
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -268,14 +268,16 @@ class InteractionEvent:
 class MatrixEvent:
     """MATRIX Mode Event JSONL の 1 行。
 
-    contract §MATRIX Mode Event JSONL:
+    contract §MATRIX Mode Event JSONL v0.7.0:
       Required: tick, day, time, type, agent_id, matrix_role
       Optional: ttl_ticks, exit_reason, trigger_id, source_layer, target_layer,
                 world_layer, transition_cost, evidence_type, evidence_ref,
                 guide_summary, candidate_transitions, gate_action, gate_status,
                 gate_reason, swarm_status, heartbeat_interval_ticks,
                 stale_after_ticks, orphan_tolerance, last_heartbeat_tick,
-                missed_heartbeats, reason
+                missed_heartbeats, reason,
+                exchange_cost_payload (MP-002 / v0.7.0),
+                exchanged (MP-002 / v0.7.0)
     """
     tick: int
     day: int
@@ -304,6 +306,9 @@ class MatrixEvent:
     last_heartbeat_tick: Optional[int] = None
     missed_heartbeats: Optional[int] = None
     reason: Optional[str] = None
+    # MP-002 exchange_pair (v0.7.0): world_transition の等価コスト記録
+    exchange_cost_payload: Optional[Any] = None  # string or dict
+    exchanged: Optional[bool] = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 

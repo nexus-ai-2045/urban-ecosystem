@@ -2,7 +2,7 @@
 
 status: implementation-ready draft
 owner: nexus_ai
-updated: 2026-06-10
+updated: 2026-06-11
 public_boundary: 公開面の正本は GitHub docs / issues / PRs とする。
 
 ## 目的
@@ -330,7 +330,7 @@ No の場合の運用:
 | M9-001 | 完了 | 8-bit audio cue layer を実装する | 生成/権利リスクなしの短い audio cue 方針がある | `docs/matrix-mode-audio-cues.md` / `btn-audio-cue` |
 | M10-001 | 完了 | Recursive Repo Skills を設計する | docs が callable operating packet として読め、dispatch が bounded になる | `docs/matrix-mode-skill-index.md` / `tools/matrix_mode_skill_check.py` |
 | M11-001 | 未着手 | public PR の human review 経路を確立する | 公開名義方針 (`docs/public-identity-policy.md`) に従い、以後の matrix mode 関連 PR は (a) 外部協力者の review approve、または (b) maintainer の out-of-band 人間レビュー完了を merge 前に PR comment へ記録してから merge する運用が evidence で確認できる | 次回 PR の review approve、または merge 前の「maintainer out-of-band review 済み」comment |
-| M11-002 | 未着手 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/` 配下の screenshot or PR 添付 / smoke 実行 log |
+| M11-002 | 完了 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/evidence/m11-002-cli-smoke-2026-06-11.log` / `docs/evidence/m11-002-viewer-1280.png` / `docs/evidence/m11-002-viewer-390.png` |
 
 ## 進捗報告運用
 

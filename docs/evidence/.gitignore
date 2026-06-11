@@ -1,0 +1,3 @@
+# docs/evidence/ の artifact を追跡する
+# ルート .gitignore で除外される *.log をここで戻す
+!*.log

@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.6.4
+version: 0.7.0
 owner: manager
-updated: 2026-06-04
+updated: 2026-06-11
 
 ## Purpose
 
@@ -319,6 +319,8 @@ Optional:
 - `last_heartbeat_tick` (integer >= 0): stale 判定で参照した最後の heartbeat tick。
 - `missed_heartbeats` (integer >= 0): 最後の heartbeat から stale_report までの tick 差。
 - `reason` (string): 人間可読な説明。LLM 生成を必須にしない。
+- `exchange_cost_payload` (string or dict, optional): `world_transition` で消費した資源を人間可読に記録する。replay で後から集計・比較できる。例: `"cost_unit:1"`。`exchanged=true` の場合は必須。
+- `exchanged` (bool, optional): この transition が等価変換として完了したことを示す。`true` の場合、逆方向の移動は元の状態を復元しない (逆 transition は別の新しい event として記録する)。
 
 Rules:
 
@@ -346,6 +348,7 @@ Rules:
 - `evidence_type` は `WORLD_LAYER_MODEL[target_layer].evidence_types` のいずれかを使う。
 - `liminal` から出る transition は cost 2 とし、human gate または明示的な matrix event を evidence として残す。
 - world layer model は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `exchanged=true` の `world_transition` は `exchange_cost_payload` を必ず持つ。`exchange_cost_payload` は消費した抽象コストを人間可読に表現し、保護された名称・外部秘密・個人情報を含めない。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -465,3 +468,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.6.2 (MATRIX M3-001): `guide_agent` の RuleBased fallback を追加。`guide_summary` / `candidate_transitions` を `MatrixEvent` optional fields とし、`heartbeat` event で現在 layer の説明と transition 候補を出せるようにした。
 - 0.6.3 (MATRIX M4-001): `operator_agent` の human gate を追加。`human_gate` event、`gate_action` / `gate_status` / `gate_reason` を contract 化し、MVP runtime では高リスク action を実行せず `requires_human` として記録する。
 - 0.6.4 (MATRIX M5-001): `sentinel_swarm` の heartbeat / stale self-report を追加。`swarm_status`、`heartbeat_interval_ticks`、`stale_after_ticks`、`orphan_tolerance`、`last_heartbeat_tick`、`missed_heartbeats` を contract 化し、stale は 3 simulation tick 欠落、orphan tolerance は初期 `0` とした。
+- 0.7.0 (MATRIX M9-002): `exchange_pair` motif packet (MP-002) の optional field を追加。`exchange_cost_payload` (string or dict) と `exchanged` (bool) を `MatrixEvent` の optional field として追加した。`world_transition` Rules に「`exchanged=true` の場合は `exchange_cost_payload` が必須」制約を明示した。後方互換: 両フィールドは optional で既存 run への影響なし。
