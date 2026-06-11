@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.1
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.3
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -175,6 +175,8 @@ class Simulation:
         matrix_sworn_duty: str = "threat_containment",
         matrix_core_instability_level: int = 1,
         matrix_stabilization_phase: str = "precursor",
+        matrix_boundary_permeability: int = 0,
+        matrix_outside_knowledge_level: int = 0,
     ) -> None:
         """シミュレーション初期化。
 
@@ -231,6 +233,13 @@ class Simulation:
             matrix_stabilization_phase: unstable_city_core motif (MP-004 / v0.7.2) の
                 崩壊-回復フェーズ。許容値: precursor / collapse / intervention / recovery / stable。
                 matrix_mode=True かつ matrix_swarm_stale_tick 指定時の stale_report に付与する。
+                保護されたキャラクター名・外部秘密・個人情報を含めない。
+            matrix_boundary_permeability: walled_society motif (MP-005 / v0.7.3) の境界透過性。
+                0 が完全封鎖。matrix_mode=True かつ matrix_guide_tick 指定時の guide_agent
+                heartbeat に付与する。rng を消費しないため既存の rng 消費順序は不変。
+            matrix_outside_knowledge_level: walled_society motif (MP-005 / v0.7.3) の
+                外部知識蓄積レベル。0 が外部知識なし。matrix_mode=True かつ matrix_guide_tick
+                指定時の guide_agent heartbeat に付与する。
                 保護されたキャラクター名・外部秘密・個人情報を含めない。
         """
         if ticks < 1:
@@ -292,6 +301,9 @@ class Simulation:
         # MP-004 unstable_city_core (v0.7.2): stale_report に付与する不安定度とフェーズ
         self.matrix_core_instability_level = matrix_core_instability_level
         self.matrix_stabilization_phase = matrix_stabilization_phase
+        # MP-005 walled_society (v0.7.3): guide_agent heartbeat に付与する境界透過性と外部知識レベル
+        self.matrix_boundary_permeability = matrix_boundary_permeability
+        self.matrix_outside_knowledge_level = matrix_outside_knowledge_level
         if self.matrix_mode:
             self._validate_matrix_config()
 
@@ -377,6 +389,10 @@ class Simulation:
             raise ValueError("matrix_oath_chain_rank は 0 以上が必要")
         if self.matrix_core_instability_level < 0:
             raise ValueError("matrix_core_instability_level は 0 以上が必要")
+        if self.matrix_boundary_permeability < 0:
+            raise ValueError("matrix_boundary_permeability は 0 以上が必要")
+        if self.matrix_outside_knowledge_level < 0:
+            raise ValueError("matrix_outside_knowledge_level は 0 以上が必要")
         if self.matrix_stabilization_phase not in MATRIX_STABILIZATION_PHASE_VALUES:
             allowed = ", ".join(sorted(MATRIX_STABILIZATION_PHASE_VALUES))
             raise ValueError(
@@ -1394,6 +1410,8 @@ class Simulation:
             })
         if tick == self.matrix_guide_tick:
             candidates = self._matrix_candidate_transitions(self.matrix_guide_layer)
+            # MP-005 walled_society (v0.7.3): 決定論的に固定値を設定する。
+            # rng を消費しないため既存の rng 消費順序は不変。
             self.matrix_events.append({
                 "tick": tick,
                 "day": day,
@@ -1409,6 +1427,8 @@ class Simulation:
                 ),
                 "candidate_transitions": candidates,
                 "reason": "guide_agent_options",
+                "boundary_permeability": self.matrix_boundary_permeability,
+                "outside_knowledge_level": self.matrix_outside_knowledge_level,
             })
         if tick == self.matrix_human_gate_tick:
             self.matrix_events.append({

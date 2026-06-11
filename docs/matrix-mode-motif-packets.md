@@ -22,6 +22,7 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 | MP-002 | 実装済み | `exchange_pair` | Cross-world Pack 2 | この文書 / data contract v0.7.0 / test_exchange_pair_* 2 件 |
 | MP-003 | 実装済み | `oath_chain` | Cross-world Pack 3 | この文書 / data contract v0.7.1 / test_oath_chain_* 2 件 |
 | MP-004 | 実装済み | `unstable_city_core` | Cross-world Pack 4 | この文書 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
+| MP-005 | 実装済み | `walled_society` | Cross-world Pack 5 | この文書 / data contract v0.7.3 / test_walled_society_* 2 件 |
 
 ## MP-001: Cross-world Pack 1
 
@@ -265,3 +266,63 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 - `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.2 に更新されている。
 - `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
 - `matrix_mode=True` かつ `matrix_swarm_stale_tick` 指定 run の `stale_report` event に `core_instability_level` と `stabilization_phase` が含まれる。同一 seed 2 回で値が一致する (決定論)。
+
+## MP-005: Cross-world Pack 5
+
+### Influence summary
+
+境界の内側で完結した social system と、外部からの知識流入が境界認識を変える構造を、boundary の透過性と外部知識の蓄積レベルを guide_agent heartbeat に付与する抽象フィールドとして表現する。
+
+### Public alias
+
+`walled_society`
+
+### 採用するもの
+
+- **境界透過性**: 社会システムの境界がどれほど外部情報を通すかを `boundary_permeability` (integer >= 0) で表現する。0 = 完全封鎖 (境界は固く、外部知識が入らない)。値が大きいほど境界が透過的で外部との情報交換が起きやすい。replay で境界状態の推移を追跡・比較できる。
+- **外部知識蓄積レベル**: 境界の外から流入し蓄積した知識の度合いを `outside_knowledge_level` (integer >= 0) で表現する。0 = 外部知識が流入していない状態。値が大きいほど外部知識が境界認識に影響していることを示す。
+- **replay での現れ方**: `matrix_events.jsonl` の `guide_agent` が発行する `heartbeat` イベントに `boundary_permeability` と `outside_knowledge_level` を optional field として追加する。guide_agent は layer 間の移動候補 (何が境界の外にあるか) を説明するため、境界透過性と外部知識レベルの記録に適している。既存 run への影響なし (optional フィールドなので後方互換を維持)。
+- **contract での現れ方**: data contract v0.7.3 の optional field 節に `boundary_permeability` と `outside_knowledge_level` を追記する。Walled Society Rules として語彙制約と禁止事項を明示する。
+
+### 採用しないもの
+
+- 保護された作品名・キャラクター名・組織名・台詞・見た目・音楽・声。
+- 実在する国・地域・政治体制の壁や検閲制度の再現。
+- 課金 API、外部送信、Cloud Run deploy、GitHub push、production DB 操作。
+- LLM 呼び出し必須の動作。
+- 暴力・弾圧・身体損傷を直接描写する表現 (抽象的な数値と境界状態に置き換える)。
+- 実在人物・組織のなりすまし。
+
+### Minimum world-building element
+
+| 要素 | 役割 | 実装場所 |
+|---|---|---|
+| `boundary_permeability` | 境界の透過性を示す optional integer。0 = 完全封鎖。大きいほど透過的で外部知識が流入しやすい。`guide_agent` heartbeat event に付与し、replay で境界推移を追跡できる。保護された名称・外部秘密・個人情報を含めない。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `outside_knowledge_level` | 外部から流入した知識の蓄積レベルを示す optional integer。0 = 外部知識なし。大きいほど境界内の社会が外部知識に影響されていることを示す。`guide_agent` heartbeat event に付与する。保護された名称・外部秘密・個人情報を含めない。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `walled_society_rule` | contract 規則として「`boundary_permeability=0` は完全封鎖」「`outside_knowledge_level=0` は外部知識なし」を docs に明示する。 | `urban-ecosystem-data-contract.md` の Walled Society Rules 節 |
+
+### Appearance in repo surfaces
+
+| Surface | 現れるもの | M9 の範囲 |
+|---|---|---|
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `boundary_permeability` / `outside_knowledge_level` optional field 追加、Walled Society Rules 追記 | v0.7.3 で実装 |
+| replay | `guide_agent` heartbeat event に両フィールドを optional 追加 | M9 で実装 |
+| viewer | `boundary_permeability` / `outside_knowledge_level` を表示する候補欄 (フィールドが無ければ既存表示のまま) | 将来 TODO |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M9 で実装 |
+
+### Risk notes
+
+- **著作権・商標**: 採用するのは「境界による社会封鎖と外部知識流入という抽象状態機械」という一般的な設計パターンのみ。特定作品のキャラクター名・固有名詞はコード、UI copy、trigger id、sample data のいずれにも入れない。
+- **scope**: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
+- **secret / cost**: 外部 API、Cloud Run deploy、GitHub push は対象外。ローカルテストのみ。
+- **決定論**: `boundary_permeability` と `outside_knowledge_level` は optional かつ固定値。既存の `matrix_events.jsonl` を出力しない run (matrix_mode=False) には影響しない。matrix_mode=True かつ `matrix_guide_tick` 指定 run の `guide_agent` heartbeat で追加される。同一 seed・同一入力では新フィールドの有無と内容が一致することを確認する。
+
+### Testable acceptance
+
+- `docs/matrix-mode-motif-packets.md` に `walled_society` packet がある。
+- public alias が `lower_snake_case` のオリジナル名である。
+- 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.3 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` かつ `matrix_guide_tick` 指定 run の `guide_agent` heartbeat event に `boundary_permeability` と `outside_knowledge_level` が含まれる。同一 seed 2 回で値が一致する (決定論)。

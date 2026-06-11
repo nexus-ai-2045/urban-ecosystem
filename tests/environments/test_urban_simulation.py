@@ -1969,3 +1969,92 @@ def test_unstable_city_core_fields_present_in_stale_report():
     states_a = json.dumps(sim_a.agent_states, ensure_ascii=False, sort_keys=True)
     states_b = json.dumps(sim_b.agent_states, ensure_ascii=False, sort_keys=True)
     assert states_a == states_b, "同一 seed で agent_states が一致するべき"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MP-005: walled_society motif packet (v0.7.3)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_walled_society_fields_absent_when_matrix_off():
+    """matrix_mode=False の run では matrix_events.jsonl を出力せず、
+    agent_states は既存出力と byte 一致する (off-by-default 不変性)。
+
+    MP-005 Testable acceptance (off-by-default) / contract v0.7.3。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 42
+    ticks = 4
+
+    # matrix_mode=False で 2 回実行し agent_states が byte 一致することを確認
+    sim1 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim1.simulate()
+
+    sim2 = Simulation(pois, profiles, seed=seed, ticks=ticks, run_id="r1", matrix_mode=False)
+    sim2.simulate()
+
+    # matrix_events は空 (walled_society フィールドも当然含まれない)
+    assert sim1.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+    assert sim2.matrix_events == [], "matrix_mode=False では matrix_events が空であるべき"
+
+    # agent_states の byte 一致 (rng 消費順序が不変であることを確認)
+    states1 = json.dumps(sim1.agent_states, ensure_ascii=False, sort_keys=True)
+    states2 = json.dumps(sim2.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states1 == states2, "同一 seed / matrix_mode=False で agent_states が一致するべき"
+
+
+def test_walled_society_fields_present_in_guide_heartbeat():
+    """matrix_mode=True かつ matrix_guide_tick 指定 run で guide_agent heartbeat event に
+    boundary_permeability と outside_knowledge_level が含まれる。
+    同一 seed 2 回 run で値が一致する (決定論)。
+
+    MP-005 Testable acceptance (guide_agent heartbeat fields) / contract v0.7.3。
+    """
+    pois, profiles = _make_simple_sim_inputs()
+    seed = 33
+
+    def _run():
+        sim = Simulation(
+            pois, profiles,
+            seed=seed, ticks=6, run_id="walled_society_test",
+            matrix_mode=True,
+            matrix_agent_id=0,
+            matrix_ttl_ticks=5,
+            matrix_guide_tick=2,
+            matrix_guide_layer="real",
+            matrix_boundary_permeability=3,
+            matrix_outside_knowledge_level=5,
+        )
+        sim.simulate()
+        return sim
+
+    sim_a = _run()
+    sim_b = _run()
+
+    # guide_agent heartbeat event を抽出
+    guides_a = [
+        e for e in sim_a.matrix_events
+        if e["type"] == "heartbeat" and e["matrix_role"] == "guide_agent"
+    ]
+    guides_b = [
+        e for e in sim_b.matrix_events
+        if e["type"] == "heartbeat" and e["matrix_role"] == "guide_agent"
+    ]
+
+    assert len(guides_a) == 1, "guide_agent heartbeat が 1 件出力されるべき"
+    evt = guides_a[0]
+
+    # walled_society フィールドの存在確認
+    assert "boundary_permeability" in evt, "boundary_permeability が guide_agent heartbeat に含まれるべき"
+    assert "outside_knowledge_level" in evt, "outside_knowledge_level が guide_agent heartbeat に含まれるべき"
+
+    # 値の確認
+    assert evt["boundary_permeability"] == 3, "boundary_permeability は指定値と一致するべき"
+    assert evt["outside_knowledge_level"] == 5, "outside_knowledge_level は指定値と一致するべき"
+
+    # 決定論: 同一 seed 2 回の結果が一致
+    assert guides_a == guides_b, "同一 seed で guide_agent heartbeat の内容が一致するべき"
+
+    # 同一 seed で agent_states も byte 一致 (既存決定論の不変性確認)
+    states_a = json.dumps(sim_a.agent_states, ensure_ascii=False, sort_keys=True)
+    states_b = json.dumps(sim_b.agent_states, ensure_ascii=False, sort_keys=True)
+    assert states_a == states_b, "同一 seed で agent_states が一致するべき"
