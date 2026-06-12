@@ -363,6 +363,42 @@ class TestMapDisplay:
         assert page.locator("#maps-key-value").inner_text() == "未設定"
         assert page.locator("#map-health-value").inner_text() == "Fallback表示"
 
+    def test_gsi_3d_mode_is_opt_in_without_api_key(self, loaded_page):
+        """API key なしでも opt-in GSI 3D 表示へ切り替えられる。"""
+        page, _ = loaded_page
+        page.select_option("#map-mode-select", value="gsi_3d")
+        page.wait_for_function(
+            """() => {
+                const mode = document.getElementById('map-mode-value');
+                const attr = document.querySelector('.gsi-3d-attribution');
+                return Boolean(mode && mode.textContent.includes('GSI 3D') && attr);
+            }""",
+            timeout=5000,
+        )
+
+        assert page.locator("#map-mode-value").inner_text() == "GSI 3D"
+        assert page.locator("#maps-key-value").inner_text() == "未設定"
+        assert "GSI 3D表示" in page.locator("#map-health-value").inner_text()
+        assert "出典: 国土地理院" in page.locator(".gsi-3d-attribution").inner_text()
+
+    def test_gsi_3d_mode_downgrades_to_fallback_when_unavailable(self, loaded_page):
+        """GSI 3D adapter 初期化失敗時は既存 fallback 地図へ降格する。"""
+        page, _ = loaded_page
+        page.evaluate("window.__URBAN_FORCE_GSI_3D_FAIL__ = true")
+        page.select_option("#map-mode-select", value="gsi_3d")
+        page.wait_for_function(
+            """() => {
+                const mode = document.getElementById('map-mode-value');
+                return Boolean(mode && mode.textContent.includes('Fallback'));
+            }""",
+            timeout=5000,
+        )
+
+        assert page.locator("#map-mode-value").inner_text() == "Fallback"
+        assert "Fallback表示" in page.locator("#map-health-value").inner_text()
+        assert page.locator(".gsi-3d-attribution").count() == 0
+        page.evaluate("window.__URBAN_FORCE_GSI_3D_FAIL__ = false")
+
     def test_settings_panel_opens_from_left_dock(self, loaded_page):
         """左下の設定ボタンから設定パネルを開ける。"""
         page, _ = loaded_page
