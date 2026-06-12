@@ -1,7 +1,7 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.3
+version: 0.7.4
 owner: manager
 updated: 2026-06-12
 
@@ -327,6 +327,8 @@ Optional:
 - `stabilization_phase` (string, optional): `unstable_city_core` motif (MP-004 / v0.7.2) が付与する崩壊-回復循環のフェーズを人間可読に記録する。許容値: `precursor` / `collapse` / `intervention` / `recovery` / `stable`。`stale_report` で使用する。保護された名称・外部秘密・個人情報を含めない。
 - `boundary_permeability` (integer >= 0, optional): `walled_society` motif (MP-005 / v0.7.3) が付与する境界の透過性。0 = 完全封鎖 (境界は固く外部知識が入らない)。値が大きいほど境界が透過的で外部との情報交換が起きやすい。`guide_agent` heartbeat で使用する。保護された名称・外部秘密・個人情報を含めない。
 - `outside_knowledge_level` (integer >= 0, optional): `walled_society` motif (MP-005 / v0.7.3) が付与する外部から流入した知識の蓄積レベル。0 = 外部知識なし。値が大きいほど境界内の社会が外部知識に影響されていることを示す。`guide_agent` heartbeat で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `duel_style` (string, optional): `duel_school` motif (MP-006 / v0.7.4) が付与する決闘 engagement の抽象的な school / style を人間可読に記録する。例: `"aggressive"` / `"defensive"` / `"technical"` / `"adaptive"`。`takeover_start` で使用する。保護された流派名・外部秘密・個人情報を含めない。
+- `duel_rank` (integer >= 0, optional): `duel_school` motif (MP-006 / v0.7.4) が付与する決闘参加時点の competitive rank / 評判。0 = 未ランク / 初期値。値が大きいほど高い地位を示す。`takeover_start` で使用する。replay で複数 event を比較して rank 推移を追跡できる。保護された名称・外部秘密・個人情報を含めない。
 
 Rules:
 
@@ -391,6 +393,18 @@ Rules:
 - 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
 - `walled_society` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `matrix_role`、`trigger_id`、`reason` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
+
+### Duel School (`duel_school`)
+
+`duel_school` は 1 対 1 の構造化された competitive interaction において、流派ごとの engagement style と competitive rank を表す公開 alias である (MP-006 / v0.7.4)。`takeover_start` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `duel_rank` は 0 始まりの非負整数。0 が未ランク基準 (初期値)。値が大きいほど高い competitive rank / 評判を示す。
+- `duel_style` は人間可読な抽象 style 文字列。保護された流派名・キャラクター名・固有術語・外部秘密・個人情報を含めない。例: `"aggressive"` / `"defensive"` / `"technical"` / `"adaptive"`。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `duel_school` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`duel_style` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -514,3 +528,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.7.1 (MATRIX M9-003): `oath_chain` motif packet (MP-003) の optional field を追加。`hierarchy_rank` (integer >= 0) と `sworn_duty` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、命令権限の階層と役割誓約を replay 可能な形で記録する。Oath Chain Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.2 (MATRIX M9-004): `unstable_city_core` motif packet (MP-004) の optional field を追加。`core_instability_level` (integer >= 0) と `stabilization_phase` (string) を `MatrixEvent` の optional field として追加した。`stale_report` に付与し、都市中枢の不安定度と崩壊-回復フェーズを replay 可能な形で記録する。Unstable City Core Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.3 (MATRIX M9-005): `walled_society` motif packet (MP-005) の optional field を追加。`boundary_permeability` (integer >= 0) と `outside_knowledge_level` (integer >= 0) を `MatrixEvent` の optional field として追加した。`guide_agent` heartbeat に付与し、境界の透過性と外部知識の蓄積レベルを replay 可能な形で記録する。Walled Society Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.4 (MATRIX M9-006): `duel_school` motif packet (MP-006) の optional field を追加。`duel_style` (string) と `duel_rank` (integer >= 0) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、1 対 1 competitive engagement の流派 style と競争 rank を replay 可能な形で記録する。Duel School Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。

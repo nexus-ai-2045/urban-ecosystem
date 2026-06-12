@@ -23,6 +23,7 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 | MP-003 | 実装済み | `oath_chain` | Cross-world Pack 3 | この文書 / data contract v0.7.1 / test_oath_chain_* 2 件 |
 | MP-004 | 実装済み | `unstable_city_core` | Cross-world Pack 4 | この文書 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
 | MP-005 | 実装済み | `walled_society` | Cross-world Pack 5 | この文書 / data contract v0.7.3 / test_walled_society_* 2 件 |
+| MP-006 | 実装済み | `duel_school` | Cross-world Pack 6 | この文書 / data contract v0.7.4 / test_duel_school_* 2 件 |
 
 ## MP-001: Cross-world Pack 1
 
@@ -326,3 +327,78 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 - `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.3 に更新されている。
 - `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
 - `matrix_mode=True` かつ `matrix_guide_tick` 指定 run の `guide_agent` heartbeat event に `boundary_permeability` と `outside_knowledge_level` が含まれる。同一 seed 2 回で値が一致する (決定論)。
+
+## MP-006: Cross-world Pack 6
+
+### Influence summary
+
+1 対 1 の構造化された competitive interaction において、流派 (school) ごとの engagement style と、勝敗の累積が rank / 評判として replay 可能な記録に反映される構造を、`takeover_start` イベントの抽象フィールドとして表現する。
+
+### Public alias
+
+`duel_school`
+
+### 採用するもの
+
+- **1 対 1 structured engagement**: takeover イベントは 1 体の agent が別の agent に対して構造化された挑戦を行う場面を表す。決闘は本質的に 1 対 1 の engagement であるため、`takeover_start` はこの構造と概念整合が高い。TTL (ttl_ticks) は決闘の持続期間として読める。
+- **engagement style (流派)**: どの school / style でこの決闘が行われたかを `duel_style` (string) として記録する。例: `"aggressive"`, `"defensive"`, `"technical"`, `"adaptive"`。保護された固有の流派名は使わず、行動特性を抽象的に表現する。
+- **rank / 評判の記録**: 決闘参加時点の competitive rank を `duel_rank` (integer >= 0) として記録する。0 = 未ランク / 初期値。値が大きいほど高い地位を示す。replay で複数の takeover_start event を比較することで、rank 推移を追跡できる。
+- **replay での現れ方**: `matrix_events.jsonl` の `takeover_start` イベントに `duel_style` (string) と `duel_rank` (integer >= 0) を optional field として追加する。既存 run への影響なし (optional フィールドなので後方互換を維持)。
+- **contract での現れ方**: data contract v0.7.4 の optional field 節に `duel_style` と `duel_rank` を追記する。Duel School Rules として語彙制約と禁止事項を明示する。
+
+### 設計メモ: host event 選定理由
+
+`takeover_start` を選んだ根拠:
+
+| 候補 | 評価 |
+|---|---|
+| `takeover_start` | 1 体が別の 1 体に挑む構造 (1 対 1) / TTL が決闘持続期間に対応 / 既存 `hierarchy_rank` と rank 概念が整合 / `sentinel_mvp` のrole takeover = 競争的 engagement のモデルとして最適 |
+| `human_gate` | 人間の明示承認が必要なゲート専用。競争インタラクションには不適合。`duel_rank` や `duel_style` を保持する意味が薄い |
+| `world_transition` | layer 間移動専用 (`bridge_agent`)。決闘は layer 移動ではなく同 layer 内の対戦 |
+| `stale_report` | 欠落した heartbeat の自己申告専用 (`sentinel_swarm`)。競争的 engagement とは無関係 |
+| `heartbeat` | 生存確認専用。決闘 start イベントとして不適切 |
+
+`takeover_start` は最も概念整合が高い host event である。
+
+### 採用しないもの
+
+- 保護された作品名・キャラクター名・流派名・組織名・台詞・見た目・音楽・声。
+- 実在する武道流派・格闘技団体・競技者の名称・エピソードの再現。
+- 課金 API、外部送信、Cloud Run deploy、GitHub push、production DB 操作。
+- LLM 呼び出し必須の動作。
+- 暴力・身体損傷を直接描写する表現 (抽象的な style 文字列と integer rank に置き換える)。
+- 実在人物・組織のなりすまし。
+
+### Minimum world-building element
+
+| 要素 | 役割 | 実装場所 |
+|---|---|---|
+| `duel_style` | この決闘 engagement で使用する抽象的な school / style を人間可読に記録する optional string。例: `"aggressive"` / `"defensive"` / `"technical"` / `"adaptive"`。保護された流派名・外部秘密・個人情報を含めない。`takeover_start` で使用する。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `duel_rank` | 決闘参加時点の competitive rank / 評判を示す optional integer。0 = 未ランク / 初期値。値が大きいほど高い地位を示す。replay で複数 event を比較して rank 推移を追跡できる。保護された名称・外部秘密・個人情報を含めない。`takeover_start` で使用する。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `duel_school_rule` | contract 規則として「`duel_rank=0` は未ランク基準」「`duel_style` は人間可読な抽象 style 文字列」を docs に明示する。 | `urban-ecosystem-data-contract.md` の Duel School Rules 節 |
+
+### Appearance in repo surfaces
+
+| Surface | 現れるもの | M9 の範囲 |
+|---|---|---|
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `duel_style` / `duel_rank` optional field 追加、Duel School Rules 追記 | v0.7.4 で実装 |
+| replay | `takeover_start` event に両フィールドを optional 追加 | M9 で実装 |
+| viewer | `duel_style` / `duel_rank` を表示する候補欄 (フィールドが無ければ既存表示のまま) | 将来 TODO |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M9 で実装 |
+
+### Risk notes
+
+- **著作権・商標**: 採用するのは「流派ごとの engagement style と competitive rank という抽象状態機械」という一般的な設計パターンのみ。特定作品のキャラクター名・流派名・固有名詞はコード、UI copy、trigger id、sample data のいずれにも入れない。
+- **scope**: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
+- **secret / cost**: 外部 API、Cloud Run deploy、GitHub push は対象外。ローカルテストのみ。
+- **決定論**: `duel_style` と `duel_rank` は optional かつ固定値。既存の `matrix_events.jsonl` を出力しない run (matrix_mode=False) には影響しない。matrix_mode=True の `takeover_start` で追加される。同一 seed・同一入力では新フィールドの有無と内容が一致することを確認する。
+
+### Testable acceptance
+
+- `docs/matrix-mode-motif-packets.md` に `duel_school` packet がある。
+- public alias が `lower_snake_case` のオリジナル名である。
+- 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.4 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` の run の `takeover_start` event に `duel_style` と `duel_rank` が含まれる。同一 seed 2 回で値が一致する (決定論)。

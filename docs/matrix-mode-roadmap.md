@@ -220,7 +220,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 - oath hierarchy and command (→ MP-003 実装済み)
 - unstable city core (→ MP-004 実装済み)
 - walled society and outside knowledge (→ MP-005 実装済み)
-- duel school
+- duel school (→ MP-006 実装済み)
 - mirror episode
 - judgment pair
 - spore forest
@@ -291,8 +291,8 @@ MATRIXモードは複数 workstream に分かれるため、main agent は orche
 
 | 判定 | Yes 条件 | 現状 |
 |---|---|---|
-| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-12 時点: TODO 表全 27 行を確認。M0-001〜M9-005 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M11-003 は MATRIX panel optional fields 表示と E2E 23 件で確認済み。M9-005 は walled_society motif packet と data contract v0.7.3 が実装済み。M9-004 は unstable_city_core motif packet と data contract v0.7.2 が実装済み。M9-003 は oath_chain motif packet と data contract v0.7.1 が実装済み。M9-002 は PR #95 (cead42e) で exchange_pair motif packet と data contract v0.7.0 が実装済み) |
-| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-12 実測: full pytest 634 件 pass・fail 0 (matrix mode optional fields E2E 3 件含む)、E2E Playwright `tests/e2e/test_ui.py` 23 件 pass、drift gate は `matrix_mode_skill_check.py --check` と `docs_sync_check.py --check` の 2/2 が exit 0、`git diff --check` exit 0。MATRIX panel は MP-002/003/004 optional fields を event type ごとに表示する) |
+| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-12 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M9-006 は duel_school motif packet と data contract v0.7.4 が本 commit で実装済み。M11-003 は MATRIX panel optional fields 表示と E2E 23 件で確認済み。M9-005 は walled_society motif packet と data contract v0.7.3 が実装済み。M9-004 は unstable_city_core motif packet と data contract v0.7.2 が実装済み。M9-003 は oath_chain motif packet と data contract v0.7.1 が実装済み。M9-002 は PR #95 (cead42e) で exchange_pair motif packet と data contract v0.7.0 が実装済み。M11-001 は PR #94 / #95 の merge 前 out-of-band review comment が evidence として確認できる) |
+| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-12 実測: unit/integration 612 件 pass・fail 0 (duel_school unit tests 2 件含む)、E2E 全 24 件 pass (test_ui.py 23 件 + test_variable_agent_profiles.py 1 件)、drift gate は `matrix_mode_skill_check.py --check` と `docs_sync_check.py --check` の 2/2 が exit 0、`git diff --check` exit 0。duel_style / duel_rank は takeover_start event に emit、MATRIX panel は MP-002/003/004 optional fields を event type ごとに表示する) |
 | 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | Yes (2026-06-12 時点: issue intake = M0-003 template 確立済み / worker packet = parallel delegation map 文書化済み / human gate = PR #94 / #95 の merge 前 out-of-band review comment で evidence 確認 / docs drift = drift gate 2/2 exit 0 / E2E = Playwright 23 件 pass / 公開境界 = identity guard 実地通過 2 回 / rollback・stop 条件 = operator_agent human gate event と motif packet stop 条件が docs 化済み。全 7 条件に current evidence が揃った) |
 
 No の場合の運用:
@@ -332,6 +332,7 @@ No の場合の運用:
 | M9-003 | 完了 | Cross-world Pack 3: oath_chain motif packet を実装する | `hierarchy_rank` / `sworn_duty` optional field が data contract v0.7.1 に追加され、`takeover_start` event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-003 / data contract v0.7.1 / test_oath_chain_* 2 件 |
 | M9-004 | 完了 | Cross-world Pack 4: unstable_city_core motif packet を実装する | `core_instability_level` / `stabilization_phase` optional field が data contract v0.7.2 に追加され、`stale_report` event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-004 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
 | M9-005 | 完了 | Cross-world Pack 5: walled_society motif packet を実装する | `boundary_permeability` / `outside_knowledge_level` optional field が data contract v0.7.3 に追加され、`guide_agent` heartbeat event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-005 / data contract v0.7.3 / test_walled_society_* 2 件 |
+| M9-006 | 完了 | Cross-world Pack 6: duel_school motif packet を実装する | `duel_style` / `duel_rank` optional field が data contract v0.7.4 に追加され、`takeover_start` event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-006 / data contract v0.7.4 / test_duel_school_* 2 件 |
 | M10-001 | 完了 | Recursive Repo Skills を設計する | docs が callable operating packet として読め、dispatch が bounded になる | `docs/matrix-mode-skill-index.md` / `tools/matrix_mode_skill_check.py` |
 | M11-001 | 完了 | public PR の human review 経路を確立する | 公開名義方針 (`docs/public-identity-policy.md`) に従い、以後の matrix mode 関連 PR は (a) 外部協力者の review approve、または (b) maintainer の out-of-band 人間レビュー完了を merge 前に PR comment へ記録してから merge する運用が evidence で確認できる | PR #94 / #95 の merge 前 out-of-band review comment (公開名義方針準拠) |
 | M11-002 | 完了 | 手動確認の証拠を artifact 化する | M1-003 の「Browser check 1280/390」と M1-002 の「CLI smoke」に対応する検証可能な artifact (screenshot / smoke log) が repo 内または PR に存在し、第三者が現物で検証できる | `docs/evidence/m11-002-cli-smoke-2026-06-11.log` / `docs/evidence/m11-002-viewer-1280.png` / `docs/evidence/m11-002-viewer-390.png` |

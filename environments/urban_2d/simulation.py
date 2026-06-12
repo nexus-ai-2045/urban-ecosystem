@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.3
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.4
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -177,6 +177,8 @@ class Simulation:
         matrix_stabilization_phase: str = "precursor",
         matrix_boundary_permeability: int = 0,
         matrix_outside_knowledge_level: int = 0,
+        matrix_duel_style: str = "adaptive",
+        matrix_duel_rank: int = 0,
     ) -> None:
         """シミュレーション初期化。
 
@@ -241,6 +243,14 @@ class Simulation:
                 外部知識蓄積レベル。0 が外部知識なし。matrix_mode=True かつ matrix_guide_tick
                 指定時の guide_agent heartbeat に付与する。
                 保護されたキャラクター名・外部秘密・個人情報を含めない。
+            matrix_duel_style: duel_school motif (MP-006 / v0.7.4) の engagement style。
+                人間可読な抽象 style 文字列。matrix_mode=True の takeover_start に付与する。
+                保護された流派名・外部秘密・個人情報を含めない。
+                rng を消費しないため既存の rng 消費順序は不変。
+            matrix_duel_rank: duel_school motif (MP-006 / v0.7.4) の competitive rank。
+                0 が未ランク基準。matrix_mode=True の takeover_start に付与する。
+                保護された名称・外部秘密・個人情報を含めない。
+                rng を消費しないため既存の rng 消費順序は不変。
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
@@ -304,6 +314,9 @@ class Simulation:
         # MP-005 walled_society (v0.7.3): guide_agent heartbeat に付与する境界透過性と外部知識レベル
         self.matrix_boundary_permeability = matrix_boundary_permeability
         self.matrix_outside_knowledge_level = matrix_outside_knowledge_level
+        # MP-006 duel_school (v0.7.4): takeover_start に付与する engagement style と competitive rank
+        self.matrix_duel_style = matrix_duel_style
+        self.matrix_duel_rank = matrix_duel_rank
         if self.matrix_mode:
             self._validate_matrix_config()
 
@@ -393,6 +406,8 @@ class Simulation:
             raise ValueError("matrix_boundary_permeability は 0 以上が必要")
         if self.matrix_outside_knowledge_level < 0:
             raise ValueError("matrix_outside_knowledge_level は 0 以上が必要")
+        if self.matrix_duel_rank < 0:
+            raise ValueError("matrix_duel_rank は 0 以上が必要")
         if self.matrix_stabilization_phase not in MATRIX_STABILIZATION_PHASE_VALUES:
             allowed = ", ".join(sorted(MATRIX_STABILIZATION_PHASE_VALUES))
             raise ValueError(
@@ -1348,6 +1363,7 @@ class Simulation:
 
         if tick == 0:
             # MP-003 oath_chain (v0.7.1): 命令権限ランクと役割誓約を決定論的に付与する。
+            # MP-006 duel_school (v0.7.4): engagement style と competitive rank を決定論的に付与する。
             # rng を消費しないため既存の rng 消費順序は不変。
             self.matrix_events.append({
                 "tick": tick,
@@ -1364,6 +1380,8 @@ class Simulation:
                 "reason": "sentinel_mvp_attach",
                 "hierarchy_rank": self.matrix_oath_chain_rank,
                 "sworn_duty": self.matrix_sworn_duty,
+                "duel_style": self.matrix_duel_style,
+                "duel_rank": self.matrix_duel_rank,
             })
         if tick == end_tick:
             exit_reason = "ttl_expired"

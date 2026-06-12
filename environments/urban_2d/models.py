@@ -1,7 +1,7 @@
 """
 urban_2d データモデル。
 
-正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.3
+正本: docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.4
 
 座標系:
   - GeoJSON (POI/AOI/Road): geometry.coordinates = [lon, lat] (RFC 7946)
@@ -273,7 +273,7 @@ class InteractionEvent:
 class MatrixEvent:
     """MATRIX Mode Event JSONL の 1 行。
 
-    contract §MATRIX Mode Event JSONL v0.7.3:
+    contract §MATRIX Mode Event JSONL v0.7.4:
       Required: tick, day, time, type, agent_id, matrix_role
       Optional: ttl_ticks, exit_reason, trigger_id, source_layer, target_layer,
                 world_layer, transition_cost, evidence_type, evidence_ref,
@@ -288,7 +288,9 @@ class MatrixEvent:
                 core_instability_level (MP-004 / v0.7.2),
                 stabilization_phase (MP-004 / v0.7.2),
                 boundary_permeability (MP-005 / v0.7.3),
-                outside_knowledge_level (MP-005 / v0.7.3)
+                outside_knowledge_level (MP-005 / v0.7.3),
+                duel_style (MP-006 / v0.7.4),
+                duel_rank (MP-006 / v0.7.4)
     """
     tick: int
     day: int
@@ -329,6 +331,9 @@ class MatrixEvent:
     # MP-005 walled_society (v0.7.3): guide_agent heartbeat の境界透過性と外部知識蓄積レベル
     boundary_permeability: Optional[int] = None    # 0 = 完全封鎖。大きいほど透過的
     outside_knowledge_level: Optional[int] = None  # 0 = 外部知識なし。大きいほど外部知識が浸透
+    # MP-006 duel_school (v0.7.4): takeover_start の engagement style と competitive rank
+    duel_style: Optional[str] = None    # 人間可読な抽象 style 文字列。例: "aggressive"
+    duel_rank: Optional[int] = None     # 0 = 未ランク基準。大きいほど高い competitive rank
     extra: dict[str, Any] = field(default_factory=dict)
 
 
