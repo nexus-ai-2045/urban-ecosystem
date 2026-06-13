@@ -56,6 +56,8 @@ python tools/smoke_fallback_viewer.py
 
 非公開 Cloud Run Service は、ブラウザで URL を直接開くと 403 になります。これは参加者側の失敗ではなく、公開範囲を閉じている状態です。参加者に見せる場合は、fallback viewer を案内するか、maintainer が公開 demo として別途用意します。
 
+希望者に Nexus 管理 Google Cloud を使わせる場合は、token や広い IAM を共有せず、目的つき・最小権限・期限つき・監査つきの申請制にします。申請テンプレートと禁止事項は [`gcloud-access-policy.md`](gcloud-access-policy.md) を参照してください。
+
 ## 運用者側で進めるもの
 
 | issue | 内容 | 状態 |
@@ -70,6 +72,7 @@ python tools/smoke_fallback_viewer.py
 - issue で目的と範囲を共有していない大きな機能実装
 - Google Cloud / Vertex AI / Google Maps / Google Places を実際に呼ぶ作業
 - Cloud Run deploy
+- Nexus 管理 project の token / service account key / 広い IAM 共有
 - シミュレーションモデルの前提変更
 
 ## 既存 PR から分かった実装境界
