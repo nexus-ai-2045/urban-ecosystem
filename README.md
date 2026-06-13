@@ -64,6 +64,8 @@ python tools/smoke_fallback_viewer.py
 
 Google Maps、Google Places、Vertex AI、Cloud Run などは、各自の Google Cloud project で試せます。その場合の課金と設定は、その project の所有者側で発生します。Nexus 管理の project を使う作業だけ、maintainer が範囲を切ってから進めます。API キー、`.env`、token、Webhook URL は公開 issue / PR / コメントに貼らないでください。
 
+Nexus 管理の Google Cloud / Cloud Run を希望者に開く場合は、token 共有ではなく、目的つき・最小権限・期限つき・監査つきの申請制にします。詳しくは [`docs/gcloud-access-policy.md`](docs/gcloud-access-policy.md) を参照してください。
+
 参加ルートの切り分け:
 
 | 立場 | まず使うもの | Google Cloud / Maps | 期待すること |
@@ -248,6 +250,8 @@ Cloud Run での実機確認は、各自の Google Cloud project でも実行で
 
 Nexus 管理の project を使う場合だけ、maintainer 承認後に実行します。手順は [`docs/deploy.md`](docs/deploy.md) を参照してください。まずは非公開 Cloud Run Service で `/api/health` と fallback viewer を確認し、公開 URL 化や Google Maps API キー注入は別判断で進めます。
 
+希望者に Nexus 管理 project を使わせる場合の申請・最小権限・禁止事項は [`docs/gcloud-access-policy.md`](docs/gcloud-access-policy.md) に分けています。
+
 非公開 Cloud Run Service は、ブラウザで URL を直に開くと 403 になります。これは故障ではなく、公開範囲を閉じているためです。参加者に見せる公開 demo にする場合は、maintainer が課金・公開範囲・API key 制限を確認してから `allow-unauthenticated` や IAP などを選びます。
 
 ## ドキュメント
@@ -258,6 +262,7 @@ Nexus 管理の project を使う場合だけ、maintainer 承認後に実行し
 - リリース方針: [`docs/release-policy.md`](docs/release-policy.md)
 - 変更履歴: [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
 - 協力ガイド: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- gcloud / Nexus 管理 Google Cloud 利用方針: [`docs/gcloud-access-policy.md`](docs/gcloud-access-policy.md)
 - Discord 再開時向け guide: [`docs/discord-start-here.md`](docs/discord-start-here.md)
 - Maintainer quick guide: [`docs/maintainer-quick-guide.md`](docs/maintainer-quick-guide.md)
 - 公開協業の現在地: [`docs/public-collaboration-status.md`](docs/public-collaboration-status.md)
