@@ -14,6 +14,7 @@
 "use strict";
 
 import { FallbackMapAdapter }  from "./fallback_map_adapter.js?v=20260606-realflow";
+import { Gsi3DAdapter }        from "./gsi_3d_adapter.js?v=20260614-gsi3d";
 import { GoogleMapsAdapter }   from "./google_maps_adapter.js?v=20260606-realflow";
 import {
     updateLegend,
@@ -196,7 +197,7 @@ const state = {
 // adapter (キー有無で切り替え)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** @type {FallbackMapAdapter|GoogleMapsAdapter} */
+/** @type {FallbackMapAdapter|Gsi3DAdapter|GoogleMapsAdapter} */
 let adapter = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -403,6 +404,23 @@ const intakeLifecycleEls = {
 
 async function initAdapter() {
     const desiredMode = _resolveDesiredMapMode();
+    _removeGsi3DAttribution();
+    if (desiredMode === "gsi_3d") {
+        try {
+            if (mapCanvas) mapCanvas.style.display = "block";
+            if (mapContainer) mapContainer.style.position = "relative";
+            adapter = new Gsi3DAdapter(mapCanvas, mapContainer);
+            await adapter.init();
+            state.runtime.mapMode = "GSI 3D";
+            updateMapRuntimeStatus();
+            adapter.onAgentClick(handleAgentClick);
+            return;
+        } catch (error) {
+            console.warn("GSI 3D の初期化に失敗したため fallback 地図に切り替えます。", error);
+            _removeGsi3DAttribution();
+            state.runtime.mapMode = "Fallback";
+        }
+    }
     if (desiredMode === "google" && hasApiKey) {
         try {
             if (mapCanvas) mapCanvas.style.display = "none";
@@ -468,6 +486,7 @@ function _setDefaultNewRunId(runs) {
 
 function _resolveDesiredMapMode() {
     if (state.runtime.mapPreference === "fallback") return "fallback";
+    if (state.runtime.mapPreference === "gsi_3d") return "gsi_3d";
     if (state.runtime.mapPreference === "google") return "google";
     return hasApiKey ? "google" : "fallback";
 }
@@ -1739,7 +1758,7 @@ function updateMapRuntimeStatus() {
 
 async function switchMapMode(preference) {
     stopPlay();
-    state.runtime.mapPreference = preference === "google" || preference === "fallback"
+    state.runtime.mapPreference = preference === "google" || preference === "fallback" || preference === "gsi_3d"
         ? preference
         : "auto";
     if (mapModeSel) mapModeSel.value = state.runtime.mapPreference;
@@ -1758,6 +1777,13 @@ async function switchMapMode(preference) {
     await initAdapter();
     await _reapplyCurrentRunLayers();
     await renderCurrentTick();
+}
+
+function _removeGsi3DAttribution() {
+    if (!mapContainer) return;
+    for (const el of mapContainer.querySelectorAll(".gsi-3d-attribution")) {
+        el.remove();
+    }
 }
 
 async function _reapplyCurrentRunLayers() {
