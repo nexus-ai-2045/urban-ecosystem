@@ -2050,6 +2050,13 @@ class TestLoadStatusDomElement:
         assert 'id="btn-audio-cue"' in res.text
         assert "8-bit cue off" in res.text
 
+    def test_html_has_gsi_3d_map_mode_option(self, client_no_key):
+        """HTML レスポンスに GSI 3D map adapter の opt-in 選択肢が含まれる。"""
+        res = client_no_key.get("/")
+        assert res.status_code == 200
+        assert 'value="gsi_3d"' in res.text
+        assert "GSI 3D" in res.text
+
 
 class TestInterpolationLogic:
     """§5.1.4 線形補間: 隣接 tick 間 lat/lon 補間のロジック検証 (Python 等価実装)。

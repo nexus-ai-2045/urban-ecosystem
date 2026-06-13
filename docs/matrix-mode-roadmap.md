@@ -226,7 +226,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 - spore forest
 - 8-bit audio cue layer
 - vehicle / virtual event experience layer
-- GSI 3D map layer (`gsi_3d_layer`, packet 起草済み → `docs/gsi-3d-map-layer.md`)
+- GSI 3D map layer (`gsi_3d_layer`, local deterministic adapter 実装済み → `docs/gsi-3d-map-layer.md`)
 
 ### Phase 10: Recursive Repo Skills
 
@@ -292,9 +292,9 @@ MATRIXモードは複数 workstream に分かれるため、main agent は orche
 
 | 判定 | Yes 条件 | 現状 |
 |---|---|---|
-| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-14 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M6-001 は cybernetic_governance motif packet と data contract v0.7.5 が実装済み。M9-006 は duel_school motif packet と data contract v0.7.4 が実装済み。GSI 3D は `gsi_3d_layer` draft packet として docs 化済みで、runtime TODO ではなく human gate 後の別実装候補に分離済み) |
-| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-14 実測: unit/integration 635 件 pass・fail 0、drift gate は `docs_sync_check.py --check` exit 0。追加確認として MP-001 は `body_network_boundary` / `command_review_channel` を `takeover_start` event に emit し、MP-006 は `duel_style` / `duel_rank` を維持する) |
-| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | Yes (2026-06-12 時点: issue intake = M0-003 template 確立済み / worker packet = parallel delegation map 文書化済み / human gate = PR #94 / #95 の merge 前 out-of-band review comment で evidence 確認 / docs drift = drift gate 2/2 exit 0 / E2E = Playwright 23 件 pass / 公開境界 = identity guard 実地通過 2 回 / rollback・stop 条件 = operator_agent human gate event と motif packet stop 条件が docs 化済み。全 7 条件に current evidence が揃った) |
+| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-14 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M6-001 は cybernetic_governance motif packet と data contract v0.7.5 が実装済み。M9-006 は duel_school motif packet と data contract v0.7.4 が実装済み。GSI 3D は `gsi_3d_layer` local deterministic adapter として実装済みで、外部 tile 接続は human gate 後の別候補に分離済み) |
+| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-14 実測: full pytest 640 件 pass・1 件 skip・fail 0、drift gate は `docs_sync_check.py --check` exit 0。追加確認として MP-001 は `body_network_boundary` / `command_review_channel` を `takeover_start` event に emit し、MP-006 は `duel_style` / `duel_rank` を維持する。GSI 3D adapter は API key なし opt-in / fallback 降格 E2E を持つ) |
+| 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | Yes (2026-06-14 時点: issue intake = M0-003 template 確立済み / worker packet = parallel delegation map 文書化済み / human gate = PR #94 / #95 の merge 前 out-of-band review comment で evidence 確認 / docs drift = drift gate 2/2 exit 0 / E2E = Playwright 25 件 pass / 公開境界 = identity guard 実地通過 2 回 / rollback・stop 条件 = operator_agent human gate event、motif packet stop 条件、GSI 3D fallback 降格 E2E が docs / tests 化済み。全 7 条件に current evidence が揃った) |
 
 No の場合の運用:
 

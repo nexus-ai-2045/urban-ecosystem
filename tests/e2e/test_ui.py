@@ -100,6 +100,7 @@ def _ensure_e2e_run(data_root: Path) -> None:
         "--matrix-mode",
         "--matrix-ttl-ticks", "4",
         "--matrix-transition-tick", "1",
+        "--matrix-guide-tick", "2",
         "--matrix-swarm-stale-tick", "3",
         "--out", str(run_dir),
     ]
@@ -363,6 +364,42 @@ class TestMapDisplay:
         assert page.locator("#maps-key-value").inner_text() == "未設定"
         assert page.locator("#map-health-value").inner_text() == "Fallback表示"
 
+    def test_gsi_3d_mode_is_opt_in_without_api_key(self, loaded_page):
+        """API key なしでも opt-in GSI 3D 表示へ切り替えられる。"""
+        page, _ = loaded_page
+        page.select_option("#map-mode-select", value="gsi_3d")
+        page.wait_for_function(
+            """() => {
+                const mode = document.getElementById('map-mode-value');
+                const attr = document.querySelector('.gsi-3d-attribution');
+                return Boolean(mode && mode.textContent.includes('GSI 3D') && attr);
+            }""",
+            timeout=5000,
+        )
+
+        assert page.locator("#map-mode-value").inner_text() == "GSI 3D"
+        assert page.locator("#maps-key-value").inner_text() == "未設定"
+        assert "GSI 3D表示" in page.locator("#map-health-value").inner_text()
+        assert "出典: 国土地理院" in page.locator(".gsi-3d-attribution").inner_text()
+
+    def test_gsi_3d_mode_downgrades_to_fallback_when_unavailable(self, loaded_page):
+        """GSI 3D adapter 初期化失敗時は既存 fallback 地図へ降格する。"""
+        page, _ = loaded_page
+        page.evaluate("window.__URBAN_FORCE_GSI_3D_FAIL__ = true")
+        page.select_option("#map-mode-select", value="gsi_3d")
+        page.wait_for_function(
+            """() => {
+                const mode = document.getElementById('map-mode-value');
+                return Boolean(mode && mode.textContent.includes('Fallback'));
+            }""",
+            timeout=5000,
+        )
+
+        assert page.locator("#map-mode-value").inner_text() == "Fallback"
+        assert "Fallback表示" in page.locator("#map-health-value").inner_text()
+        assert page.locator(".gsi-3d-attribution").count() == 0
+        page.evaluate("window.__URBAN_FORCE_GSI_3D_FAIL__ = false")
+
     def test_settings_panel_opens_from_left_dock(self, loaded_page):
         """左下の設定ボタンから設定パネルを開ける。"""
         page, _ = loaded_page
@@ -395,7 +432,7 @@ class TestMapDisplay:
 
 
 class TestMatrixOptionalFieldsPanel:
-    """MATRIX panel が MP-002〜004 の optional fields を event type ごとに表示する。"""
+    """MATRIX panel が MP-002〜006 の optional fields を event type ごとに表示する。"""
 
     def _seek_matrix_tick(self, page: "Page", tick_index: int, expected_text: str) -> str:
         """slider で tick を移動し、MATRIX panel が期待 event を描画するまで待つ。"""
@@ -426,6 +463,18 @@ class TestMatrixOptionalFieldsPanel:
         assert "sworn_duty" in panel_text
         assert "threat_containment" in panel_text
 
+    def test_takeover_start_shows_duel_school_fields(self, loaded_page):
+        """tick 0 の takeover_start に MP-006 の style と rank が表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 0, "takeover_start")
+
+        assert "takeover_start" in panel_text
+        assert "Duel school" in panel_text
+        assert "duel_style" in panel_text
+        assert "adaptive" in panel_text
+        assert "duel_rank" in panel_text
+        assert "0" in panel_text
+
     def test_world_transition_shows_exchange_pair_fields(self, loaded_page):
         """tick 1 の world_transition に MP-002 の交換コストと完了状態が表示される。"""
         page, _ = loaded_page
@@ -437,6 +486,17 @@ class TestMatrixOptionalFieldsPanel:
         assert "cost_unit:1" in panel_text
         assert "exchanged" in panel_text
         assert "true" in panel_text
+
+    def test_heartbeat_shows_walled_society_fields(self, loaded_page):
+        """tick 2 の heartbeat に MP-005 の境界透過性と外部知識レベルが表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 2, "heartbeat")
+
+        assert "heartbeat" in panel_text
+        assert "Walled society" in panel_text
+        assert "boundary_permeability" in panel_text
+        assert "outside_knowledge_level" in panel_text
+        assert "0" in panel_text
 
     def test_stale_report_shows_unstable_city_core_fields(self, loaded_page):
         """tick 3 の stale_report に MP-004 の不安定度と安定化フェーズが表示される。"""

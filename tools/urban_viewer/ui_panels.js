@@ -36,12 +36,13 @@ export function updateMapStatus(els, info) {
     if (!els) return;
 
     const usingGoogleMaps = info.mode === "Google Maps";
+    const usingGsi3D = info.mode === "GSI 3D";
     const mapsKeyPresent = info.mapsKey === "present";
 
     if (els.modeValue) {
         els.modeValue.textContent = info.mode || "Fallback";
-        els.modeValue.classList.toggle("status-pill--ok", usingGoogleMaps);
-        els.modeValue.classList.toggle("status-pill--warning", !usingGoogleMaps);
+        els.modeValue.classList.toggle("status-pill--ok", usingGoogleMaps || usingGsi3D);
+        els.modeValue.classList.toggle("status-pill--warning", !usingGoogleMaps && !usingGsi3D);
         els.modeValue.classList.toggle("status-pill--muted", false);
     }
     if (els.mapsKeyValue) {
@@ -50,7 +51,9 @@ export function updateMapStatus(els, info) {
     if (els.mapHealthValue) {
         els.mapHealthValue.textContent = usingGoogleMaps
             ? "Google Maps"
-            : "Fallback表示";
+            : usingGsi3D
+                ? "GSI 3D表示"
+                : "Fallback表示";
     }
     if (els.dataSourceValue) {
         els.dataSourceValue.textContent = info.dataSource || "local";
@@ -587,9 +590,21 @@ function matrixOptionalFieldGroups(event) {
         }];
     }
     if (event.type === "takeover_start") {
+        return [
+            {
+                label: "Oath chain",
+                fields: ["hierarchy_rank", "sworn_duty"],
+            },
+            {
+                label: "Duel school",
+                fields: ["duel_style", "duel_rank"],
+            },
+        ];
+    }
+    if (event.type === "heartbeat") {
         return [{
-            label: "Oath chain",
-            fields: ["hierarchy_rank", "sworn_duty"],
+            label: "Walled society",
+            fields: ["boundary_permeability", "outside_knowledge_level"],
         }];
     }
     if (event.type === "stale_report") {
