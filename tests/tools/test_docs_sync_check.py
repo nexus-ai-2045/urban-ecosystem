@@ -11,6 +11,7 @@ from tools.docs_sync_check import (
     cross_world_drift_errors,
     generate_markdown,
 )
+from tools.render_cross_world_roadmap_html import generate_html as generate_cross_world_roadmap_html
 
 
 def test_generated_capabilities_include_current_api_and_settings() -> None:
@@ -78,6 +79,14 @@ def test_cross_world_drift_detects_todo_and_mvp_gaps(tmp_path: Path) -> None:
     assert any("UE-XWORLD-MVP-008" in error for error in errors)
 
 
+def test_cross_world_drift_detects_generated_html_mismatch(tmp_path: Path) -> None:
+    _write_minimal_cross_world_tree(tmp_path)
+    html = tmp_path / "docs" / "cross-world-operator-roadmap.html"
+    html.write_text(html.read_text(encoding="utf-8").replace("世界をまたぐ操作モード", "stale html"), encoding="utf-8")
+
+    assert not check_cross_world_docs(tmp_path)
+
+
 def _write_minimal_cross_world_tree(root: Path) -> None:
     docs = root / "docs"
     work_orders = docs / "subagents" / "work-orders"
@@ -103,8 +112,15 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
         encoding="utf-8",
     )
 
-    (docs / "cross-world-operator-roadmap.md").write_text("- Version: `0.9.0`\n", encoding="utf-8")
-    (docs / "cross-world-operator-roadmap.html").write_text("<span>Version: 0.9.0</span>\n", encoding="utf-8")
+    (docs / "cross-world-operator-roadmap.md").write_text(
+        "- Version: `0.9.0`\n\n"
+        "## ロードマップ概要\n\n"
+        "### Phase 1: Operator MVP\n\n"
+        "- `Sentinel MVP`\n\n"
+        "最小モードを整理します。\n",
+        encoding="utf-8",
+    )
+    (docs / "cross-world-operator-roadmap.html").write_text(generate_cross_world_roadmap_html(root), encoding="utf-8")
     (docs / "cross-world-operator-todo.html").write_text("<html></html>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.md").write_text(
         "- Version: `0.9.0`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
