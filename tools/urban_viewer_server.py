@@ -1608,6 +1608,7 @@ app = FastAPI(title="Urban Ecosystem Viewer", version="0.1.0")
 # 静的アセット配信 (/static/* -> tools/urban_viewer/)
 _STATIC_DIR = Path(__file__).parent / "urban_viewer"
 _APP_JS_PATH = _STATIC_DIR / "app.js"
+_DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
 
 
 @app.get("/static/app.js")
@@ -1632,6 +1633,10 @@ async def _serve_app_js() -> Response:
 
 # app.js 以外の静的アセット (CSS / 他 JS / colors.js 等) は raw 配信
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+# 公開ロードマップ / TODO preview を Cloud Run でも閲覧できるようにする。
+# docs は public repo の正本で、private path / secret scan は docs_sync_check 側で検出する。
+app.mount("/docs", StaticFiles(directory=str(_DOCS_DIR), html=True), name="docs")
 
 
 @app.middleware("http")
