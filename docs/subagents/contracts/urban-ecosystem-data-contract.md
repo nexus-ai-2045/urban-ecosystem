@@ -1,7 +1,7 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.4
+version: 0.7.5
 owner: manager
 updated: 2026-06-12
 
@@ -319,6 +319,8 @@ Optional:
 - `last_heartbeat_tick` (integer >= 0): stale 判定で参照した最後の heartbeat tick。
 - `missed_heartbeats` (integer >= 0): 最後の heartbeat から stale_report までの tick 差。
 - `reason` (string): 人間可読な説明。LLM 生成を必須にしない。
+- `body_network_boundary` (string, optional): `cybernetic_governance` motif (MP-001 / v0.7.5) が付与する身体状態と network-visible state の境界説明。`takeover_start` で使用する。例: `"body_state_vs_network_state"`。保護された名称・外部秘密・個人情報を含めない。
+- `command_review_channel` (string, optional): `cybernetic_governance` motif (MP-001 / v0.7.5) が付与する command role の review 面。高リスク action を直接実行せず、human gate / review queue へ送ることを replay 可能に示す。`takeover_start` で使用する。例: `"human_gate_review_queue"`。保護された名称・外部秘密・個人情報を含めない。
 - `exchange_cost_payload` (string or dict, optional): `world_transition` で消費した資源を人間可読に記録する。replay で後から集計・比較できる。例: `"cost_unit:1"`。`exchanged=true` の場合は必須。
 - `exchanged` (bool, optional): この transition が等価変換として完了したことを示す。`true` の場合、逆方向の移動は元の状態を復元しない (逆 transition は別の新しい event として記録する)。
 - `hierarchy_rank` (integer >= 0, optional): `oath_chain` motif (MP-003 / v0.7.1) が付与する命令権限の階層ランク。0 が最上位権限 (apex)。値が小さいほど高い権限を持ち、命令は低い rank 番号から高い rank 番号へ向かう。`takeover_start` で使用する。保護された名称・外部秘密・個人情報を含めない。
@@ -357,6 +359,18 @@ Rules:
 - `liminal` から出る transition は cost 2 とし、human gate または明示的な matrix event を evidence として残す。
 - world layer model は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `exchanged=true` の `world_transition` は `exchange_cost_payload` を必ず持つ。`exchange_cost_payload` は消費した抽象コストを人間可読に表現し、保護された名称・外部秘密・個人情報を含めない。
+
+### Cybernetic Governance (`cybernetic_governance`)
+
+`cybernetic_governance` は身体状態、network-visible state、command role、observer review の境界を表す公開 alias である (MP-001 / v0.7.5)。`takeover_start` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `body_network_boundary` は人間可読な境界説明。simulated body state と network-visible state を混同しないための短い識別子を使う。
+- `command_review_channel` は高リスク action を直接実行せず、human gate / review queue へ送る review 面を示す。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `cybernetic_governance` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`body_network_boundary`、`command_review_channel` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Oath Chain (`oath_chain`)
 
@@ -529,3 +543,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.7.2 (MATRIX M9-004): `unstable_city_core` motif packet (MP-004) の optional field を追加。`core_instability_level` (integer >= 0) と `stabilization_phase` (string) を `MatrixEvent` の optional field として追加した。`stale_report` に付与し、都市中枢の不安定度と崩壊-回復フェーズを replay 可能な形で記録する。Unstable City Core Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.3 (MATRIX M9-005): `walled_society` motif packet (MP-005) の optional field を追加。`boundary_permeability` (integer >= 0) と `outside_knowledge_level` (integer >= 0) を `MatrixEvent` の optional field として追加した。`guide_agent` heartbeat に付与し、境界の透過性と外部知識の蓄積レベルを replay 可能な形で記録する。Walled Society Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.4 (MATRIX M9-006): `duel_school` motif packet (MP-006) の optional field を追加。`duel_style` (string) と `duel_rank` (integer >= 0) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、1 対 1 competitive engagement の流派 style と競争 rank を replay 可能な形で記録する。Duel School Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.5 (MATRIX M6-001 / MP-001): `cybernetic_governance` motif packet の optional field を追加。`body_network_boundary` (string) と `command_review_channel` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、身体状態 / network-visible state の境界と command review 面を replay 可能な形で記録する。Cybernetic Governance Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。

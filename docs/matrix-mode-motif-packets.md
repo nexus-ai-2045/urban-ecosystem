@@ -18,7 +18,7 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 
 | ID | Status | Public alias | 種別 | 証拠 |
 |---|---|---|---|---|
-| MP-001 | docs-only | `cybernetic_governance` | Cross-world Pack 1 | この文書 |
+| MP-001 | 実装済み | `cybernetic_governance` | Cross-world Pack 1 | この文書 / data contract v0.7.5 / test_cybernetic_governance_* 2 件 |
 | MP-002 | 実装済み | `exchange_pair` | Cross-world Pack 2 | この文書 / data contract v0.7.0 / test_exchange_pair_* 2 件 |
 | MP-003 | 実装済み | `oath_chain` | Cross-world Pack 3 | この文書 / data contract v0.7.1 / test_oath_chain_* 2 件 |
 | MP-004 | 実装済み | `unstable_city_core` | Cross-world Pack 4 | この文書 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
@@ -66,24 +66,27 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 
 | Surface | 現れるもの | M6 の範囲 |
 |---|---|---|
-| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み (docs-only) |
-| contract | 将来の `MatrixEvent` field / enum 候補を検討する入口 | M6 では変更しない |
-| replay | `agent_states.jsonl` と `matrix_events.jsonl` の境界として説明する | M6 では新規 event を出さない |
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `body_network_boundary` / `command_review_channel` optional field 追加、Cybernetic Governance Rules 追記 | v0.7.5 で実装 |
+| replay | `takeover_start` event に両フィールドを optional 追加 | M6 で実装 |
 | viewer | body/network/command/observer の説明を将来 UI に出す候補 | M6 では UI copy を追加しない |
-| tests | docs boundary、protected term absence、TODO 証拠の確認 | M6 は `rg` / diff check で検証する |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M6 で実装 |
 
 ### Risk notes
 
 - copyright/trademark: 抽象構造だけを扱い、protected name は roadmap の境界説明以外へ移さない。
 - privacy: 個人情報や secret を evidence_ref、reason、issue template に入れない。
 - safety: surveillance や manipulation を「便利機能」として扱わず、human gate と observer review を必須にする。
-- scope: M6 は docs-only motif packet。runtime primitive、viewer UI、外部連携は別 TODO で扱う。
+- scope: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
 
 ### Testable acceptance
 
 - `docs/matrix-mode-motif-packets.md` に `cybernetic_governance` packet がある。
 - public alias が `lower_snake_case` のオリジナル名である。
 - 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.5 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` の run の `takeover_start` event に `body_network_boundary` と `command_review_channel` が含まれる。同一 seed 2 回で値が一致する (決定論)。
 - protected names、protected quotes、lookalike art、voice、music が runtime、UI copy、code identifier に追加されていない。
 - `docs/matrix-mode-roadmap.md` の M6-001 がこの packet を証拠として参照する。
 
