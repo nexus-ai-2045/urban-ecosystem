@@ -3,7 +3,7 @@ urban_2d ルールベースシミュレーション (§9 / §13.3 / §20)。
 
 正本:
   - docs/ai-ecosystem-tool-spec.md §9 行動ルール / §13.3 シミュレーション検証 / §20 境界ケース
-  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.4
+  - docs/subagents/contracts/urban-ecosystem-data-contract.md v0.7.5
 
 責務:
   profiles + POI から tick ループを回し、agent_states.jsonl /
@@ -171,6 +171,8 @@ class Simulation:
         matrix_swarm_stale_after_ticks: int = MATRIX_SWARM_STALE_AFTER_TICKS_DEFAULT,
         matrix_swarm_orphan_tolerance: int = MATRIX_SWARM_ORPHAN_TOLERANCE_DEFAULT,
         matrix_swarm_heartbeat_interval_ticks: int = 1,
+        matrix_body_network_boundary: str = "body_state_vs_network_state",
+        matrix_command_review_channel: str = "human_gate_review_queue",
         matrix_oath_chain_rank: int = 1,
         matrix_sworn_duty: str = "threat_containment",
         matrix_core_instability_level: int = 1,
@@ -222,6 +224,14 @@ class Simulation:
             matrix_swarm_stale_after_ticks: stale 判定までの heartbeat 欠落 tick 数。
             matrix_swarm_orphan_tolerance: orphan sentinel の許容数。MVP 既定は 0。
             matrix_swarm_heartbeat_interval_ticks: heartbeat 期待間隔。
+            matrix_body_network_boundary: cybernetic_governance motif (MP-001 / v0.7.5)
+                の身体状態と network-visible state の境界説明。
+                matrix_mode=True の takeover_start に付与する。
+                保護されたキャラクター名・外部秘密・個人情報を含めない。
+            matrix_command_review_channel: cybernetic_governance motif (MP-001 / v0.7.5)
+                の command role が高リスク action を送る review 面。
+                matrix_mode=True の takeover_start に付与する。
+                保護されたキャラクター名・外部秘密・個人情報を含めない。
             matrix_oath_chain_rank: oath_chain motif (MP-003 / v0.7.1) の命令権限ランク。
                 0 が apex (最上位権限)。matrix_mode=True の takeover_start に付与する。
                 rng を消費しないため既存の rng 消費順序は不変。
@@ -305,6 +315,9 @@ class Simulation:
         self.matrix_swarm_stale_after_ticks = matrix_swarm_stale_after_ticks
         self.matrix_swarm_orphan_tolerance = matrix_swarm_orphan_tolerance
         self.matrix_swarm_heartbeat_interval_ticks = matrix_swarm_heartbeat_interval_ticks
+        # MP-001 cybernetic_governance (v0.7.5): takeover_start に付与する境界とreview面
+        self.matrix_body_network_boundary = matrix_body_network_boundary
+        self.matrix_command_review_channel = matrix_command_review_channel
         # MP-003 oath_chain (v0.7.1): takeover_start に付与する命令権限と誓約
         self.matrix_oath_chain_rank = matrix_oath_chain_rank
         self.matrix_sworn_duty = matrix_sworn_duty
@@ -1362,6 +1375,7 @@ class Simulation:
         end_tick = min(self.ticks - 1, self.matrix_ttl_ticks - 1)
 
         if tick == 0:
+            # MP-001 cybernetic_governance (v0.7.5): body/network 境界と command review 面を決定論的に付与する。
             # MP-003 oath_chain (v0.7.1): 命令権限ランクと役割誓約を決定論的に付与する。
             # MP-006 duel_school (v0.7.4): engagement style と competitive rank を決定論的に付与する。
             # rng を消費しないため既存の rng 消費順序は不変。
@@ -1378,6 +1392,8 @@ class Simulation:
                 "target_layer": "virtual",
                 "world_layer": "virtual",
                 "reason": "sentinel_mvp_attach",
+                "body_network_boundary": self.matrix_body_network_boundary,
+                "command_review_channel": self.matrix_command_review_channel,
                 "hierarchy_rank": self.matrix_oath_chain_rank,
                 "sworn_duty": self.matrix_sworn_duty,
                 "duel_style": self.matrix_duel_style,

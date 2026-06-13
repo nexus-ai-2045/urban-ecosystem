@@ -35,13 +35,13 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 
 公開実装名はオリジナルでなければならない。作品名、キャラクター名、引用、世界観は議論の参照元として扱えるが、product surface、prompt、code identifier、sample data、UI copy、visual design、music、generated asset としてコピーしてはならない。
 
-| 参照元 | 公開実装 alias | 採用してよい抽象機能 |
+| 発想クラス | 公開実装 alias | 採用してよい抽象機能 |
 |---|---|---|
-| Agent Smith | `sentinel_mvp` | 実行時 role takeover、封じ込め圧、adversarial simulation |
-| Neo | `bridge_agent` | `virtual`、`real`、`liminal` world layer 間の移動 |
-| Morpheus | `guide_agent` | ルール説明、選択肢提示、transition 開始 |
-| Trinity | `operator_agent` | 高信頼実行、rescue path、operator support |
-| Agents group | `sentinel_swarm` | 協調 monitor、guard、escalation |
+| Sentinel archetype | `sentinel_mvp` | 実行時 role takeover、封じ込め圧、adversarial simulation |
+| World bridge archetype | `bridge_agent` | `virtual`、`real`、`liminal` world layer 間の移動 |
+| Guide archetype | `guide_agent` | ルール説明、選択肢提示、transition 開始 |
+| Operator archetype | `operator_agent` | 高信頼実行、rescue path、operator support |
+| Sentinel group archetype | `sentinel_swarm` | 協調 monitor、guard、escalation |
 | Cybernetic special unit archetypes | `cybernetic_governance` | body/network 境界、field operator、command role |
 | Alchemy sibling archetypes | `exchange_pair` | cost、transformation、equivalent exchange 実験 |
 | Demon-slayer command archetypes | `oath_corps` | duty、hierarchy、threat containment |
@@ -105,7 +105,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 
 ### Phase 2: `bridge_agent`
 
-目標: Neo的な能力を、コピーではなく抽象能力として実装する。
+目標: world bridge 的な能力を、コピーではなく抽象能力として実装する。
 
 挙動:
 
@@ -226,6 +226,7 @@ MATRIXモードは、この土台の上に optional `matrix_events.jsonl`、CLI 
 - spore forest
 - 8-bit audio cue layer
 - vehicle / virtual event experience layer
+- GSI 3D map layer (`gsi_3d_layer`, packet 起草済み → `docs/gsi-3d-map-layer.md`)
 
 ### Phase 10: Recursive Repo Skills
 
@@ -291,8 +292,8 @@ MATRIXモードは複数 workstream に分かれるため、main agent は orche
 
 | 判定 | Yes 条件 | 現状 |
 |---|---|---|
-| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-12 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M9-006 は duel_school motif packet と data contract v0.7.4 が本 commit で実装済み。M11-003 は MATRIX panel optional fields 表示と E2E 23 件で確認済み。M9-005 は walled_society motif packet と data contract v0.7.3 が実装済み。M9-004 は unstable_city_core motif packet と data contract v0.7.2 が実装済み。M9-003 は oath_chain motif packet と data contract v0.7.1 が実装済み。M9-002 は PR #95 (cead42e) で exchange_pair motif packet と data contract v0.7.0 が実装済み。M11-001 は PR #94 / #95 の merge 前 out-of-band review comment が evidence として確認できる) |
-| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-12 実測: unit/integration 612 件 pass・fail 0 (duel_school unit tests 2 件含む)、E2E 全 24 件 pass (test_ui.py 23 件 + test_variable_agent_profiles.py 1 件)、drift gate は `matrix_mode_skill_check.py --check` と `docs_sync_check.py --check` の 2/2 が exit 0、`git diff --check` exit 0。duel_style / duel_rank は takeover_start event に emit、MATRIX panel は MP-002/003/004 optional fields を event type ごとに表示する) |
+| 残務ゼロ？ | TODO がすべて `完了`、または `保留` に human-readable reason と再開条件がある | Yes (2026-06-14 時点: TODO 表全 27 行を確認。M0-001〜M9-006 / M10-001〜M11-003 のすべてが `完了`。未着手・進行中・保留が 0 件。M6-001 は cybernetic_governance motif packet と data contract v0.7.5 が実装済み。M9-006 は duel_school motif packet と data contract v0.7.4 が実装済み。GSI 3D は `gsi_3d_layer` draft packet として docs 化済みで、runtime TODO ではなく human gate 後の別実装候補に分離済み) |
+| 実装完了してる？ | `sentinel_mvp`、`bridge_agent`、`guide_agent`、`operator_agent`、`sentinel_swarm` の contract / runtime / viewer / tests が揃い、M6-M10 の docs / UI / drift gate が完了している | Yes (2026-06-14 実測: unit/integration 635 件 pass・fail 0、drift gate は `docs_sync_check.py --check` exit 0。追加確認として MP-001 は `body_network_boundary` / `command_review_channel` を `takeover_start` event に emit し、MP-006 は `duel_style` / `duel_rank` を維持する) |
 | 運用まで保証された？ | issue intake、worker packet、human gate、docs drift、E2E、公開境界、rollback/stop 条件が検証済み | Yes (2026-06-12 時点: issue intake = M0-003 template 確立済み / worker packet = parallel delegation map 文書化済み / human gate = PR #94 / #95 の merge 前 out-of-band review comment で evidence 確認 / docs drift = drift gate 2/2 exit 0 / E2E = Playwright 23 件 pass / 公開境界 = identity guard 実地通過 2 回 / rollback・stop 条件 = operator_agent human gate event と motif packet stop 条件が docs 化済み。全 7 条件に current evidence が揃った) |
 
 No の場合の運用:
@@ -324,7 +325,7 @@ No の場合の運用:
 | M3-001 | 完了 | `guide_agent` の説明 layer を作る | rule-based fallback で現在ルールと選択肢を説明できる | data contract v0.6.2 / guide tests |
 | M4-001 | 完了 | `operator_agent` の human gate 境界を作る | public PR、secret、cost、deployment へ影響する操作が gate される | data contract v0.6.3 / human gate tests |
 | M5-001 | 完了 | `sentinel_swarm` heartbeat を設計・実装する | stale は 3 tick 欠落、orphan tolerance は初期 `0` として明記される | data contract v0.6.4 / swarm tests |
-| M6-001 | 完了 | Cross-world Pack 1 を作る | cybernetic governance をオリジナル抽象で表現する | `docs/matrix-mode-motif-packets.md` |
+| M6-001 | 完了 | Cross-world Pack 1: cybernetic_governance motif packet を実装する | `body_network_boundary` / `command_review_channel` optional field が data contract v0.7.5 に追加され、`takeover_start` event に emit され、off-by-default の不変性と同一 seed 決定論を unit test で確認できる | `docs/matrix-mode-motif-packets.md` MP-001 / data contract v0.7.5 / test_cybernetic_governance_* 2 件 |
 | M7-001 | 完了 | Turing Bench を設計する | real-person impersonation なしで評価指標を定義する | `docs/matrix-mode-turing-bench.md` |
 | M8-001 | 完了 | Three Worlds を viewer に接続する | 現在の world layer が UI で確認できる | `matrix-world` UI / viewer tests |
 | M9-001 | 完了 | 8-bit audio cue layer を実装する | 生成/権利リスクなしの短い audio cue 方針がある | `docs/matrix-mode-audio-cues.md` / `btn-audio-cue` |
@@ -430,7 +431,7 @@ MATRIXモードに新しい influence を追加する場合は、この最小 pa
 
 受け入れ条件:
 
-- roadmap が Smith > Neo > Morpheus > Trinity > Agents を alias として整理している。
+- roadmap が Sentinel > Bridge > Guide > Operator > Swarm を alias として整理している。
 - cross-world milestone が表現されている。
 - copyright boundary が明示されている。
 - やらないことが明示されている。
