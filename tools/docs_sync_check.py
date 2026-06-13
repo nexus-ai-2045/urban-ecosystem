@@ -23,6 +23,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from tools.urban_simulation_cli import build_parser
 from tools.urban_viewer_server import ALLOWED_FILES, AGENT_PROFILES_RE, SUPPORTED_DATA_SOURCES, app
+from tools.render_cross_world_roadmap_html import check_html as check_cross_world_roadmap_html
+from tools.render_cross_world_roadmap_html import write_html as write_cross_world_roadmap_html
 
 
 GENERATED_DOC = PROJECT_ROOT / "docs" / "generated" / "current-capabilities.md"
@@ -357,10 +359,13 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
 
 def check_cross_world_docs(project_root: Path = PROJECT_ROOT) -> bool:
     errors = cross_world_drift_errors(project_root)
-    if not errors:
+    html_in_sync = check_cross_world_roadmap_html(project_root)
+    if not errors and html_in_sync:
         return True
     for error in errors:
         print(error, file=sys.stderr)
+    if not html_in_sync:
+        print("Cross-world roadmap HTML is not generated from the Markdown source.", file=sys.stderr)
     return False
 
 
@@ -374,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
     content = generate_markdown()
     if args.write:
         write_document(content)
+        write_cross_world_roadmap_html()
         return 0
     if not check_document(content):
         return 1
