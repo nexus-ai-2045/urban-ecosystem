@@ -3,21 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cross-world Operator Mode ロードマップ</title>
+  <title>世界をまたぐ操作モード ロードマップ</title>
   <style>
     :root {
-      --bg: #f7f7f4;
-      --panel: #ffffff;
+      --bg: #f5f3ee;
+      --paper: #fffefa;
       --ink: #202124;
-      --muted: #5f6368;
-      --line: #d8d7d0;
-      --accent: #0f766e;
-      --accent-2: #7c3aed;
-      --warn: #9a4d00;
+      --muted: #62615b;
+      --line: #d8d2c4;
+      --teal: #0f766e;
+      --blue: #315f8f;
+      --amber: #b86b16;
+      --coral: #b94e48;
+      --shadow: 0 24px 60px rgba(31, 28, 20, 0.12);
     }
 
     * {
       box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
@@ -25,387 +31,641 @@
       background: var(--bg);
       color: var(--ink);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.65;
+      line-height: 1.7;
     }
 
-    main {
-      max-width: 1120px;
+    a {
+      color: var(--teal);
+      text-underline-offset: 3px;
+    }
+
+    .site-shell {
+      min-height: 100vh;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid rgba(32, 33, 36, 0.1);
+      background: rgba(245, 243, 238, 0.86);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-inner {
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 32px 20px 56px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
 
-    header {
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 24px;
-      margin-bottom: 28px;
+    .brand {
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .hero {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 44px 20px 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+      gap: 30px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-size: 0.9rem;
+      font-weight: 800;
     }
 
     h1,
     h2,
     h3 {
-      line-height: 1.25;
       letter-spacing: 0;
+      line-height: 1.22;
     }
 
     h1 {
-      font-size: 2rem;
-      margin: 0 0 12px;
+      margin: 0;
+      font-size: clamp(2.3rem, 5vw, 4.8rem);
+      max-width: 9.5em;
     }
 
     h2 {
-      font-size: 1.35rem;
-      margin: 40px 0 14px;
+      margin: 0 0 16px;
+      font-size: clamp(1.65rem, 3vw, 2.4rem);
     }
 
     h3 {
-      font-size: 1rem;
       margin: 0 0 8px;
+      font-size: 1.08rem;
     }
 
     p {
-      margin: 0 0 14px;
+      margin: 0;
     }
 
-    a {
-      color: var(--accent);
+    .lead {
+      margin-top: 18px;
+      color: #3d3c37;
+      font-size: 1.12rem;
+      max-width: 36rem;
     }
 
-    code {
-      background: #ecebe5;
-      border-radius: 4px;
-      padding: 0.1rem 0.32rem;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 0.92em;
-    }
-
-    .meta {
+    .hero-actions {
+      margin-top: 22px;
       display: flex;
+      gap: 10px;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
     }
 
-    .pill {
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
       border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--panel);
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: var(--ink);
+      background: var(--paper);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .button.primary {
+      border-color: #174c49;
+      background: #174c49;
+      color: #fff;
+    }
+
+    .hero-visual {
+      margin: 0;
+      border: 1px solid rgba(32, 33, 36, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-visual img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+    }
+
+    .hero-visual figcaption {
+      padding: 10px 12px;
       color: var(--muted);
-      padding: 4px 10px;
-      font-size: 0.9rem;
+      font-size: 0.86rem;
+      border-top: 1px solid var(--line);
     }
 
-    .note {
-      border-left: 4px solid var(--accent);
-      background: var(--panel);
-      padding: 14px 16px;
-      margin: 16px 0;
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 20px 64px;
     }
 
-    .warning {
-      border-left-color: var(--warn);
+    section {
+      margin-top: 52px;
     }
 
-    .grid {
+    .summary-grid,
+    .cards,
+    .proof-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card,
+    .card,
+    .phase,
+    .gate {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .summary-card strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--teal);
+      font-size: 1.45rem;
+      line-height: 1.1;
+    }
+
+    .summary-card span,
+    .muted,
+    .id {
+      color: var(--muted);
+    }
+
+    .id {
+      display: block;
+      margin-top: 8px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.78rem;
+    }
+
+    .journey {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
 
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 14px;
-    }
-
-    .card strong {
-      color: var(--accent);
-    }
-
-    .roadmap {
-      display: grid;
-      gap: 10px;
-      counter-reset: item;
-    }
-
-    .roadmap article {
-      counter-increment: item;
+    .world {
       position: relative;
-      background: var(--panel);
+      min-height: 170px;
+      overflow: hidden;
+      background: var(--paper);
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 14px 14px 14px 52px;
+      padding: 18px;
     }
 
-    .roadmap article::before {
-      content: counter(item);
+    .world::after {
+      content: "";
       position: absolute;
-      left: 14px;
-      top: 14px;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
+      right: -44px;
+      bottom: -54px;
+      width: 150px;
+      height: 150px;
+      border: 18px solid rgba(15, 118, 110, 0.12);
+      border-radius: 999px;
+    }
+
+    .world.simulated::after {
+      border-color: rgba(49, 95, 143, 0.15);
+    }
+
+    .world.liminal::after {
+      border-color: rgba(184, 107, 22, 0.16);
+    }
+
+    .world small {
+      display: block;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      counter-reset: phase;
+    }
+
+    .phase {
+      counter-increment: phase;
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) minmax(220px, 0.45fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .phase-number {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
       display: grid;
       place-items: center;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 800;
+    }
+
+    .phase:nth-child(2) .phase-number,
+    .phase:nth-child(5) .phase-number {
+      background: var(--blue);
+    }
+
+    .phase:nth-child(3) .phase-number,
+    .phase:nth-child(6) .phase-number {
+      background: var(--amber);
+    }
+
+    .phase:nth-child(4) .phase-number,
+    .phase:nth-child(7) .phase-number {
+      background: var(--coral);
+    }
+
+    .phase p {
+      color: #3d3c37;
+    }
+
+    .phase ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: var(--muted);
+    }
+
+    .label-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 9px;
+      color: var(--muted);
+      background: #fbfaf6;
       font-size: 0.82rem;
       font-weight: 700;
     }
 
-    ul {
-      margin: 8px 0 0;
-      padding-left: 1.2rem;
+    .gate {
+      border-left: 5px solid var(--amber);
     }
 
-    .two-col {
+    .gate strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .plain-list {
+      margin: 10px 0 0;
+      padding-left: 1.15rem;
+      color: #3d3c37;
+    }
+
+    .docs-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
     }
 
-    .source-list dt {
-      color: var(--accent-2);
-      font-weight: 700;
-      margin-top: 10px;
+    .doc-link {
+      display: block;
+      min-height: 110px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      text-decoration: none;
+      color: var(--ink);
     }
 
-    .source-list dd {
-      margin: 2px 0 0;
+    .doc-link span {
+      display: block;
+      margin-top: 8px;
       color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 20px 42px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 26px;
+      }
+
+      .journey,
+      .phase {
+        grid-template-columns: 1fr;
+      }
+
+      .phase-number {
+        width: 36px;
+        height: 36px;
+      }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Cross-world Operator Mode ロードマップ</h1>
-      <p>
-        viewer / operator が複数の simulation layer をまたいで agent を一時的に観測・操作・案内するための
-        docs-only roadmap preview。
-      </p>
-      <div class="meta" aria-label="document metadata">
-        <span class="pill">Status: draft</span>
-        <span class="pill">Version: 0.9.0</span>
-        <span class="pill">Owner: manager</span>
-        <span class="pill">Updated: 2026-06-08</span>
-        <span class="pill">Data contract: unchanged</span>
+  <div class="site-shell">
+    <nav class="nav" aria-label="ページ内ナビゲーション">
+      <div class="nav-inner">
+        <div class="brand">世界をまたぐ操作モード</div>
+        <div class="nav-links">
+          <a href="#overview">概要</a>
+          <a href="#worlds">三つの世界</a>
+          <a href="#roadmap">ロードマップ</a>
+          <a href="#gates">保証</a>
+          <a href="#docs">正本</a>
+        </div>
       </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Cross-world Operator Mode / Version: 0.9.0</p>
+        <h1>AIエージェントを、世界ごと動かせるようにする。</h1>
+        <p class="lead">
+          これは、複数の世界レイヤーをまたいで、観測・操作・案内・レビューを行うためのロードマップです。
+          まずは「誰に入るか」よりも、「どの世界で、何を見て、どこまで動かしてよいか」を決めます。
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#roadmap">次に作るものを見る</a>
+          <a class="button" href="cross-world-operator-todo.html">未実装TODOを見る</a>
+        </div>
+      </div>
+      <figure class="hero-visual">
+        <img src="assets/cross-world-roadmap-hero.png" alt="三層の世界、操作ノード、レビューゲートを抽象的に表したロードマップのキービジュアル">
+        <figcaption>三つの世界、操作ノード、レビューゲートを一枚にまとめた抽象イメージ。</figcaption>
+      </figure>
     </header>
 
-    <section>
-      <h2>目的</h2>
-      <p>
-        この最初の PR では、既存の Urban Ecosystem data contract を変更しない。
-        実装も入れず、公開可能な roadmap docs と work order だけを追加する。
-      </p>
-      <p>
-        発想段階で参照した外部作品名・キャラクター名は、実装 ID や公開識別子として使わない。
-        公開面では abstract archetype / milestone に変換した名前だけを使う。
-      </p>
-    </section>
-
-    <section>
-      <h2>Versioning</h2>
-      <p>
-        Cross-world Operator Mode の docs package version は意味単位で自動更新する。
-        現在の <code>0.9.0</code> は、MVP-008 Intake Lifecycle And Worldbuilding Pipelineの toy prototype を追加した MINOR 更新。
-        Urban Ecosystem data contract は変更しない。
-      </p>
-    </section>
-
-    <section>
-      <h2>Skill / Orchestration Premise</h2>
-      <p>
-        Cross-world Operator Mode は、最終的に単一機能ではなく、再利用可能な skill 集合と、
-        それらを安全に呼び分ける orchestration 群として扱う。
-      </p>
-      <div class="grid">
-        <article>
-          <h3>Skill mesh</h3>
-          <p>operator entry、world bridge、guide / roster、motif intake、assessment、governance、distributed ops、intake lifecycleを責任単位に分ける。</p>
-        </article>
-        <article>
-          <h3>Orchestration pack</h3>
-          <p>FDE packet、human gate、drift check、public-safe validator、review handoff、rollback conditionを束ねる。</p>
-        </article>
-        <article>
-          <h3>Loop guard</h3>
-          <p>recursive skill callには、maximum depth、allowed I/O、source category、human gate、loop guardを必須にする。</p>
-        </article>
-      </div>
-    </section>
-
-    <section>
-      <h2>公開命名境界</h2>
-      <div class="grid">
-        <div class="card"><strong>Cross-world Operator Mode</strong><br>virtual-world operator / agent-possession motif</div>
-        <div class="card"><strong>Sentinel MVP</strong><br>最小 takeover / monitoring MVP</div>
-        <div class="card"><strong>World Bridge Actor</strong><br>virtual / physical bridge actor</div>
-        <div class="card"><strong>Guide / Partner</strong><br>guide / partner roles</div>
-        <div class="card"><strong>Agent Roster</strong><br>monitoring / intervention agents</div>
-        <div class="card"><strong>Cyber-ops Milestones</strong><br>cyber-operations / field-support roles</div>
-        <div class="card"><strong>Equivalent Exchange Pair</strong><br>paired restoration / exchange motifs</div>
-        <div class="card"><strong>Pillar Council Arc</strong><br>guardian / council / patron / corruption-prime motifs</div>
-        <div class="card"><strong>Unstable Power Arc</strong><br>rider / unstable vessel / dormant city-core motifs</div>
-        <div class="card"><strong>Boundary War Arc</strong><br>boundary / protector / strategist motifs</div>
-        <div class="card"><strong>Fighter Archetype Set</strong><br>discipline / rival / precision fighter motifs</div>
-        <div class="card"><strong>Pilot Sync Arc</strong><br>pilot trio / synchronization / bio-machine motifs</div>
-      </div>
-    </section>
-
-    <section>
-      <h2>ロードマップ</h2>
-      <div class="roadmap">
-        <article><h3>Sentinel MVP</h3><p>agent 選択、inspection/control viewpoint、通常 replay への復帰を定義する。</p></article>
-        <article><h3>World Bridge Actor</h3><p><code>physical</code>, <code>simulated</code>, <code>liminal</code> を行き来する state model。</p></article>
-        <article><h3>Guide / Partner</h3><p>operator が見ているものを説明し、安全な行動を助ける guide / companion archetype。</p></article>
-        <article><h3>Agent Roster</h3><p>監視・追跡・介入 archetype を増やす。copyrighted names や real-person identities は encoding しない。</p></article>
-        <article><h3>Cyber-ops Milestones</h3><p>cross-world operation、field support、supervisor role を future work order として整理する。</p></article>
-        <article><h3>Equivalent Exchange Pair</h3><p>cost、restoration、pair dependency、body/soul separation を mechanics として扱う。</p></article>
-        <article><h3>Pillar Council Arc</h3><p>guardian、council、patron-leader、corruption-prime structure を social hierarchy / conflict として扱う。</p></article>
-        <article><h3>Unstable Power Arc</h3><p>city-scale instability、uncontrolled power、awakening event、containment dynamics。</p></article>
-        <article><h3>Boundary War Arc</h3><p>wall/boundary logic、external-world pressure、protector、strategist、elite intervention。</p></article>
-        <article><h3>Fighter Archetype Set</h3><p>discipline、rivalry、precision、training、event-duel を optional scenario pattern とする。</p></article>
-        <article><h3>Social-Tech Mirror Lab</h3><p>technology が human behavior、incentives、identity、trust をどう歪めるかを short scenario で検証する。</p></article>
-        <article><h3>Judgment Game Arc</h3><p>judgment、surveillance、inference、counter-inference、adversarial reasoning。</p></article>
-        <article><h3>Ecological Mediation Arc</h3><p>environmental negotiation、collective organisms、swarm intelligence、non-human agency。</p></article>
-        <article><h3>Pilot Sync Arc</h3><p>reluctant pilot、quiet mirror、rival pilot、synchronization threshold、bio-machine pressure。</p></article>
-        <article><h3>Human/AI Assessment Lab</h3><p>欺瞞ではなく、human-likeness、intention inference、boundary recognition、assessor calibration を評価する。</p></article>
-        <article><h3>Three-world Layer</h3><p><code>physical</code>, <code>simulated</code>, <code>liminal</code> を初期 three-layer world model とする。</p></article>
-        <article><h3>Event + Music Layer</h3><p>vehicle-event / virtual-performer の参加感と、後続の 8-bit WebAudio cue prototype。</p></article>
-        <article><h3>Next Motif Expansion Slot</h3><p>次の承認 motif を追加できる extension point を残す。</p></article>
-        <article><h3>Post-Singularity Scenario Boundary</h3><p>prediction ではなく bounded scenario family として扱う。</p></article>
-        <article><h3>Chaotic Three-Body World Benchmark</h3><p>initial-condition sensitivity、stable-window、chaotic-era、local policy assessment を見る。</p></article>
-        <article><h3>Frontier AI Capability Layer Benchmark</h3><p>long-horizon autonomy、tool use、misuse-adjacent constraints、governance thresholds を public-safe に扱う。</p></article>
-        <article><h3>Scale-Simplification Simulation Benchmark</h3><p>micro social layer と macro physical layer を比較し、scale を広げることで simulation noise が減る場合を評価する。</p></article>
-        <article><h3>Future-Known Implementation Frame</h3><p>昔の future-world image、現在の local capacity、repo が埋める gap を比較する。</p></article>
-        <article><h3>Human Time-Sense Boundary Benchmark</h3><p>wait value、progress、stuck state、next return point、embodied urgency を人間に伝えられるかを見る。</p></article>
-        <article><h3>Numeric Operating Protocol</h3><p>cycle、compression、opening、split-count rule を creative operating hypothesis として扱う。</p></article>
-        <article><h3>FDE Packet Router Benchmark</h3><p><code>entry -> packet -> evidence -> decision -> closure</code> で loose chat residue を防ぐ。</p></article>
-        <article><h3>Agent Harness Layer Benchmark</h3><p>model capability と product harness quality を分ける。</p></article>
-        <article><h3>User Oversight Fourth-Power Layer</h3><p>user を external observer / fourth-power media layer として定義する。</p></article>
-        <article><h3>Deliberative Separation-of-Powers Layer</h3><p>proposal / review / execution と meta-user oversight に分ける。</p></article>
-        <article><h3>Repository-as-Skill Mesh</h3><p>repo を callable skills と recursive references の集合として検討する。</p></article>
-        <article><h3>P2P Distributed Operations Spike</h3><p>identity、trust、sync、conflict resolution、moderation、abuse resistance を先に設計する。</p></article>
-        <article><h3>Cloud Capacity Envelope</h3><p>cloud use は target service、data egress、cost/quota、credentials、rollback plan を human gate の後に置く。</p></article>
-        <article><h3>Worldbuilding Extraction Pipeline</h3><p>source article を section / layer / claim / term に分解し、link validation と orchestration report で閉じる。</p></article>
-      </div>
-    </section>
-
-    <section>
-      <h2>拡張保証</h2>
-      <div class="two-col">
-        <div class="card">
-          <h3>Archetype Guarantee</h3>
-          <p>agent selection、operator guidance、conflict、assessment、replay explanation のいずれかに現れる actor / role archetype が最低1つある。</p>
+    <main>
+      <section id="overview">
+        <h2>一言でいうと</h2>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <strong>入る</strong>
+            <span>エージェントの視点に入り、何を見ているかを確認する。</span>
+          </article>
+          <article class="summary-card">
+            <strong>渡る</strong>
+            <span>現実、シミュレーション、あいだの世界を行き来する。</span>
+          </article>
+          <article class="summary-card">
+            <strong>守る</strong>
+            <span>操作できる範囲、公開してよい名前、人間レビューを明確にする。</span>
+          </article>
+          <article class="summary-card">
+            <strong>増やす</strong>
+            <span>新しいモチーフや世界観を、安全な抽象名に変換して追加する。</span>
+          </article>
         </div>
-        <div class="card">
-          <h3>World Guarantee</h3>
-          <p>world rule、pressure、layer、institution、ecology、machine system、boundary condition のいずれかが最低1つある。</p>
+      </section>
+
+      <section id="worlds">
+        <h2>舞台は三つ</h2>
+        <div class="journey">
+          <article class="world physical">
+            <small>1 / 現実</small>
+            <h3>人間が責任を持つ場所</h3>
+            <p>レビュー、承認、公開判断、費用、アカウント、クラウド利用などはここで扱う。</p>
+            <span class="id">physical</span>
+          </article>
+          <article class="world simulated">
+            <small>2 / 仮想</small>
+            <h3>試しに動かす場所</h3>
+            <p>エージェント、世界ルール、ベンチマーク、シナリオを小さく試す。</p>
+            <span class="id">simulated</span>
+          </article>
+          <article class="world liminal">
+            <small>3 / 境界</small>
+            <h3>意味をつなぐ場所</h3>
+            <p>現実と仮想の差分、違和感、保留、判断待ちを置く。</p>
+            <span class="id">liminal</span>
+          </article>
         </div>
-      </div>
-      <div class="note warning">
-        Operator-entry phrase は internal design input として扱えるが、public code に copyrighted catchphrase、
-        character name、quoted line を hard-code しない。
-      </div>
-    </section>
+      </section>
 
-    <section>
-      <h2>Minimum World Richness Guarantee</h2>
-      <ul>
-        <li>Place and environment</li>
-        <li>Rules of possibility</li>
-        <li>Social fabric</li>
-        <li>Resources and power</li>
-        <li>History and memory</li>
-        <li>Daily life signal</li>
-        <li>Change pressure</li>
-      </ul>
-      <p>
-        7項目を満たせない addition は、<code>parking-lot</code> または <code>watch</code> item としてのみ扱う。
-      </p>
-    </section>
+      <section id="roadmap">
+        <h2>ロードマップ</h2>
+        <div class="timeline">
+          <article class="phase">
+            <div class="phase-number">01</div>
+            <div>
+              <h3>まず、エージェントの視点に入る</h3>
+              <p>任意のエージェントを選び、観測・軽い操作・通常状態への復帰までを最小単位で作る。</p>
+              <div class="label-row">
+                <span class="label">最初のMVP</span>
+                <span class="label">人間レビュー必須</span>
+              </div>
+            </div>
+            <ul>
+              <li>視点に入る</li>
+              <li>操作範囲を出す</li>
+              <li>戻れるようにする</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>Fractal Decision / FDE</h2>
-      <p>
-        default decision shape は three AI branches plus one meta-user oversight layer。
-        Proposal branch、Review branch、Execution branch、Fourth-power oversight に分ける。
-      </p>
-      <div class="grid">
-        <div class="card"><strong>Entry</strong><br>decision を trigger したもの。</div>
-        <div class="card"><strong>Packet</strong><br>smallest reviewable unit。</div>
-        <div class="card"><strong>Evidence</strong><br>local files、tests、sources、explicit assumptions。</div>
-        <div class="card"><strong>Decision</strong><br>adopt、revise、park、reroute、reject、escalate。</div>
-        <div class="card"><strong>Closure</strong><br>何が変わり、何が残り、誰が reopen できるか。</div>
-      </div>
-    </section>
+          <article class="phase">
+            <div class="phase-number">02</div>
+            <div>
+              <h3>三つの世界を行き来する</h3>
+              <p>現実、仮想、境界の状態モデルを作り、どの情報がどの世界に属するかを整理する。</p>
+              <span class="id">World Bridge Actor</span>
+            </div>
+            <ul>
+              <li>世界レイヤー</li>
+              <li>移動条件</li>
+              <li>最低限の世界要素</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>Scale-Simplification Simulation Benchmark</h2>
-      <p>
-        外部公開post由来の採用候補として、scale を広げると simulation が単純化する場合がある、
-        という benchmark を追加する。引用ではなく抽象化した評価軸として扱う。
-      </p>
-      <div class="grid">
-        <div class="card"><strong>Social Noise</strong><br>人間社会の個別具体は noise が多く、local simulation が難しい場合がある。</div>
-        <div class="card"><strong>Physical Scale</strong><br>物理法則が支配する大きな scale では、rule set が少なくなり model 化しやすい場合がある。</div>
-        <div class="card"><strong>Cognition Boundary</strong><br>難しさは world 側だけでなく、人間の認知・理解・観測粒度にも依存する。</div>
-        <div class="card"><strong>Layer Comparison</strong><br>micro social layer と macro physical layer を比較できるようにする。</div>
-      </div>
-    </section>
+          <article class="phase">
+            <div class="phase-number">03</div>
+            <div>
+              <h3>案内役と監視役を増やす</h3>
+              <p>説明する役、伴走する役、監視する役、介入する役を抽象ロールとして分ける。</p>
+              <span class="id">Guide / Partner / Agent Roster</span>
+            </div>
+            <ul>
+              <li>案内</li>
+              <li>監視</li>
+              <li>介入</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>Worldbuilding Extraction Pipeline</h2>
-      <p>
-        別projectから採用するのは内容ではなく pipeline のみ。private path、固有記事、固有世界名、
-        本文断片は public docs に持ち込まない。
-      </p>
-      <div class="grid">
-        <div class="card"><strong>Section Split</strong><br>source article を section に分解する。</div>
-        <div class="card"><strong>Layer Classify</strong><br>section を world layer に分類する。</div>
-        <div class="card"><strong>Claim Extract</strong><br>claim candidate を抽出する。</div>
-        <div class="card"><strong>Claim Metadata</strong><br>subject、predicate、claim kind、source、terms を付ける。</div>
-        <div class="card"><strong>Vocabulary</strong><br>terms を concept vocabulary として集約する。</div>
-        <div class="card"><strong>Validation</strong><br>wiki-style link / reference の欠落を検証する。</div>
-        <div class="card"><strong>Orchestration Report</strong><br>生成手順、抽出数、検証結果を残す。</div>
-      </div>
-    </section>
+          <article class="phase">
+            <div class="phase-number">04</div>
+            <div>
+              <h3>世界観パックを取り込む</h3>
+              <p>人物名ではなく、代償、評議会、暴走、境界、訓練、監視、環境交渉、同期などの構造として取り込む。</p>
+              <span class="id">Motif Arc Pack</span>
+            </div>
+            <ul>
+              <li>人物だけは禁止</li>
+              <li>世界ルール必須</li>
+              <li>公開名に変換</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>Non-goals / Gates</h2>
-      <ul>
-        <li>fictional characters の再現や protected lines の引用はしない。</li>
-        <li>internal notes、private paths、voice-chat transcripts は public docs に出さない。</li>
-        <li>Discord から GitHub へ auto-write しない。</li>
-        <li>P2P は design spike 先行。network implementation には入らない。</li>
-        <li>cloud commands、cloud resources、secrets、billing / quota changes はこの PR では扱わない。</li>
-        <li>follow-up implementation には separate approved work order が必要。</li>
-      </ul>
-    </section>
+          <article class="phase">
+            <div class="phase-number">05</div>
+            <div>
+              <h3>評価とベンチマークを作る</h3>
+              <p>人間らしさ、意図推定、境界認識、混沌、規模、AI能力を「安全に測る枠」にする。</p>
+              <span class="id">Assessment / Benchmark Lab</span>
+            </div>
+            <ul>
+              <li>欺瞞は禁止</li>
+              <li>危険手順は禁止</li>
+              <li>引用ではなく抽象化</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>Source Categories</h2>
-      <dl class="source-list">
-        <dt>public-policy</dt>
-        <dd>existing project policy / gate / public collaboration rule。implementation 前に repo docs と照合する。</dd>
-        <dt>external-practice</dt>
-        <dd>external product / community-management practice に grounded。short source link または review note を残す。</dd>
-        <dt>project-hypothesis</dt>
-        <dd>この project の local operating rule。real review cycle で試すまで adjustable とする。</dd>
-        <dt>creative-hypothesis</dt>
-        <dd>original motif synthesis / speculative design。industry practice として提示しない。</dd>
-      </dl>
-    </section>
+          <article class="phase">
+            <div class="phase-number">06</div>
+            <div>
+              <h3>合議制で決める</h3>
+              <p>提案、レビュー、実行、人間の外部監視を分け、FDEで小さな判断単位に閉じる。</p>
+              <span class="id">Fractal Decision / FDE</span>
+            </div>
+            <ul>
+              <li>提案</li>
+              <li>レビュー</li>
+              <li>実行</li>
+              <li>外部監視</li>
+            </ul>
+          </article>
 
-    <section>
-      <h2>初回 PR Scope</h2>
-      <p>
-        初回 PR は docs-only。application code、data contracts、generated docs、tests は変更しない。
-        GitHub / Linear / Discord / cloud / external API の write actions は human review の後に分離する。
-      </p>
-    </section>
-  </main>
+          <article class="phase">
+            <div class="phase-number">07</div>
+            <div>
+              <h3>リポジトリをスキル集合にする</h3>
+              <p>コード、ドキュメント、検証、運用を呼び出し可能なスキル群として整理し、再帰呼び出しには制限を置く。</p>
+              <span class="id">Repo-as-Skill Mesh</span>
+            </div>
+            <ul>
+              <li>ループ上限</li>
+              <li>入出力の許可</li>
+              <li>信頼境界</li>
+            </ul>
+          </article>
+
+          <article class="phase">
+            <div class="phase-number">08</div>
+            <div>
+              <h3>追加依頼を落とさない運用にする</h3>
+              <p>「これ追加して」を下書き候補として受け、世界要素・抽象名・TODO・ゲートへ機械的に落とす。</p>
+              <span class="id">Intake Lifecycle</span>
+            </div>
+            <ul>
+              <li>受け付け</li>
+              <li>分類</li>
+              <li>TODO化</li>
+              <li>保留理由</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="gates">
+        <h2>保証すること</h2>
+        <div class="proof-grid">
+          <article class="gate">
+            <strong>世界観がない追加は入れない</strong>
+            <p>人物や役割だけではなく、場所、ルール、社会、資源、歴史、日常、変化圧力の確認を必須にする。</p>
+          </article>
+          <article class="gate">
+            <strong>公開名は抽象化する</strong>
+            <p>作品名、キャラクター名、決め台詞、私的パス、外部投稿本文は実装IDにしない。</p>
+          </article>
+          <article class="gate">
+            <strong>外部書き込みは人間が止める</strong>
+            <p>GitHub issue、Linear、クラウド、外部チャット、公開PRは、人間レビュー前に自動実行しない。</p>
+          </article>
+          <article class="gate">
+            <strong>残った論点も行き先を持つ</strong>
+            <p>採用、保留、監視、対象外のどれかに分類し、採用なら必ずTODO IDを持たせる。</p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>やらないこと</h2>
+        <ul class="plain-list">
+          <li>固有キャラクターをそのまま再現しない。</li>
+          <li>保護された台詞をコードに埋め込まない。</li>
+          <li>未レビューの外部投稿、外部チケット作成、クラウド変更をしない。</li>
+          <li>危険能力のライブテストや、現在モデルの断定ランキングをしない。</li>
+        </ul>
+      </section>
+
+      <section id="docs">
+        <h2>正本と関連ドキュメント</h2>
+        <div class="docs-row">
+          <a class="doc-link" href="cross-world-operator-roadmap.md">
+            ロードマップ正本
+            <span>レビューで見るMarkdown版。</span>
+          </a>
+          <a class="doc-link" href="cross-world-operator-todo.html">
+            未実装TODO
+            <span>残っている作業と保証マトリクス。</span>
+          </a>
+          <a class="doc-link" href="cross-world-operator-linear-drafts.md">
+            Linear起票案
+            <span>MVP単位に分けた内部管理用ドラフト。</span>
+          </a>
+          <a class="doc-link" href="subagents/work-orders/wo-urban-018-cross-world-operator-roadmap.yaml">
+            Work order
+            <span>書き込み範囲、ゲート、受け入れ条件。</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Status: draft / Owner: manager / Updated: 2026-06-08 / Urban Ecosystem data contract は変更しない。</p>
+    </footer>
+  </div>
 </body>
 </html>
