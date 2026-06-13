@@ -12,7 +12,12 @@
 - 参加者の通常入口: API キーなしの fallback viewer。下の `python tools/smoke_fallback_viewer.py` を使ってください。
 - アプリ版バージョン: `0.1.0`
 - データ契約バージョン: [`0.6.4`](docs/subagents/contracts/urban-ecosystem-data-contract.md)
-- 最新運用確認: commit `4be2dcc` を Cloud Run revision `urban-ecosystem-00017-gst` に非公開 deploy 済み。MATRIX panel の MP-005 / MP-006 optional fields は viewer 静的ファイルまで反映済みです。
+- 2026-06-14 時点の運用確認: commit `4be2dcc` を Cloud Run revision `urban-ecosystem-00017-gst` に非公開 deploy 済み。MATRIX panel の MP-005 / MP-006 optional fields は viewer 静的ファイルまで反映済みです。
+
+## まず見るHTML
+
+- [世界をまたぐ操作モード ロードマップ HTML](docs/cross-world-operator-roadmap.html)
+- Cloud Run / local viewer では `/docs/cross-world-operator-roadmap.html` で表示できます。
 
 ## はじめて触る人へ
 
