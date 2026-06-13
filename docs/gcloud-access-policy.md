@@ -10,7 +10,7 @@ updated: 2026-06-14
 
 ## 基本方針
 
-- 初回参加者の正規入口は、API キーなしの fallback viewer と公開 Cloud Run URL です。
+- 初回参加者の正規入口は、API キーなしの fallback viewer です。Nexus 管理 Cloud Run は maintainer 用の非公開 smoke / demo 環境として扱います。
 - 各自の Google Cloud project で試す場合は、その project の所有者が課金、公開範囲、IAM、Secret を管理します。
 - Nexus 管理 project を使う場合は、maintainer が目的、期間、権限、予算上限、rollback 条件を確認してから許可します。
 - OAuth token、service account key、`.env`、Webhook URL、API key は Discord、GitHub issue、PR、コメントに貼りません。
@@ -20,8 +20,8 @@ updated: 2026-06-14
 
 | 区分 | 既定 | 条件 |
 |---|---|---|
-| 公開 Cloud Run URL の閲覧 | 許可 | 認証情報不要。負荷が高い操作は避ける |
 | fallback viewer のレビュー | 許可 | API key なし。issue で感想や詰まりを共有する |
+| Nexus 管理 Cloud Run URL の閲覧 | maintainer のみ | 現在は非公開 smoke 環境。認証なし 403 が正常 |
 | Nexus 管理 project の一時利用 | 申請制 | 目的、期間、権限、予算上限、rollback を明記 |
 | Cloud Run deploy | maintainer のみ | PR / CI / smoke / rollback plan が揃った場合 |
 | Secret Manager / IAM 変更 | maintainer のみ | 変更内容と復旧方法を明記 |
@@ -37,7 +37,7 @@ GitHub issue または maintainer が指定した review surface に、次を記
 - 目的:
 - 使いたい機能:
 - 対象環境:
-  - 公開 Cloud Run URL の利用のみ / Nexus 管理 project の一時利用 / 自分の GCP project
+  - fallback viewer の利用のみ / Nexus 管理 project の一時利用 / 自分の GCP project
 - 必要な期間:
 - 必要な権限:
 - 想定するコマンド:
@@ -57,7 +57,8 @@ GitHub issue または maintainer が指定した review surface に、次を記
 
 | 用途 | 推奨境界 |
 |---|---|
-| 公開 demo を見る | 権限付与なし。公開 URL のみ |
+| fallback viewer を見る | 権限付与なし。API key なし |
+| Nexus 管理 Cloud Run の smoke を見る | maintainer が認証付きで実行し、結果だけ issue / PR に残す |
 | smoke / 動作確認 | maintainer が実行し、結果だけ issue / PR に残す |
 | Cloud Run service の閲覧 | 必要な場合だけ `roles/run.viewer` 相当 |
 | Cloud Run deploy | maintainer または専用 deploy automation。利用者へ直接付与しない |
@@ -75,7 +76,7 @@ GitHub issue または maintainer が指定した review surface に、次を記
 
 ## 運用フロー
 
-1. まず公開 URL / fallback viewer で試す。
+1. まず fallback viewer で試す。
 2. 足りない場合は申請テンプレートで目的を出す。
 3. maintainer が、目的、権限、期間、予算、公開範囲、rollback を確認する。
 4. 許可する場合は、最小権限または maintainer 実行で進める。
@@ -86,7 +87,7 @@ GitHub issue または maintainer が指定した review surface に、次を記
 
 ```md
 gcloud / Cloud Run は希望者に使えるようにしますが、token や広い権限は共有しません。
-まずは公開 URL と API キーなし fallback viewer を触ってください。
+まずは API キーなし fallback viewer を触ってください。Nexus 管理 Cloud Run は現在 maintainer 用の非公開 smoke 環境です。
 Nexus 管理 project を使いたい場合は、目的、期間、必要権限、予算上限、rollback 条件を書いて申請してください。
 maintainer が範囲を切って、最小権限または maintainer 実行で対応します。
 ```
