@@ -590,9 +590,21 @@ function matrixOptionalFieldGroups(event) {
         }];
     }
     if (event.type === "takeover_start") {
+        return [
+            {
+                label: "Oath chain",
+                fields: ["hierarchy_rank", "sworn_duty"],
+            },
+            {
+                label: "Duel school",
+                fields: ["duel_style", "duel_rank"],
+            },
+        ];
+    }
+    if (event.type === "heartbeat") {
         return [{
-            label: "Oath chain",
-            fields: ["hierarchy_rank", "sworn_duty"],
+            label: "Walled society",
+            fields: ["boundary_permeability", "outside_knowledge_level"],
         }];
     }
     if (event.type === "stale_report") {

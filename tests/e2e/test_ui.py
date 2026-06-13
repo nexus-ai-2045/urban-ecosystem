@@ -100,6 +100,7 @@ def _ensure_e2e_run(data_root: Path) -> None:
         "--matrix-mode",
         "--matrix-ttl-ticks", "4",
         "--matrix-transition-tick", "1",
+        "--matrix-guide-tick", "2",
         "--matrix-swarm-stale-tick", "3",
         "--out", str(run_dir),
     ]
@@ -431,7 +432,7 @@ class TestMapDisplay:
 
 
 class TestMatrixOptionalFieldsPanel:
-    """MATRIX panel が MP-002〜004 の optional fields を event type ごとに表示する。"""
+    """MATRIX panel が MP-002〜006 の optional fields を event type ごとに表示する。"""
 
     def _seek_matrix_tick(self, page: "Page", tick_index: int, expected_text: str) -> str:
         """slider で tick を移動し、MATRIX panel が期待 event を描画するまで待つ。"""
@@ -462,6 +463,18 @@ class TestMatrixOptionalFieldsPanel:
         assert "sworn_duty" in panel_text
         assert "threat_containment" in panel_text
 
+    def test_takeover_start_shows_duel_school_fields(self, loaded_page):
+        """tick 0 の takeover_start に MP-006 の style と rank が表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 0, "takeover_start")
+
+        assert "takeover_start" in panel_text
+        assert "Duel school" in panel_text
+        assert "duel_style" in panel_text
+        assert "adaptive" in panel_text
+        assert "duel_rank" in panel_text
+        assert "0" in panel_text
+
     def test_world_transition_shows_exchange_pair_fields(self, loaded_page):
         """tick 1 の world_transition に MP-002 の交換コストと完了状態が表示される。"""
         page, _ = loaded_page
@@ -473,6 +486,17 @@ class TestMatrixOptionalFieldsPanel:
         assert "cost_unit:1" in panel_text
         assert "exchanged" in panel_text
         assert "true" in panel_text
+
+    def test_heartbeat_shows_walled_society_fields(self, loaded_page):
+        """tick 2 の heartbeat に MP-005 の境界透過性と外部知識レベルが表示される。"""
+        page, _ = loaded_page
+        panel_text = self._seek_matrix_tick(page, 2, "heartbeat")
+
+        assert "heartbeat" in panel_text
+        assert "Walled society" in panel_text
+        assert "boundary_permeability" in panel_text
+        assert "outside_knowledge_level" in panel_text
+        assert "0" in panel_text
 
     def test_stale_report_shows_unstable_city_core_fields(self, loaded_page):
         """tick 3 の stale_report に MP-004 の不安定度と安定化フェーズが表示される。"""
