@@ -6,18 +6,23 @@
 渋谷の実在スポットを舞台に、住人エージェントが通勤・昼食・買い物・交流・帰宅を行い、
 その 1 日を地図ビューアでリプレイできます。
 
-## 公開デモ / バージョン
+## 運用状態 / バージョン
 
-- 公開デモ: [urban-ecosystem](https://urban-ecosystem-7r3ac467fa-an.a.run.app/)
+- Cloud Run: [urban-ecosystem](https://urban-ecosystem-7r3ac467fa-an.a.run.app/) は maintainer 用の非公開 smoke 環境です。認証なしで 403 になるのが正常です。
+- 参加者の通常入口: API キーなしの fallback viewer。下の `python tools/smoke_fallback_viewer.py` を使ってください。
 - アプリ版バージョン: `0.1.0`
 - データ契約バージョン: [`0.6.4`](docs/subagents/contracts/urban-ecosystem-data-contract.md)
+- 最新運用確認: commit `4be2dcc` を Cloud Run revision `urban-ecosystem-00017-gst` に非公開 deploy 済み。MATRIX panel の MP-005 / MP-006 optional fields は viewer 静的ファイルまで反映済みです。
 
 ## はじめて触る人へ
 
 ### 最短導線（5 分で OK）
 
-1. 公開デモを見る  
-   [urban-ecosystem demo](https://urban-ecosystem-7r3ac467fa-an.a.run.app/)
+1. API キーなしの fallback viewer を起動する
+   ```bash
+   unset GOOGLE_MAPS_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_CLOUD_PROJECT
+   python tools/smoke_fallback_viewer.py
+   ```
 2. 画面上の「分かりにくさ」を3つだけメモする  
 3. そのまま Issue / コメントへ投げる
 
@@ -30,6 +35,8 @@ python tools/smoke_fallback_viewer.py
 ```
 
 `python tools/smoke_fallback_viewer.py` の起動後、表示 URL を開いてください。
+
+Cloud Run URL を直に開いて 403 になる場合、それは故障ではありません。現在の Cloud Run は maintainer が認証付きで smoke する非公開環境です。参加者レビューは fallback viewer で受け付けます。
 
 ### 見るときの目安
 

@@ -2,7 +2,7 @@
 
 このページは、公開協業を始める前後に「いま何が決まっていて、何がまだ未決か」を確認するための棚卸しです。
 
-最終更新: 2026-06-03
+最終更新: 2026-06-14
 
 ## まず見る場所
 
@@ -25,6 +25,18 @@
 公開協業者に見せる作業と判断は GitHub に残します。Discord は流れる入口で、現在は一旦フリーズ中です。Linear は内部管理です。
 
 public PR を作ること、public branch を push すること、PR を ready にすること、merge することは TYPE1 です。人間レビュー前には行いません。詳しい gate は [`docs/type1-public-pr-gate.md`](type1-public-pr-gate.md) を正本にします。
+
+## 現在の運用状態
+
+| 項目 | 現在地 |
+|---|---|
+| GitHub `main` | `3873973` / CI success |
+| Cloud Run | commit `4be2dcc` を `urban-ecosystem-00017-gst` に非公開 deploy 済み |
+| 公開範囲 | 認証なしの `/` と `/api/health` は 403 が正常 |
+| 認証付き smoke | 前回運用確認では `/api/health` と `/api/runs` は 200。再確認には maintainer 認証が必要 |
+| MATRIX panel | MP-005 `Walled society` と MP-006 `Duel school` の optional field 表示が viewer 静的ファイルに反映済み |
+
+この Cloud Run は参加者向けの公開 demo ではなく、maintainer が運用確認する非公開 smoke 環境です。参加者に案内する入口は API キーなしの fallback viewer です。
 
 ## いま参加してよいもの
 
