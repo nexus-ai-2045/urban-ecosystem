@@ -19,8 +19,7 @@ experiments
 *.ipynb
 .ipynb_checkpoints
 
-# ドキュメント (ランタイム不要)
-docs
+# ドキュメント preview は /docs で配信するため Cloud Run image に含める。
 
 # Claude Code / Codex ローカル設定
 .claude
