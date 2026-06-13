@@ -14,9 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # app/ : FastAPI サーバ (WO-003 / WO-005 で実装)
 # tools/ : シミュレーション CLI (urban_simulation_cli.py 等)
 # environments/ : ルールベースシミュレーションコア (urban_2d/)
+# docs/ : 公開ロードマップ / TODO preview (/docs/*)
 COPY app/ ./app/
 COPY tools/ ./tools/
 COPY environments/ ./environments/
+COPY docs/ ./docs/
 
 # --- デモデータ同梱 (Cloud Run 起動直後に /api/runs から取得可能にする) ---
 # WO-004 の --sample フラグで seed=42 固定サンプルを 8 ファイル生成。
