@@ -37,6 +37,8 @@ CROSS_WORLD_CORE_DOCS = [
 ]
 
 CROSS_WORLD_README_LINKS = [
+    "https://urban-ecosystem-646396388635.asia-northeast1.run.app/docs/cross-world-operator-roadmap.html",
+    "https://urban-ecosystem-646396388635.asia-northeast1.run.app/docs/cross-world-operator-todo.html",
     "docs/cross-world-operator-roadmap.html",
     "docs/cross-world-operator-todo.html",
     "docs/cross-world-operator-roadmap.md",
@@ -267,6 +269,8 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
     for link in CROSS_WORLD_README_LINKS:
         if f"]({link})" not in readme:
             errors.append(f"README.md missing Cross-world link: {link}")
+        if link.startswith("https://"):
+            continue
         if not (project_root / link).is_file():
             errors.append(f"Cross-world linked file missing: {link}")
 
