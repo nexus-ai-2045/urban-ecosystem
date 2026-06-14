@@ -536,12 +536,17 @@ TODO化時は、context ideaを必ず次のどれかに分類します。
 
 ### XWORLD-TODO-026 Numeric Operating Protocol
 
-- Status: `parking-lot`
+- Status: `implemented`
+- Disposition: `parking-lot`
 - Source category: `creative-hypothesis`
 - Next artifact: [MVP-006 Governance And Fractal Decision 実装前仕様](cross-world-operator-mvp-006-governance-fractal-decision.md)
 - Gate: human review before implementation
 - Reason: numeric meaningはcreative hypothesisであり、実装根拠としては未成熟。
 - Recheck condition: concrete operator workflowに接続できた時。
+- Acceptance:
+  - numeric meaningを実装根拠、hidden rule、確定仕様として採用しない。
+  - `GET /api/governance-fde` が `numeric_protocol.status = parking-lot` を返す。
+  - `POST /api/governance-fde/decide` は `numeric_rule: implemented` を `numeric_rule_overreach` で拒否する。
 
 ### XWORLD-TODO-027 FDE Packet Router Benchmark
 
