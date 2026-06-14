@@ -416,8 +416,9 @@ def generate_html(project_root: Path = PROJECT_ROOT) -> str:
           まずは「誰に入るか」よりも、「どの世界で、何を見て、どこまで動かしてよいか」を決めます。
         </p>
         <div class="hero-actions">
-          <a class="button primary" href="#roadmap">次に作るものを見る</a>
-          <a class="button" href="cross-world-operator-todo.html">未実装TODOを見る</a>
+          <a class="button primary" href="cross-world-operator-roadmap.html">ロードマップHTML</a>
+          <a class="button" href="cross-world-operator-todo.html">未実装TODO HTML</a>
+          <a class="button subtle" href="#roadmap">次に作るもの</a>
         </div>
       </div>
       <figure class="hero-visual">
