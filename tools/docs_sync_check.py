@@ -262,6 +262,18 @@ def _cross_world_version(path: Path) -> str:
     return match.group(1) if match else ""
 
 
+def _cross_world_todo_statuses(todo: str) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for match in re.finditer(
+        r"^### (XWORLD-TODO-\d{3}) .+?\n(?P<body>.*?)(?=^### XWORLD-TODO-|\Z)",
+        todo,
+        flags=re.MULTILINE | re.DOTALL,
+    ):
+        status_match = re.search(r"^- Status: `([^`]+)`", match.group("body"), flags=re.MULTILINE)
+        statuses[match.group(1)] = status_match.group(1) if status_match else ""
+    return statuses
+
+
 def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
     errors: list[str] = []
     readme = _read(project_root / "README.md")
@@ -290,6 +302,21 @@ def cross_world_drift_errors(project_root: Path = PROJECT_ROOT) -> list[str]:
     missing_todos = [f"XWORLD-TODO-{index:03d}" for index in range(1, 40) if f"XWORLD-TODO-{index:03d}" not in todo]
     if missing_todos:
         errors.append(f"Cross-world TODO missing: {', '.join(missing_todos)}")
+    todo_statuses = _cross_world_todo_statuses(todo)
+    incomplete_todos = [
+        f"{todo_id}={todo_statuses.get(todo_id, 'missing-status')}"
+        for todo_id in (f"XWORLD-TODO-{index:03d}" for index in range(1, 40))
+        if todo_statuses.get(todo_id) != "implemented"
+    ]
+    if incomplete_todos:
+        errors.append(f"Cross-world TODO not closed: {', '.join(incomplete_todos)}")
+    numeric_section = re.search(
+        r"^### XWORLD-TODO-026 .+?\n(?P<body>.*?)(?=^### XWORLD-TODO-|\Z)",
+        todo,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    if numeric_section and "Disposition: `parking-lot`" not in numeric_section.group("body"):
+        errors.append("XWORLD-TODO-026 must keep Disposition: `parking-lot`")
 
     linear = _read(project_root / "docs" / "cross-world-operator-linear-drafts.md")
     missing_mvps = [f"UE-XWORLD-MVP-{index:03d}" for index in range(0, 9) if f"UE-XWORLD-MVP-{index:03d}" not in linear]

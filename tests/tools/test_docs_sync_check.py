@@ -79,6 +79,26 @@ def test_cross_world_drift_detects_todo_and_mvp_gaps(tmp_path: Path) -> None:
     assert any("UE-XWORLD-MVP-008" in error for error in errors)
 
 
+def test_cross_world_drift_detects_open_todo_status(tmp_path: Path) -> None:
+    _write_minimal_cross_world_tree(tmp_path)
+    todo = tmp_path / "docs" / "cross-world-operator-todo.md"
+    todo.write_text(todo.read_text(encoding="utf-8").replace("- Status: `implemented`", "- Status: `watch`", 1), encoding="utf-8")
+
+    errors = cross_world_drift_errors(tmp_path)
+
+    assert any("Cross-world TODO not closed" in error for error in errors)
+
+
+def test_cross_world_drift_requires_numeric_parking_lot_disposition(tmp_path: Path) -> None:
+    _write_minimal_cross_world_tree(tmp_path)
+    todo = tmp_path / "docs" / "cross-world-operator-todo.md"
+    todo.write_text(todo.read_text(encoding="utf-8").replace("- Disposition: `parking-lot`\n", "", 1), encoding="utf-8")
+
+    errors = cross_world_drift_errors(tmp_path)
+
+    assert any("XWORLD-TODO-026 must keep Disposition" in error for error in errors)
+
+
 def test_cross_world_drift_detects_generated_html_mismatch(tmp_path: Path) -> None:
     _write_minimal_cross_world_tree(tmp_path)
     html = tmp_path / "docs" / "cross-world-operator-roadmap.html"
@@ -123,7 +143,13 @@ def _write_minimal_cross_world_tree(root: Path) -> None:
     (docs / "cross-world-operator-roadmap.html").write_text(generate_cross_world_roadmap_html(root), encoding="utf-8")
     (docs / "cross-world-operator-todo.html").write_text("<html></html>\n", encoding="utf-8")
     (docs / "cross-world-operator-todo.md").write_text(
-        "- Version: `0.9.0`\n" + "\n".join(f"XWORLD-TODO-{index:03d}" for index in range(1, 40)),
+        "- Version: `0.9.0`\n"
+        + "\n".join(
+            f"### XWORLD-TODO-{index:03d} Minimal\n\n"
+            f"- Status: `implemented`\n"
+            f"{'- Disposition: `parking-lot`' if index == 26 else ''}\n"
+            for index in range(1, 40)
+        ),
         encoding="utf-8",
     )
     (docs / "cross-world-operator-linear-drafts.md").write_text(
