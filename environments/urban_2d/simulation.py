@@ -181,6 +181,8 @@ class Simulation:
         matrix_outside_knowledge_level: int = 0,
         matrix_duel_style: str = "adaptive",
         matrix_duel_rank: int = 0,
+        matrix_identity_ambiguity_level: int = 0,
+        matrix_deception_risk: str = "low",
     ) -> None:
         """シミュレーション初期化。
 
@@ -261,6 +263,16 @@ class Simulation:
                 0 が未ランク基準。matrix_mode=True の takeover_start に付与する。
                 保護された名称・外部秘密・個人情報を含めない。
                 rng を消費しないため既存の rng 消費順序は不変。
+            matrix_identity_ambiguity_level: mirror_episode motif (MP-007 / v0.7.6) の
+                identity 曖昧度。0 が明確に識別可能 (曖昧さなし)。値が大きいほど
+                human / agent の identity 判別が困難であることを示す。
+                matrix_mode=True の takeover_start に付与する。
+                rng を消費しないため既存の rng 消費順序は不変。
+            matrix_deception_risk: mirror_episode motif (MP-007 / v0.7.6) の deception /
+                social-consequence posture。人間可読な抽象文字列。例: "low" / "monitored"。
+                matrix_mode=True の takeover_start に付与する。
+                保護された名称・外部秘密・個人情報を含めない。
+                rng を消費しないため既存の rng 消費順序は不変。
         """
         if ticks < 1:
             raise ValueError("ticks は 1 以上が必要")
@@ -330,6 +342,9 @@ class Simulation:
         # MP-006 duel_school (v0.7.4): takeover_start に付与する engagement style と competitive rank
         self.matrix_duel_style = matrix_duel_style
         self.matrix_duel_rank = matrix_duel_rank
+        # MP-007 mirror_episode (v0.7.6): takeover_start に付与する identity 曖昧度と deception posture
+        self.matrix_identity_ambiguity_level = matrix_identity_ambiguity_level
+        self.matrix_deception_risk = matrix_deception_risk
         if self.matrix_mode:
             self._validate_matrix_config()
 
@@ -421,6 +436,8 @@ class Simulation:
             raise ValueError("matrix_outside_knowledge_level は 0 以上が必要")
         if self.matrix_duel_rank < 0:
             raise ValueError("matrix_duel_rank は 0 以上が必要")
+        if self.matrix_identity_ambiguity_level < 0:
+            raise ValueError("matrix_identity_ambiguity_level は 0 以上が必要")
         if self.matrix_stabilization_phase not in MATRIX_STABILIZATION_PHASE_VALUES:
             allowed = ", ".join(sorted(MATRIX_STABILIZATION_PHASE_VALUES))
             raise ValueError(
@@ -1378,6 +1395,7 @@ class Simulation:
             # MP-001 cybernetic_governance (v0.7.5): body/network 境界と command review 面を決定論的に付与する。
             # MP-003 oath_chain (v0.7.1): 命令権限ランクと役割誓約を決定論的に付与する。
             # MP-006 duel_school (v0.7.4): engagement style と competitive rank を決定論的に付与する。
+            # MP-007 mirror_episode (v0.7.6): identity 曖昧度と deception posture を決定論的に付与する。
             # rng を消費しないため既存の rng 消費順序は不変。
             self.matrix_events.append({
                 "tick": tick,
@@ -1398,6 +1416,8 @@ class Simulation:
                 "sworn_duty": self.matrix_sworn_duty,
                 "duel_style": self.matrix_duel_style,
                 "duel_rank": self.matrix_duel_rank,
+                "identity_ambiguity_level": self.matrix_identity_ambiguity_level,
+                "deception_risk": self.matrix_deception_risk,
             })
         if tick == end_tick:
             exit_reason = "ttl_expired"
