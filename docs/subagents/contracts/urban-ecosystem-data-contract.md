@@ -1,9 +1,9 @@
 # Urban Ecosystem Data Contract
 
 status: accepted
-version: 0.7.5
+version: 0.7.6
 owner: manager
-updated: 2026-06-12
+updated: 2026-06-15
 
 ## Purpose
 
@@ -331,6 +331,8 @@ Optional:
 - `outside_knowledge_level` (integer >= 0, optional): `walled_society` motif (MP-005 / v0.7.3) が付与する外部から流入した知識の蓄積レベル。0 = 外部知識なし。値が大きいほど境界内の社会が外部知識に影響されていることを示す。`guide_agent` heartbeat で使用する。保護された名称・外部秘密・個人情報を含めない。
 - `duel_style` (string, optional): `duel_school` motif (MP-006 / v0.7.4) が付与する決闘 engagement の抽象的な school / style を人間可読に記録する。例: `"aggressive"` / `"defensive"` / `"technical"` / `"adaptive"`。`takeover_start` で使用する。保護された流派名・外部秘密・個人情報を含めない。
 - `duel_rank` (integer >= 0, optional): `duel_school` motif (MP-006 / v0.7.4) が付与する決闘参加時点の competitive rank / 評判。0 = 未ランク / 初期値。値が大きいほど高い地位を示す。`takeover_start` で使用する。replay で複数 event を比較して rank 推移を追跡できる。保護された名称・外部秘密・個人情報を含めない。
+- `identity_ambiguity_level` (integer >= 0, optional): `mirror_episode` motif (MP-007 / v0.7.6) が付与する identity の曖昧度。0 = 明確に識別可能 (曖昧さなし)。値が大きいほど human / agent の identity 判別が困難であることを示す。`takeover_start` で使用する。保護された名称・外部秘密・個人情報を含めない。
+- `deception_risk` (string, optional): `mirror_episode` motif (MP-007 / v0.7.6) が付与する deception / social-consequence posture を人間可読に記録する。例: `"low"` / `"monitored"` / `"flagged"` / `"contained"`。`takeover_start` で使用する。保護された名称・台詞・外部秘密・個人情報を含めない。
 
 Rules:
 
@@ -419,6 +421,18 @@ Rules:
 - 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
 - `duel_school` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
 - `matrix_role`、`trigger_id`、`duel_style` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
+
+### Mirror Episode (`mirror_episode`)
+
+`mirror_episode` は agent の identity がどの程度曖昧か (human と区別できるか) と、その曖昧さが social-consequence / deception リスクとしてどう扱われているかを表す公開 alias である (MP-007 / v0.7.6)。`takeover_start` イベントにオプションフィールドとして付与する。
+
+Rules:
+
+- `identity_ambiguity_level` は 0 始まりの非負整数。0 が明確に識別可能 (曖昧さなし)。値が大きいほど human / agent の identity 判別が困難であることを示す。
+- `deception_risk` は人間可読な抽象 posture 文字列。保護された名称・台詞・固有術語・外部秘密・個人情報を含めない。例: `"low"` / `"monitored"` / `"flagged"` / `"contained"`。
+- 両フィールドは optional。matrix_mode=False の既存 run には影響しない。
+- `mirror_episode` は runtime side effect を持たない。既存 run、secret、外部 API、Cloud Run、GitHub push には影響しない。
+- `matrix_role`、`trigger_id`、`deception_risk` には保護されたキャラクター名・引用を入れず、公開 alias と内部識別子だけを使う。
 
 ### Guide Agent Fallback (`guide_agent`)
 
@@ -544,3 +558,4 @@ Required: `schema_version`, `run_id`, `seed`, `ticks`, `individual_simulation`, 
 - 0.7.3 (MATRIX M9-005): `walled_society` motif packet (MP-005) の optional field を追加。`boundary_permeability` (integer >= 0) と `outside_knowledge_level` (integer >= 0) を `MatrixEvent` の optional field として追加した。`guide_agent` heartbeat に付与し、境界の透過性と外部知識の蓄積レベルを replay 可能な形で記録する。Walled Society Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.4 (MATRIX M9-006): `duel_school` motif packet (MP-006) の optional field を追加。`duel_style` (string) と `duel_rank` (integer >= 0) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、1 対 1 competitive engagement の流派 style と競争 rank を replay 可能な形で記録する。Duel School Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
 - 0.7.5 (MATRIX M6-001 / MP-001): `cybernetic_governance` motif packet の optional field を追加。`body_network_boundary` (string) と `command_review_channel` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、身体状態 / network-visible state の境界と command review 面を replay 可能な形で記録する。Cybernetic Governance Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。
+- 0.7.6 (MATRIX M9-007 / MP-007): `mirror_episode` motif packet の optional field を追加。`identity_ambiguity_level` (integer >= 0) と `deception_risk` (string) を `MatrixEvent` の optional field として追加した。`takeover_start` に付与し、identity の曖昧度と deception / social-consequence posture を replay 可能な形で記録する。Mirror Episode Rules 節を新設した。後方互換: 両フィールドは optional で既存 run への影響なし。

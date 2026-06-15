@@ -2,7 +2,7 @@
 
 status: draft
 owner: nexus_ai
-updated: 2026-06-12
+updated: 2026-06-15
 
 source: docs/matrix-mode-roadmap.md
 
@@ -24,6 +24,7 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 | MP-004 | 実装済み | `unstable_city_core` | Cross-world Pack 4 | この文書 / data contract v0.7.2 / test_unstable_city_core_* 2 件 |
 | MP-005 | 実装済み | `walled_society` | Cross-world Pack 5 | この文書 / data contract v0.7.3 / test_walled_society_* 2 件 |
 | MP-006 | 実装済み | `duel_school` | Cross-world Pack 6 | この文書 / data contract v0.7.4 / test_duel_school_* 2 件 |
+| MP-007 | 実装済み | `mirror_episode` | Cross-world Pack 7 | この文書 / data contract v0.7.6 / test_mirror_episode_* 2 件 |
 
 ## MP-001: Cross-world Pack 1
 
@@ -405,3 +406,76 @@ Status 語彙: `docs-only` = runtime field を持たない docs packet。`実装
 - `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.4 に更新されている。
 - `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
 - `matrix_mode=True` の run の `takeover_start` event に `duel_style` と `duel_rank` が含まれる。同一 seed 2 回で値が一致する (決定論)。
+
+## MP-007: Cross-world Pack 7
+
+### Influence summary
+
+agent が人間とどの程度区別できるか (identity の曖昧さ) と、その曖昧さが社会的にどう扱われ deception リスクとして監視されているかを、`takeover_start` イベントの抽象フィールドとして表現する。「人間か AI か判別しづらい状況と、それがもたらす社会的帰結」という一般的な着想を、特定作品から切り離した検証可能な状態機械に抽象化する。
+
+### Public alias
+
+`mirror_episode`
+
+### 採用するもの
+
+- **identity 曖昧度の記録**: takeover で agent が role を引き継いだ時点で、その agent の identity が human とどの程度区別できるかを `identity_ambiguity_level` (integer >= 0) として記録する。0 = 明確に識別可能 (曖昧さなし)。値が大きいほど human / agent の判別が困難であることを示す。Turing-test 的な「判別しづらさ」を抽象 integer に置き換える。
+- **deception / social-consequence posture**: identity の曖昧さが deception リスクや社会的帰結としてどう扱われているかを `deception_risk` (string) として人間可読に記録する。例: `"low"`, `"monitored"`, `"flagged"`, `"contained"`。特定の作品・台詞は使わず、posture を抽象的に表現する。
+- **replay での現れ方**: `matrix_events.jsonl` の `takeover_start` イベントに `identity_ambiguity_level` (integer >= 0) と `deception_risk` (string) を optional field として追加する。既存 run への影響なし (optional フィールドなので後方互換を維持)。
+- **contract での現れ方**: data contract v0.7.6 の optional field 節に `identity_ambiguity_level` と `deception_risk` を追記する。Mirror Episode Rules として語彙制約と禁止事項を明示する。
+
+### 設計メモ: host event 選定理由
+
+`takeover_start` を選んだ根拠:
+
+| 候補 | 評価 |
+|---|---|
+| `takeover_start` | agent が role を引き継ぐ瞬間こそ「これは human か agent か」という identity 曖昧さが最も問われる場面。既存 `body_network_boundary` (MP-001) や `command_review_channel` と並べることで「身体/network 境界 + identity 曖昧度 + deception 監視面」が同 event に揃い概念整合が高い |
+| `human_gate` | 人間の明示承認ゲート専用。identity 曖昧度は gate 判断の入力ではあるが、posture を継続記録する host としては takeover_start の方が自然 |
+| `world_transition` | layer 間移動専用 (`bridge_agent`)。identity 曖昧さは layer 移動とは独立した概念 |
+| `stale_report` | 欠落 heartbeat の自己申告専用 (`sentinel_swarm`)。identity 判別とは無関係 |
+| `heartbeat` | 生存確認専用。identity 曖昧度の start イベントとして不適切 |
+
+`takeover_start` は最も概念整合が高い host event である。
+
+### 採用しないもの
+
+- 保護された作品名・キャラクター名・エピソード名・台詞・見た目・音楽・声。
+- 実在人物・組織・サービスのなりすましや、特定エピソードの再現。
+- 課金 API、外部送信、Cloud Run deploy、GitHub push、production DB 操作。
+- LLM 呼び出し必須の動作。
+- 実在の個人を identity 曖昧さの対象として名指しする表現 (抽象的な integer level と posture string に置き換える)。
+
+### Minimum world-building element
+
+| 要素 | 役割 | 実装場所 |
+|---|---|---|
+| `identity_ambiguity_level` | この takeover 時点での identity 曖昧度を示す optional integer。0 = 明確に識別可能。値が大きいほど human / agent の判別が困難。保護された名称・外部秘密・個人情報を含めない。`takeover_start` で使用する。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `deception_risk` | identity 曖昧さの deception / social-consequence posture を人間可読に記録する optional string。例: `"low"` / `"monitored"` / `"flagged"` / `"contained"`。保護された名称・台詞・外部秘密・個人情報を含めない。`takeover_start` で使用する。 | `MatrixEvent` optional field / `matrix_events.jsonl` |
+| `mirror_episode_rule` | contract 規則として「`identity_ambiguity_level=0` は明確に識別可能」「`deception_risk` は人間可読な抽象 posture 文字列」を docs に明示する。 | `urban-ecosystem-data-contract.md` の Mirror Episode Rules 節 |
+
+### Appearance in repo surfaces
+
+| Surface | 現れるもの | M9 の範囲 |
+|---|---|---|
+| docs | motif packet、採用/不採用、world-building element、risk notes | 実装済み |
+| contract | `identity_ambiguity_level` / `deception_risk` optional field 追加、Mirror Episode Rules 追記 | v0.7.6 で実装 |
+| replay | `takeover_start` event に両フィールドを optional 追加 | M9 で実装 |
+| viewer | `identity_ambiguity_level` / `deception_risk` を表示する候補欄 (フィールドが無ければ既存表示のまま) | 将来 TODO |
+| tests | off-by-default 不変性 / 決定論 / フィールド有無の確認 | M9 で実装 |
+
+### Risk notes
+
+- **著作権・商標**: 採用するのは「identity の曖昧度と deception posture という抽象状態機械」という一般的な設計パターンのみ。特定作品のキャラクター名・エピソード名・台詞・固有名詞はコード、UI copy、trigger id、sample data のいずれにも入れない。
+- **scope**: この packet は docs + data contract optional field + runtime emit の追加のみ。viewer 表示は別 TODO で扱う。
+- **secret / cost**: 外部 API、Cloud Run deploy、GitHub push は対象外。ローカルテストのみ。
+- **決定論**: `identity_ambiguity_level` と `deception_risk` は optional かつ固定値。既存の `matrix_events.jsonl` を出力しない run (matrix_mode=False) には影響しない。matrix_mode=True の `takeover_start` で追加される。同一 seed・同一入力では新フィールドの有無と内容が一致することを確認する。
+
+### Testable acceptance
+
+- `docs/matrix-mode-motif-packets.md` に `mirror_episode` packet がある。
+- public alias が `lower_snake_case` のオリジナル名である。
+- 採用するもの / 採用しないもの / minimum world-building element / risk notes が分かれている。
+- `docs/subagents/contracts/urban-ecosystem-data-contract.md` のバージョンが v0.7.6 に更新されている。
+- `matrix_mode=False` の run では `matrix_events.jsonl` が出力されず、既存 `agent_states.jsonl` に変化がない (byte 一致)。
+- `matrix_mode=True` の run の `takeover_start` event に `identity_ambiguity_level` と `deception_risk` が含まれる。同一 seed 2 回で値が一致する (決定論)。

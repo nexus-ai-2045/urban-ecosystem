@@ -292,7 +292,9 @@ class MatrixEvent:
                 boundary_permeability (MP-005 / v0.7.3),
                 outside_knowledge_level (MP-005 / v0.7.3),
                 duel_style (MP-006 / v0.7.4),
-                duel_rank (MP-006 / v0.7.4)
+                duel_rank (MP-006 / v0.7.4),
+                identity_ambiguity_level (MP-007 / v0.7.6),
+                deception_risk (MP-007 / v0.7.6)
     """
     tick: int
     day: int
@@ -339,6 +341,9 @@ class MatrixEvent:
     # MP-006 duel_school (v0.7.4): takeover_start の engagement style と competitive rank
     duel_style: Optional[str] = None    # 人間可読な抽象 style 文字列。例: "aggressive"
     duel_rank: Optional[int] = None     # 0 = 未ランク基準。大きいほど高い competitive rank
+    # MP-007 mirror_episode (v0.7.6): takeover_start の identity 曖昧度と deception/social-consequence posture
+    identity_ambiguity_level: Optional[int] = None  # 0 = 明確に識別可能。大きいほど identity 判別が困難
+    deception_risk: Optional[str] = None            # 人間可読な抽象 posture。例: "low" / "monitored"
     extra: dict[str, Any] = field(default_factory=dict)
 
 
