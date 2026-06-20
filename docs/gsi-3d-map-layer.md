@@ -66,6 +66,51 @@ source: docs/matrix-mode-roadmap.md (Motif packet template) / public GSI 3D map 
 - adapter 初期化失敗時に fallback 地図へ降格する E2E がある。
 - protected name / 課金 API / サーバサイド依存が追加されていない。
 
+## gsi_3d_live — live tile mode (MapLibre + 国土地理院最適化ベクトルタイル)
+
+status: implemented (experimental / 環境変数 EXPERIMENTAL_GSI_TILE 設定時のみ有効)
+added: 2026-06-17
+
+### 概要
+
+`gsi_3d` (canvas deterministic) に加え、実タイルを取得する `gsi_3d_live` モードを追加した。
+MapLibre GL JS v5.24.0 (vendored / BSD-3-Clause) と国土地理院最適化ベクトルタイルを使い、
+建物 3D (BldA source-layer / fill-extrusion 固定高さ) と道路 (RdCL) を重畳表示する。
+
+### 有効化方法
+
+```
+EXPERIMENTAL_GSI_TILE=1 uvicorn tools.urban_viewer_server:app
+```
+
+環境変数が未設定の場合、サーバーは `'false'` を注入し、CI では gsi_3d_live が一切起動しない。
+
+### 3 層安全弁 (CI で gsi_3d_live が起動しないことの保証)
+
+| 層 | 場所 | 内容 |
+|---|---|---|
+| 1 (サーバー) | `urban_viewer_server.py` `_serve_app_js()` | 環境変数未設定時 `EXPERIMENTAL_GSI_TILE='false'` を注入 |
+| 2 (JS 定数) | `app.js` `_resolveDesiredMapMode()` | `hasGsiTile=false` → gsi_3d_live に解決しない / option を hidden+disabled |
+| 3 (adapter) | `gsi_3d_live_adapter.js` `init()` | `window.maplibregl` 不在 / `options.forceUnavailable` / `__URBAN_FORCE_GSI_LIVE_FAIL__` で throw |
+
+### 既存の gsi_3d モードとの違い
+
+| 項目 | gsi_3d (canvas) | gsi_3d_live (live tile) |
+|---|---|---|
+| 外部タイル | なし (CI セーフ) | 国土地理院最適化ベクトルタイル |
+| ライブラリ | なし | MapLibre GL JS v5.24.0 (vendored) |
+| 建物高さ | 擬似値 | 固定値 (普通=10m / 堅牢=40m / 高層・大型=100m) ※実際の高さではない |
+| 有効条件 | 常時 | EXPERIMENTAL_GSI_TILE 環境変数設定時のみ |
+| CI 安全 | ✅ | ✅ (3 層安全弁) |
+
+### vendored ファイル
+
+- `tools/urban_viewer/maplibre-gl.js` — MapLibre GL JS v5.24.0 (3-Clause BSD)
+- `tools/urban_viewer/maplibre-gl.css` — MapLibre GL JS v5.24.0 付属 CSS
+- `tools/urban_viewer/LICENSES.txt` — ライセンス表記
+
+---
+
 ## GitHub issue 起案 (未起票・human gate 待ち)
 
 ```md

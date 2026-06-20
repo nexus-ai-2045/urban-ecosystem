@@ -520,10 +520,12 @@ INTAKE_WORLD_PACKET_FIELDS: tuple[str, ...] = (
 # run_id バリデーション正規表現 (§21.1)
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
 
-# プレースホルダ文字列 (index.html 内のプレースホルダ)
-_PLACEHOLDER_KEY     = "%%GOOGLE_MAPS_API_KEY%%"
-_PLACEHOLDER_MAP_ID  = "%%GOOGLE_MAPS_MAP_ID%%"
-_PLACEHOLDER_SCRIPT  = "%%MAPS_SCRIPT_TAG%%"
+# プレースホルダ文字列 (index.html / app.js 内のプレースホルダ)
+_PLACEHOLDER_KEY      = "%%GOOGLE_MAPS_API_KEY%%"
+_PLACEHOLDER_MAP_ID   = "%%GOOGLE_MAPS_MAP_ID%%"
+_PLACEHOLDER_SCRIPT   = "%%MAPS_SCRIPT_TAG%%"
+# GSI live tile モードフラグ: 環境変数 EXPERIMENTAL_GSI_TILE 設定時 'true' / 未設定時 'false'
+_PLACEHOLDER_GSI_TILE = "%%EXPERIMENTAL_GSI_TILE%%"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 設定 (環境変数)
@@ -579,6 +581,15 @@ def _get_google_cloud_project() -> str:
         "GOOGLE_CLOUD_PROJECT",
         os.environ.get("GOOGLE_CLOUD_PROJECT", ""),
     ).strip()
+
+
+def _get_experimental_gsi_tile() -> str:
+    """EXPERIMENTAL_GSI_TILE フラグを 'true' / 'false' 文字列で返す。
+
+    環境変数 EXPERIMENTAL_GSI_TILE が設定されている場合 'true'。
+    未設定の場合 'false'。CI / 通常実行ではデフォルト 'false'。
+    """
+    return "true" if os.environ.get("EXPERIMENTAL_GSI_TILE", "").strip() else "false"
 
 
 def _set_runtime_value(name: str, value: object) -> None:
@@ -1628,6 +1639,11 @@ async def _serve_app_js() -> Response:
         js = _replace_js_placeholder_literal(
             js, _PLACEHOLDER_MAP_ID, map_id if usable_map_id else ""
         )
+    # EXPERIMENTAL_GSI_TILE は API key の有無に関わらず常に置換する。
+    # 未設定時 'false' → CI では gsi_3d_live が一切起動しない (サーバー側 1 層目安全弁)。
+    js = _replace_js_placeholder_literal(
+        js, _PLACEHOLDER_GSI_TILE, _get_experimental_gsi_tile()
+    )
     return Response(content=js, media_type="application/javascript")
 
 

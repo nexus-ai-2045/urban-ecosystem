@@ -12,6 +12,7 @@ testpaths = ["tests"]
 # CI では `-m 'not requires_api'` で外部 API 依存テストを除外する。
 markers = [
     "requires_api: 外部 API (Vertex AI / Gemini / Google Maps) の認証情報が必要なテスト。CI ではスキップする。",
+    "requires_network_tile: 実タイルサーバー (cyberjapandata.gsi.go.jp 等) への接続が必要なテスト。CI ではスキップする。",
 ]
 
 [tool.pyright]
