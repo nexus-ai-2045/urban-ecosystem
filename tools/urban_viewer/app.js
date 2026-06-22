@@ -47,11 +47,39 @@ const MAPS_API_KEY = "%%GOOGLE_MAPS_API_KEY%%";
 /** Map ID 注入プレースホルダー: サーバーが HTML 生成時に置き換える */
 const MAPS_MAP_ID  = "%%GOOGLE_MAPS_MAP_ID%%";
 
+/**
+ * GSI live tile モード注入プレースホルダー: サーバーが 'true' / 'false' に置き換える。
+ * 環境変数 EXPERIMENTAL_GSI_TILE 未設定時は 'false'。
+ * CI ではこの値が 'false' のため gsi_3d_live は一切起動しない (3 層目安全弁)。
+ */
+const EXPERIMENTAL_GSI_TILE = "%%EXPERIMENTAL_GSI_TILE%%";
+
 /** API サーバー base URL (同一オリジン) */
 const API_BASE = "";
 
 /** Google Maps を使うかどうか */
 const hasApiKey = MAPS_API_KEY && !MAPS_API_KEY.startsWith("%%");
+
+/**
+ * GSI live tile モードが有効かどうか。
+ * サーバーが 'true' を注入した時だけ真になる。
+ * CI / 通常実行では 'false' または未置換 ('%%...%%') のため常に偽。
+ */
+const hasGsiTile = EXPERIMENTAL_GSI_TILE === "true";
+
+// EXPERIMENTAL_GSI_TILE が有効なときだけ MapLibre JS / CSS を <head> に動的注入する。
+// CI では hasGsiTile=false のため maplibre リクエストは一切発生しない (1 層目安全弁)。
+if (hasGsiTile) {
+    (function _injectMaplibre() {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "/static/maplibre-gl.css";
+        document.head.appendChild(css);
+        const js = document.createElement("script");
+        js.src = "/static/maplibre-gl.js";
+        document.head.appendChild(js);
+    }());
+}
 
 /** requestAnimationFrame の実時間あたり tick 数: speed(1|2|5) x を何 ms で 1 tick 進めるか */
 const MS_PER_TICK_AT_1X = 1000;  // 1x = 1 tick/秒 (5分刻みを1秒で表示)
@@ -405,6 +433,27 @@ const intakeLifecycleEls = {
 async function initAdapter() {
     const desiredMode = _resolveDesiredMapMode();
     _removeGsi3DAttribution();
+
+    // gsi_3d_live: MapLibre + 国土地理院最適化ベクトルタイル live adapter
+    // dynamic import により CI が parse/network しない (3 層目: _resolveDesiredMapMode で既に guard 済み)
+    if (desiredMode === "gsi_3d_live") {
+        try {
+            if (mapCanvas) mapCanvas.style.display = "none";
+            // dynamic import: EXPERIMENTAL_GSI_TILE=false の CI では到達しないが、
+            // 到達した場合でも gsi_3d_live_adapter.js 単体は外部 tile を fetch しない。
+            const { Gsi3DLiveAdapter } = await import("./gsi_3d_live_adapter.js?v=20260614-gsi3d");
+            adapter = new Gsi3DLiveAdapter(mapContainer);
+            await adapter.init();
+            state.runtime.mapMode = "GSI 3D Live";
+            updateMapRuntimeStatus();
+            adapter.onAgentClick(handleAgentClick);
+            return;
+        } catch (error) {
+            console.warn("GSI 3D Live の初期化に失敗したため fallback 地図に切り替えます。", error);
+            state.runtime.mapMode = "Fallback";
+        }
+    }
+
     if (desiredMode === "gsi_3d") {
         try {
             if (mapCanvas) mapCanvas.style.display = "block";
@@ -487,6 +536,8 @@ function _setDefaultNewRunId(runs) {
 function _resolveDesiredMapMode() {
     if (state.runtime.mapPreference === "fallback") return "fallback";
     if (state.runtime.mapPreference === "gsi_3d") return "gsi_3d";
+    // gsi_3d_live は EXPERIMENTAL_GSI_TILE が真のときだけ有効 (2 層目安全弁)
+    if (hasGsiTile && state.runtime.mapPreference === "gsi_3d_live") return "gsi_3d_live";
     if (state.runtime.mapPreference === "google") return "google";
     return hasApiKey ? "google" : "fallback";
 }
@@ -1758,9 +1809,14 @@ function updateMapRuntimeStatus() {
 
 async function switchMapMode(preference) {
     stopPlay();
-    state.runtime.mapPreference = preference === "google" || preference === "fallback" || preference === "gsi_3d"
-        ? preference
-        : "auto";
+    // gsi_3d_live を受理セットに含める。含まれない preference は "auto" にリセットする。
+    state.runtime.mapPreference =
+        preference === "google" ||
+        preference === "fallback" ||
+        preference === "gsi_3d" ||
+        preference === "gsi_3d_live"
+            ? preference
+            : "auto";
     if (mapModeSel) mapModeSel.value = state.runtime.mapPreference;
 
     const desiredMode = _resolveDesiredMapMode();
@@ -2068,6 +2124,13 @@ function wireEvents() {
         mapModeSel.addEventListener("change", async () => {
             await switchMapMode(mapModeSel.value);
         });
+        // gsi_3d_live オプションは EXPERIMENTAL_GSI_TILE が偽のとき非表示+無効にする。
+        // サーバーが HTML を改変しない方針のため、app.js 側で制御する。
+        const gsiLiveOpt = mapModeSel.querySelector("option[value='gsi_3d_live']");
+        if (gsiLiveOpt && !hasGsiTile) {
+            gsiLiveOpt.hidden   = true;
+            gsiLiveOpt.disabled = true;
+        }
     }
     if (saveSettingsBtn) {
         saveSettingsBtn.addEventListener("click", async () => {
